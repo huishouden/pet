@@ -18,8 +18,10 @@ export interface PetData {
   name: string;
   species: Species;
   breed?: string;
-  /** YYYY-MM-DD; may be approximate for rescues. */
+  /** YYYY-MM-DD. */
   birthDate?: string;
+  /** Set when `birthDate` was worked out from an age (rescues, unknown birthdays): no birthday is shown or reminded. */
+  birthDateApprox?: boolean;
   /** The unit this pet is weighed in. */
   weightUnit: WeightUnit;
   /** The weight to aim for (the vet's goal), in `weightUnit`. */
@@ -185,7 +187,7 @@ export interface MedDose extends MedDoseData {
 
 /** The only keys each collection's documents may carry; the rules list the same. */
 export const FIELDS = {
-  petProfiles: ['name', 'species', 'breed', 'birthDate', 'weightUnit', 'targetWeight', 'targetNote', 'notes', 'createdAt', 'updatedAt', 'by'],
+  petProfiles: ['name', 'species', 'breed', 'birthDate', 'birthDateApprox', 'weightUnit', 'targetWeight', 'targetNote', 'notes', 'createdAt', 'updatedAt', 'by'],
   petReminders: ['petId', 'kind', 'title', 'every', 'unit', 'due', 'lastDoneAt', 'notes', 'createdAt', 'updatedAt', 'by'],
   petDoses: ['petId', 'reminderId', 'title', 'at', 'by', 'createdAt'],
   petAppointments: ['petIds', 'kind', 'title', 'at', 'location', 'notes', 'contactId', 'calendarEventId', 'calendarLink', 'createdAt', 'by'],

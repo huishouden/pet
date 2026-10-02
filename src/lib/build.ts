@@ -26,6 +26,8 @@ export interface PetInput {
   species: Species;
   breed?: string;
   birthDate?: string;
+  /** The birth date was worked out from an age. */
+  birthDateApprox?: boolean;
   weightUnit: WeightUnit;
   targetWeight?: number;
   targetNote?: string;
@@ -34,8 +36,8 @@ export interface PetInput {
 
 /** What editing a pet starts from (and what saving one field of it writes back). */
 export function petInputOf(p: PetData): PetInput {
-  const { name, species, breed, birthDate, weightUnit, targetWeight, targetNote, notes } = p;
-  return { name, species, breed, birthDate, weightUnit, targetWeight, targetNote, notes };
+  const { name, species, breed, birthDate, birthDateApprox, weightUnit, targetWeight, targetNote, notes } = p;
+  return { name, species, breed, birthDate, birthDateApprox, weightUnit, targetWeight, targetNote, notes };
 }
 
 export function petDoc(p: PetInput, by: string, createdAt: number, updatedAt?: number): PetData {
@@ -44,6 +46,7 @@ export function petDoc(p: PetInput, by: string, createdAt: number, updatedAt?: n
     species: p.species,
     breed: trimmed(p.breed, LIMITS.breed),
     birthDate: isYmd(p.birthDate) ? p.birthDate : undefined,
+    birthDateApprox: isYmd(p.birthDate) && p.birthDateApprox ? true : undefined,
     weightUnit: p.weightUnit,
     ...(validTarget(p.targetWeight) ? { targetWeight: Math.round(p.targetWeight! * 100) / 100, targetNote: trimmed(p.targetNote, LIMITS.targetNote) } : {}),
     notes: trimmed(p.notes, LIMITS.petNotes),

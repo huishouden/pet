@@ -69,8 +69,8 @@ function PetDetail({ pet, pets, store, open, now, onGive, notify }: {
   const recent = [...weights].sort((a, b) => b.at - a.at).slice(0, 3);
   const records = store.data.records.filter((r) => r.petId === pet.id).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.createdAt - a.createdAt));
   const born = parseYmd(pet.birthDate);
-  const ageText = age(pet.birthDate, now);
-  const birthday = birthdayText(pet.birthDate, now);
+  const ageText = age(pet.birthDate, now, pet.birthDateApprox);
+  const birthday = birthdayText(pet.birthDate, now, pet.birthDateApprox);
   const target = targetProgress(weights, pet.weightUnit, pet.targetWeight);
 
   return (
@@ -82,7 +82,7 @@ function PetDetail({ pet, pets, store, open, now, onGive, notify }: {
             <div className="min-w-0 flex-1">
               <h3 className="text-3xl font-semibold text-stone-800 [overflow-wrap:anywhere]">{pet.name}</h3>
               <p className="mt-0.5 text-lg text-stone-600">{[SPECIES_LABELS[pet.species], pet.breed, ageText].filter(Boolean).join(' · ')}</p>
-              {born !== null && <p className="text-base text-stone-600">Born {formatDateShort(born)}</p>}
+              {born !== null && !pet.birthDateApprox && <p className="text-base text-stone-600">Born {formatDateShort(born)}</p>}
               {birthday && (
                 <p className={`mt-0.5 flex items-center gap-1.5 text-base ${birthday === 'Birthday today' ? 'font-semibold text-forest-700' : 'text-stone-600'}`}>
                   <Cake size={16} aria-hidden="true" /> {birthday}

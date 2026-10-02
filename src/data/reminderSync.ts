@@ -24,7 +24,8 @@ export function useReminderSync(householdId: string, me: string, data: PetHouseh
       const wanted = new Map<string, ReminderInput[]>();
       for (const c of data.courses) wanted.set(courseRef(c.id), courseReminders(c, data.pets.find((p) => p.id === c.petId), data.medDoses, now));
       for (const p of data.pets) wanted.set(mealsRef(p.id), mealReminders(p, data.meals, data.feedings, now));
-      for (const p of data.pets) if (p.birthDate) wanted.set(birthdayRef(p.id), birthdayReminders(p, now));
+      // Every pet, so a birthday removed or made approximate since the last open has its reminder cancelled.
+      for (const p of data.pets) wanted.set(birthdayRef(p.id), birthdayReminders(p, now));
       const jobs: Promise<unknown>[] = [];
       for (const [ref, list] of wanted) {
         const signature = JSON.stringify(list.map((r) => [r.id, r.at, r.title, r.body]));

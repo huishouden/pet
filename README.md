@@ -65,7 +65,7 @@ opens every Huishouden app.
 Scan the label reads a medicine label photo on the device (`@huishouden/pwa-kit/dose`, tesseract.js
 loaded on first use) and fills in the course for the person to check; the photo is never stored or
 uploaded. Medicine doses, meals nobody has ticked by their time and each pet's next birthday (9:00
-on the day) become reminders in the
+on the day; not for an approximate birth date) become reminders in the
 household's `reminders` collection (`@huishouden/pwa-kit/reminders`), which the shared sender
 delivers as notifications to each member who turned them on for a device (Care, "Notifications on
 this device", shown once the repo has `VITE_VAPID_PUBLIC_KEY`).
@@ -74,8 +74,11 @@ Find in my calendar and Import from calendar read Google Calendar (read-only) th
 `@huishouden/pwa-kit/calendar`; Google asks once for permission the first time. Find a business looks
 places up on OpenStreetMap (`@huishouden/pwa-kit/places`), only when Search is pressed. A pet's birthday can come
 from the calendar too: "Find birthday in my calendar" in the pet's profile, and Import from calendar for
-pets without one. A yearly birthday series that began on the day gives the year; an age or year in
-the title ("turns 5", "born 2027") also does; otherwise Pet asks for the year.
+pets without one (or with only an age). An age or year in the title ("turns 5", "born 2027") gives
+the year; otherwise Pet asks for an age or the year born, and shows the year a yearly series began
+only as a hint, since that is usually when the event was added. A pet with no known birthday can
+have an age instead: it is saved as an approximate birth date (`birthDateApprox`), shown as "About 6
+years", with no birthday line or reminder.
 
 ## Develop
 
