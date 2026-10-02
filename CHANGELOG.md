@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/huishouden/pet/compare/v1.0.1...v1.1.0) (2026-10-02)
+
+
+### Features
+
+* birthdays from the calendar, and a target weight per pet (kit v0.23.0) ([#6](https://github.com/huishouden/pet/issues/6)) ([cad1550](https://github.com/huishouden/pet/commit/cad15505b816ff6cebd99eac7336065817f0b7a6))
+
 ## [1.0.1](https://github.com/huishouden/pet/compare/v1.0.0...v1.0.1) (2026-10-02)
 
 
