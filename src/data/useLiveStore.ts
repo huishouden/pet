@@ -8,6 +8,7 @@ import { DAY } from '@huishouden/pwa-kit/time';
 import { db } from './firebase';
 import { createActions, type Backend } from './actions';
 import { useReminderSync } from './reminderSync';
+import { AGENDA_SOURCES, useAgendaSync } from './agendaSync';
 import { COLLECTIONS, type DataKey, type PetStore } from './types';
 
 /** How far back dose history reads: a year of daily medication, and every monthly one. */
@@ -21,7 +22,8 @@ const FEEDING_HISTORY_DAYS = 15;
  */
 export function useLiveStore(householdId: string, me: string, members: string[], onError: (message: string) => void): PetStore {
   const [data, setData] = useState<PetHouseholdData>(emptyData);
-  const [answered, setAnswered] = useState({ pets: false, reminders: false });
+  // Which lists have answered once (from cache or server), error or not.
+  const [answered, setAnswered] = useState<ReadonlySet<DataKey>>(() => new Set());
   const dataRef = useRef(data);
   dataRef.current = data;
   const errorRef = useRef(onError);
@@ -31,15 +33,16 @@ export function useLiveStore(householdId: string, me: string, members: string[],
 
   useEffect(() => {
     const fail = (what: string) => (e: Error) => errorRef.current(readError(e, `Couldn't load ${what}`));
+    const answer = (key: DataKey) => setAnswered((a) => (a.has(key) ? a : new Set(a).add(key)));
     const listen = (key: DataKey, q: Query, what: string) =>
       onSnapshot(
         q,
         (s) => {
           setData((d) => ({ ...d, [key]: s.docs.map((x) => ({ id: x.id, ...x.data() })) }));
-          if (key === 'pets' || key === 'reminders') setAnswered((a) => ({ ...a, [key]: true }));
+          answer(key);
         },
         (e) => {
-          if (key === 'pets' || key === 'reminders') setAnswered((a) => ({ ...a, [key]: true }));
+          answer(key);
           fail(what)(e);
         },
       );
@@ -87,9 +90,12 @@ export function useLiveStore(householdId: string, me: string, members: string[],
     return createActions(backend);
   }, [base, householdId, me]);
 
-  const ready = answered.pets && answered.reminders;
+  const ready = answered.has('pets') && answered.has('reminders');
   // Push notifications for doses and meal cut-offs, delivered by the household's shared sender.
   useReminderSync(householdId, me, data, ready, onError);
+  // The household agenda (the portal's calendar and Today) waits for every list it is built from:
+  // publishing before one has loaded would delete that list's items.
+  useAgendaSync(householdId, me, data, AGENDA_SOURCES.every((k) => answered.has(k)));
 
   return { data, ready, actions, members, me };
 }
