@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/huishouden/pet/compare/v1.4.0...v1.5.0) (2026-10-02)
+
+
+### Features
+
+* offer new calendar events on the main screen ([#21](https://github.com/huishouden/pet/issues/21)) ([e3dffc4](https://github.com/huishouden/pet/commit/e3dffc48fb3452083542bb418542eaea1da119be))
+
 ## [1.4.0](https://github.com/huishouden/pet/compare/v1.3.0...v1.4.0) (2026-10-02)
 
 
