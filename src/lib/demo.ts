@@ -1,5 +1,6 @@
 import type { Contact } from '@huishouden/pwa-kit/contacts';
-import type { Appointment, Course, Dose, Feeding, Meal, MedDose, Pet, PetRecord, Reminder, Weight } from './model';
+import type { Appointment, Course, Dose, Feeding, Meal, MedDose, Pet, PetPhoto, PetRecord, Reminder, Weight } from './model';
+import { DEMO_PHOTOS } from './demoPhotos';
 import { toYmd } from '@huishouden/pwa-kit/time';
 
 // Invented sample data for the signed-out app: README screenshots and first impressions. Everything
@@ -22,11 +23,13 @@ export interface PetHouseholdData {
   feedings: Feeding[];
   courses: Course[];
   medDoses: MedDose[];
+  /** Each pet's avatar photo, by pet id. */
+  photos: PetPhoto[];
   /** The household's contacts shown in Pet. */
   contacts: Contact[];
 }
 
-export const emptyData = (): PetHouseholdData => ({ pets: [], reminders: [], doses: [], appointments: [], weights: [], records: [], meals: [], feedings: [], courses: [], medDoses: [], contacts: [] });
+export const emptyData = (): PetHouseholdData => ({ pets: [], reminders: [], doses: [], appointments: [], weights: [], records: [], meals: [], feedings: [], courses: [], medDoses: [], photos: [], contacts: [] });
 
 /** Local time on a 2031 day: month 1–12. */
 const on = (month: number, day: number, hhmm = '12:00', year = 2031) => {
@@ -327,6 +330,7 @@ export function demoData(): PetHouseholdData {
     feedings: feedings(ms),
     courses: courses(),
     medDoses: medDoses(),
+    photos: Object.entries(DEMO_PHOTOS).map(([id, data]) => ({ id, data, updatedAt: CREATED, by: SAM })),
     contacts: contacts(),
   };
 }

@@ -1,5 +1,5 @@
 import type { Contact, ContactInput } from '@huishouden/pwa-kit/contacts';
-import type { Appointment, Course, Dose, Feeding, Meal, MedDose, Pet, PetRecord, Reminder, Weight } from '../lib/model';
+import type { Appointment, Course, Dose, Feeding, Meal, MedDose, Pet, PetPhoto, PetRecord, Reminder, Weight } from '../lib/model';
 import type { AppointmentInput, CourseInput, FeedingInput, MealInput, PetInput, RecordInput, ReminderInput } from '../lib/build';
 import type { PetHouseholdData } from '../lib/demo';
 import type { WeightUnit } from '../lib/weight';
@@ -18,6 +18,7 @@ export const COLLECTIONS = {
   feedings: 'petFeedings',
   courses: 'petMedCourses',
   medDoses: 'petMedDoses',
+  photos: 'petPhotos',
 } as const;
 export type DataKey = keyof typeof COLLECTIONS;
 
@@ -32,6 +33,7 @@ export interface PetBundle {
   feedings: Feeding[];
   courses: Course[];
   medDoses: MedDose[];
+  photo?: PetPhoto;
   /** Appointments as they were: those only for this pet are deleted, shared ones lose this pet. */
   appointments: Appointment[];
 }
@@ -67,6 +69,12 @@ export interface PetActions {
   deleteFeedings(list: Feeding[]): void;
   restoreFeedings(list: Feeding[]): void;
   /** Returns the course's id. */
+  /** Sets the pet's photo (a data URL from the kit's `squarePhoto`); returns the one it replaced, for Undo. */
+  savePetPhoto(petId: string, dataUrl: string): PetPhoto | undefined;
+  /** Removes the pet's photo; returns it, for Undo. */
+  removePetPhoto(petId: string): PetPhoto | undefined;
+  /** Puts back the photo a save or remove replaced (none: removes the current one). */
+  restorePetPhoto(petId: string, before: PetPhoto | undefined): void;
   saveCourse(id: string | null, input: CourseInput): string;
   deleteCourse(c: Course): void;
   restoreCourse(c: Course): void;

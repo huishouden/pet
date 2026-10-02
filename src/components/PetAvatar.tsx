@@ -1,3 +1,4 @@
+import { createContext, useContext } from 'react';
 import { Bird, Cat, Dog, Fish, PawPrint, Rabbit, Squirrel, Turtle, type LucideIcon } from 'lucide-react';
 import type { Pet, Species } from '../lib/model';
 import { petColour } from '../lib/pets';
@@ -13,8 +14,13 @@ const ICONS: Record<Species, LucideIcon> = {
   other: PawPrint,
 };
 
-/** A pet's round mark: its species drawn in white on the pet's own muted colour. */
-export function PetAvatar({ pet, pets, size = 40 }: { pet: Pet | undefined; pets: Pet[]; size?: number }) {
+/** Each pet's photo (a data URL) by pet id, provided once by the app so every avatar can show it. */
+export const PetPhotos = createContext<ReadonlyMap<string, string>>(new Map());
+
+/** A pet's round mark: its photo when it has one, otherwise its species in white on the pet's own muted colour. */
+export function PetAvatar({ pet, pets, size = 40, plain }: { pet: Pet | undefined; pets: Pet[]; size?: number; plain?: boolean }) {
+  const photo = useContext(PetPhotos).get(pet?.id ?? '');
+  if (photo && !plain) return <img src={photo} alt="" width={size} height={size} className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} aria-hidden="true" />;
   const Icon = pet ? ICONS[pet.species] ?? PawPrint : PawPrint;
   return (
     <span

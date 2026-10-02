@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import type { Pet, Species } from '../lib/model';
 import { LIMITS, SPECIES } from '../lib/model';
@@ -7,21 +7,27 @@ import { MONTHS, daysBetween, toYmd } from '@huishouden/pwa-kit/time';
 import { WEIGHT_UNITS, parseWeight, type WeightUnit } from '../lib/weight';
 import { MAX_AGE, ageParts, approxBirthDate, birthDateFromAgeOrYear, bornWords, type BirthdayGuess } from '../lib/birthday';
 import { BirthdayFind } from './BirthdayFind';
+import { PetAvatar, PetPhotos } from './PetAvatar';
+import { PhotoPicker } from '@huishouden/pwa-kit/react/photo';
 import { age } from '../lib/time';
 import type { PetInput } from '../lib/build';
 import { Chip, Dialog, Field, deleteButton, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
-export function PetDialog({ pet, now, calendarAvailable, birthday, onSave, onDelete, onClose }: {
+export function PetDialog({ pet, pets, now, calendarAvailable, birthday, onSave, onDelete, onClose }: {
   pet: Pet | null;
+  pets: Pet[];
   now: number;
   calendarAvailable: boolean;
   /** A birthday found in the calendar without its year, to finish here. */
   birthday?: BirthdayGuess;
-  onSave: (input: PetInput) => void;
+  /** `photo`: the new photo's data URL, null to remove it, undefined when unchanged. */
+  onSave: (input: PetInput, photo: string | null | undefined) => void;
   onDelete?: () => void;
   onClose: () => void;
 }) {
   const [name, setName] = useState(pet?.name ?? '');
+  const savedPhoto = useContext(PetPhotos).get(pet?.id ?? '') ?? null;
+  const [photo, setPhoto] = useState<string | null>(savedPhoto);
   const [species, setSpecies] = useState<Species>(pet?.species ?? 'dog');
   const [breed, setBreed] = useState(pet?.breed ?? '');
   const [birthDate, setBirthDate] = useState(birthday?.date ?? pet?.birthDate ?? '');
@@ -72,7 +78,7 @@ export function PetDialog({ pet, now, calendarAvailable, birthday, onSave, onDel
 
   const save = () => {
     if (!valid) return;
-    onSave({ name, species, breed, birthDate: finalDate ?? undefined, birthDateApprox: byAge && finalDate ? true : undefined, weightUnit, targetWeight: targetWeight ?? undefined, targetNote, notes });
+    onSave({ name, species, breed, birthDate: finalDate ?? undefined, birthDateApprox: byAge && finalDate ? true : undefined, weightUnit, targetWeight: targetWeight ?? undefined, targetNote, notes }, photo === savedPhoto ? undefined : photo);
     onClose();
   };
 
@@ -110,6 +116,14 @@ export function PetDialog({ pet, now, calendarAvailable, birthday, onSave, onDel
           save();
         }}
       >
+        <PhotoPicker
+          photo={photo}
+          fallback={<PetAvatar pet={pet ? { ...pet, species } : undefined} pets={pets} size={80} plain />}
+          label={`${name.trim() || 'the pet'}'s photo`}
+          size={80}
+          onSave={setPhoto}
+          onRemove={() => setPhoto(null)}
+        />
         <Field label="Name">
           <input className={inputClass} value={name} maxLength={LIMITS.petName} onChange={(e) => setName(e.target.value)} autoComplete="off" />
         </Field>

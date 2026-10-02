@@ -38,6 +38,20 @@ export interface Pet extends PetData {
   id: string;
 }
 
+/**
+ * petPhotos/{petId}: the pet's avatar photo, a small WebP or JPEG data URL from
+ * `@huishouden/pwa-kit/photo`, kept apart from the profile so reading the pets stays light.
+ */
+export interface PetPhotoData {
+  data: string;
+  updatedAt: number;
+  by: string;
+}
+/** `id` is the pet's id. */
+export interface PetPhoto extends PetPhotoData {
+  id: string;
+}
+
 /** petReminders/{id}: prevention, vaccines and medication, one-off or every N days/weeks/months/years. */
 export interface ReminderData {
   petId: string;
@@ -197,6 +211,7 @@ export const FIELDS = {
   petFeedings: ['petId', 'mealId', 'at', 'portion', 'note', 'by', 'createdAt', 'updatedAt'],
   petMedCourses: ['petId', 'name', 'dose', 'timesPerDay', 'times', 'startDate', 'days', 'withFood', 'notes', 'createdAt', 'updatedAt', 'by'],
   petMedDoses: ['petId', 'courseId', 'slot', 'at', 'by', 'createdAt'],
+  petPhotos: ['data', 'updatedAt', 'by'],
 } as const;
 
 /** String length caps, mirrored in the rules. */
@@ -224,4 +239,6 @@ export const LIMITS = {
   courseName: 80,
   courseDose: 80,
   courseNotes: 500,
+  /** Characters in a photo's data URL (the rules allow 100 000; the kit aims under 60 000). */
+  photo: 100_000,
 } as const;

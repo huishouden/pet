@@ -9,8 +9,9 @@
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "test": "bun test src",
-    "e2e": "playwright test e2e/smoke.spec.ts e2e/feeding.spec.ts e2e/care.spec.ts e2e/pets.spec.ts e2e/contacts.spec.ts e2e/calendar.spec.ts e2e/birthdays.spec.ts",
+    "e2e": "playwright test e2e/smoke.spec.ts e2e/feeding.spec.ts e2e/care.spec.ts e2e/pets.spec.ts e2e/contacts.spec.ts e2e/calendar.spec.ts e2e/birthdays.spec.ts e2e/photos.spec.ts",
     "screenshots": "playwright test e2e/screenshots.spec.ts",
+    "demo-photos": "bun scripts/demo-photos.ts",
     "icons": "pwa-logo paw public/icon.svg && pwa-icons --background=#1b4332",
     "prepare": "git config core.hooksPath .githooks",
     "env:pull": "gh variable list --json name,value -q '.[] | select(.name|startswith(\"VITE_\")) | \"\\(.name)=\\(.value)\"' > .env.local && echo 'wrote .env.local'"
@@ -23,7 +24,7 @@
     "tesseract.js": "^7"
   },
   "devDependencies": {
-    "@huishouden/pwa-kit": "github:huishouden/pwa-kit#v0.23.0",
+    "@huishouden/pwa-kit": "github:huishouden/pwa-kit#v0.27.0",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/bun": "^1.4.2",
