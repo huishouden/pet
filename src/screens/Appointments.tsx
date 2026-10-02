@@ -3,7 +3,8 @@ import { Cake, CalendarArrowDown, CalendarPlus, ChevronDown, ChevronUp, External
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import { telHref } from '@huishouden/pwa-kit/places';
 import type { Appointment, Pet } from '../lib/model';
-import { PET_CALENDAR_QUERIES, fromCalendar } from '../lib/calendarImport';
+import { PET_CALENDAR_QUERIES } from '../lib/calendarImport';
+import type { CalendarMatch } from '@huishouden/pwa-kit/calendar';
 import { APPOINTMENT_LABELS } from '../lib/care';
 import { petNames } from '../lib/pets';
 import { formatDayLong, formatTime, monthShort, relativeDay } from '@huishouden/pwa-kit/time';
@@ -18,12 +19,14 @@ import type { Open } from '../PetApp';
 import { PetAvatar, PetChips } from '../components/PetAvatar';
 import { cardClass, ghostButton, iconButton, linkClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 
-export function Appointments({ store, pets, open, calendarAvailable, notify }: {
+export function Appointments({ store, pets, open, calendarAvailable, notify, onImport }: {
   store: PetStore;
   pets: Pet[];
   open: Open;
   calendarAvailable: boolean;
   notify: (message: string, undo?: () => void) => void;
+  /** Adds calendar events as appointments, with a toast. */
+  onImport: (list: CalendarMatch[]) => void;
 }) {
   const { now } = useClock();
   const [petId, setPetId] = useState<string | null>(null);
@@ -103,10 +106,7 @@ export function Appointments({ store, pets, open, calendarAvailable, notify }: {
           allImported="Every pet event in your calendar is already in Pet."
           records={all}
           onRetry={runScan}
-          onAdd={(list) => {
-            for (const m of list) store.actions.saveAppointment(null, fromCalendar(m, pets));
-            notify(list.length === 1 ? `Added ${list[0].title}` : `Added ${list.length} appointments`);
-          }}
+          onAdd={onImport}
           onClose={() => {
             setImporting(false);
             scan.reset();

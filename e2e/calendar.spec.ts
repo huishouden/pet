@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { stubCalendar } from '@huishouden/pwa-kit/e2e';
 import { calendarEvents, mockCalendar } from './fixtures/calendar';
 
 // Google Calendar has no emulator, and the sample app has no Google account: these tests stand in
@@ -71,4 +72,66 @@ test.describe('with a calendar', () => {
     await expect(alert).toContainText('Calendar access was not allowed');
     await expect(alert.getByRole('button', { name: 'Try again' })).toBeVisible();
   });
+});
+
+// Something an assistant put in the calendar ("a vet appointment for Biscuit") shows up on Today on
+// its own, but only on a device that already has a calendar token (stubbed here): Pet never asks on open.
+// A sample pet's birthday: offered through Set birthday in Import from calendar, never as a visit.
+const biscuitBirthday = {
+  ...calendarEvents[0],
+  id: 'evt-biscuit-bday',
+  title: "Biscuit's birthday",
+  start: new Date(2031, 5, 1).getTime(),
+  end: undefined,
+  allDay: true,
+  location: '',
+  description: '',
+  link: 'https://calendar.example.com/event?eid=evt-biscuit-bday',
+};
+
+test.describe('new in your calendar', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.clock.setFixedTime('2031-05-14T10:30:00');
+    await stubCalendar(page, { events: [...calendarEvents, biscuitBirthday] });
+    await page.goto('/');
+  });
+
+  test('offers new visits on Today; Add and Not this one; birthdays keep their own flow', async ({ page }) => {
+    const card = page.getByRole('region', { name: 'New in your calendar' });
+    await expect(card).toContainText('New in your calendar: Biscuit vet: rabies vaccine');
+    await expect(card).not.toContainText('Dental cleaning');
+    await card.getByRole('button', { name: '+2 more' }).click();
+    const more = card.getByRole('list', { name: 'More new calendar events' });
+    await expect(more.getByRole('listitem')).toHaveCount(2);
+    await expect(card).not.toContainText('birthday');
+
+    await card.getByRole('button', { name: 'Add Biscuit vet: rabies vaccine' }).click();
+    await expect(page.getByText('Added Biscuit vet: rabies vaccine')).toBeVisible();
+    await expect(card).toContainText('New in your calendar: Miso grooming');
+
+    await card.getByRole('button', { name: 'Not this one: Miso grooming' }).click();
+    await expect(card).toContainText('New in your calendar: Kennel tour');
+    await expect(card.getByRole('button', { name: /more$/ })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Appointments', exact: true }).click();
+    await expect(card).toHaveCount(0);
+    await expect(page.getByText('Biscuit vet: rabies vaccine').first()).toBeVisible();
+  });
+
+  test('a dismissed event stays dismissed after reopening', async ({ page }) => {
+    const card = page.getByRole('region', { name: 'New in your calendar' });
+    await card.getByRole('button', { name: 'Not this one: Biscuit vet: rabies vaccine' }).click();
+    await page.reload();
+    await expect(card).toContainText('New in your calendar: Miso grooming');
+    await expect(card).not.toContainText('rabies');
+  });
+});
+
+test('no calendar token on the device: no card and no Google window', async ({ page }) => {
+  await page.clock.setFixedTime('2031-05-14T10:30:00');
+  await stubCalendar(page, { events: calendarEvents, cachedToken: false });
+  await page.goto('/');
+  await expect(page.getByRole('heading').first()).toBeVisible();
+  await expect(page.getByRole('region', { name: 'New in your calendar' })).toHaveCount(0);
+  expect(page.context().pages()).toHaveLength(1);
 });

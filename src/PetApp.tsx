@@ -9,7 +9,11 @@ import { isRecurring, markGiven } from './lib/schedule';
 import { addDays, formatDayShort, formatTime, longDate, parseYmd, shortDate, startOfDay, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
 import { useClock } from '@huishouden/pwa-kit/react/clock';
 import type { PetStore } from './data/types';
-import { calendarAvailable } from '@huishouden/pwa-kit/react/calendar';
+import { CalendarSuggestions, calendarAvailable, useCalendarSuggestions } from '@huishouden/pwa-kit/react/calendar';
+import { isImported, type CalendarMatch } from '@huishouden/pwa-kit/calendar';
+import { PET_CALENDAR_QUERIES, fromCalendar } from './lib/calendarImport';
+import { isBirthdayOf } from './lib/birthday';
+import { auth } from './data/firebase';
 import { Header, type Tab } from './components/Header';
 import { Toast, type ToastState } from '@huishouden/pwa-kit/react/ui';
 import { PetDialog } from './components/PetDialog';
@@ -102,6 +106,19 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   const photos = useMemo(() => new Map(store.data.photos.map((p) => [p.id, p.data])), [store.data.photos]);
   const calendar = calendarAvailable(user);
   const { actions } = store;
+  // Birthday events keep their own flow (Set birthday in Import from calendar), so they are never suggested as visits.
+  const suggested = useCalendarSuggestions({
+    auth,
+    words: PET_CALENDAR_QUERIES,
+    isImported: (m) => isImported(m, store.data.appointments) || pets.some((p) => isBirthdayOf(m.title, p.name)),
+    app: 'Pet',
+  });
+
+  /** Calendar events in as appointments: Import from calendar and the new-in-your-calendar card. */
+  const importEvents = (list: CalendarMatch[]) => {
+    for (const m of list) actions.saveAppointment(null, fromCalendar(m, pets));
+    notify(list.length === 1 ? `Added ${list[0].title}` : `Added ${list.length} appointments`);
+  };
 
   useEffect(() => {
     document.title = 'Huishouden Pet';
@@ -193,10 +210,21 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   let content: ReactNode;
   if (!store.ready) content = <p className="p-2 text-lg text-stone-600">Loading the pets</p>;
   else if (tab === 'care') content = <Care store={store} pets={pets} open={open} onGive={give} notify={notify} deviceSettings={deviceSettings} />;
-  else if (tab === 'appointments') content = <Appointments store={store} pets={pets} open={open} calendarAvailable={calendar} notify={notify} />;
+  else if (tab === 'appointments') content = <Appointments store={store} pets={pets} open={open} calendarAvailable={calendar} notify={notify} onImport={importEvents} />;
   else if (tab === 'pets') content = <Pets store={store} pets={pets} open={open} shown={shownPet} onShow={setShownPet} onGive={give} notify={notify} />;
   else if (tab === 'contacts') content = <Contacts store={store} open={open} notify={notify} />;
-  else content = <Today store={store} pets={pets} open={open} onGive={give} onToggleMeal={toggleMeal} onToggleDose={(pet, c, slot, day) => toggleDose(pet, c, slot, day)} />;
+  else
+    content = (
+      <Today
+        store={store}
+        pets={pets}
+        open={open}
+        onGive={give}
+        onToggleMeal={toggleMeal}
+        onToggleDose={(pet, c, slot, day) => toggleDose(pet, c, slot, day)}
+        afterNeeds={<CalendarSuggestions suggestions={suggested.suggestions} now={now} onAdd={(m) => importEvents([m])} onDismiss={suggested.dismiss} />}
+      />
+    );
 
   return (
     <PetPhotos.Provider value={photos}>
