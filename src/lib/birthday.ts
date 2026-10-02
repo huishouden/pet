@@ -3,7 +3,7 @@
 
 import type { CalendarMatch } from '@huishouden/pwa-kit/calendar';
 import type { ReminderInput } from '@huishouden/pwa-kit/reminders';
-import { MONTHS, addDays, addMonths, daysBetween, daysInMonth, toYmd, ymd, ymdParts, type Ymd } from '@huishouden/pwa-kit/time';
+import { MONTHS, addDays, addMonths, daysBetween, daysInMonth, inDays, toYmd, ymd, ymdParts, type Ymd } from '@huishouden/pwa-kit/time';
 
 /** The searches for one pet's birthday: "Biscuit birthday", "Biscuit's birthday", "Biscuit bday". */
 export function birthdayQueries(name: string): string[] {
@@ -181,4 +181,34 @@ export function birthdayReminder(pet: { id: string; name: string; birthDate?: st
     url: app.url,
     ref: app.ref,
   };
+}
+
+/** How far ahead Today mentions a coming birthday. */
+export const BIRTHDAY_LEAD_MONTHS = 3;
+
+export interface BirthdayCountdown {
+  date: Ymd;
+  turns: number;
+  days: number;
+  /** "today", "tomorrow", "in 5 days", "in 3 weeks", "in 2 months". */
+  when: string;
+}
+
+/**
+ * A birthday close enough to mention: within three months (by the calendar), counted down in months,
+ * then weeks, then days. Null further off, without a birth date, or when it is only approximate.
+ */
+export function birthdayCountdown(birthDate: string | undefined, now: number, approx?: boolean): BirthdayCountdown | null {
+  const next = birthDate && !approx ? nextBirthday(birthDate, now) : null;
+  if (!next || next.date > addMonths(toYmd(now), BIRTHDAY_LEAD_MONTHS)) return null;
+  return { ...next, when: inDays(next.days, { months: 'nearest' }) };
+}
+
+/** "Biscuit's birthday in 3 weeks", "Biscuit's birthday tomorrow"; the day itself is a celebration, not a line. */
+export const birthdayLine = (name: string, c: Pick<BirthdayCountdown, 'when'>) => `${name}'s birthday ${c.when}`;
+
+/** "Turns 5 on June 4": the line under a coming birthday. */
+export function turnsOn(c: Pick<BirthdayCountdown, 'turns' | 'date'>): string {
+  const p = ymdParts(c.date)!;
+  return `Turns ${c.turns} on ${MONTHS[p.m - 1]} ${p.d}`;
 }

@@ -8,10 +8,19 @@ import { calendarEvents, mockCalendar } from './fixtures/calendar';
 // The clock is frozen at the sample data's moment so every run renders the same.
 const fixedTime = '2031-05-14T10:30:00';
 
+const needsDoing = (p: import('@playwright/test').Page) => expect(p.getByRole('region', { name: 'Needs doing' }).getByText('Antibiotic for Biscuit')).toBeVisible();
+
 test('today', ({ page }) =>
   captureScreenshot(page, 'today', {
     fixedTime,
-    prepare: (p) => expect(p.getByText('Overdue: flea and tick')).toBeVisible(),
+    prepare: needsDoing,
+  }));
+
+test('birthday', ({ page }) =>
+  captureScreenshot(page, 'birthday', {
+    path: '/?tab=pets&pet=demo-pet-biscuit',
+    fixedTime,
+    prepare: (p) => expect(p.getByRole('region', { name: "Biscuit's profile" }).getByText('Happy birthday, Biscuit!')).toBeVisible(),
   }));
 
 test('care', ({ page }) =>
@@ -96,7 +105,7 @@ test('phone: today', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await captureScreenshot(page, 'phone-today', {
     fixedTime,
-    prepare: (p) => expect(p.getByText('Overdue: flea and tick')).toBeVisible(),
+    prepare: needsDoing,
   });
 });
 

@@ -17,7 +17,9 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('the sample pets show their next birthday', async ({ page }) => {
-  await expect(page.getByRole('region', { name: "Biscuit's profile" })).toContainText('Turns 5 on March 8');
+  await expect(page.getByRole('region', { name: "Biscuit's profile" })).toContainText('Biscuit turns 4 today');
+  await page.getByRole('button', { name: 'Miso', exact: true }).click();
+  await expect(page.getByRole('region', { name: "Miso's profile" })).toContainText('Turns 2 on June 4');
 });
 
 test('a yearly series only suggests the year; an age finishes the birthday', async ({ page }) => {

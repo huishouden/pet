@@ -7,7 +7,9 @@ import {
   appointmentAgenda,
   birthdayAgenda,
   courseAgenda,
+  agendaChanges,
   courseDetail,
+  doseAgenda,
   mealAgenda,
   reminderAgenda,
   tabUrl,
@@ -15,7 +17,7 @@ import {
   type AgendaEntry,
 } from './agenda';
 import { mealAt } from './feeding';
-import type { Appointment, Course, Feeding, Meal, Pet, Reminder } from './model';
+import type { Appointment, Course, Feeding, Meal, MedDose, Pet, Reminder } from './model';
 
 // Invented household: two pets on a fixed day in 2031.
 const NOW = new Date(2031, 4, 14, 10, 30).getTime();
@@ -75,6 +77,7 @@ const meals: Meal[] = [
 ];
 const fedAm: Feeding = { id: 'feed-1', petId: pepper.id, mealId: 'meal-am', at: at(5, 14, '09:05'), ...stamp };
 const fedAmYesterday: Feeding = { ...fedAm, id: 'feed-0', at: at(5, 13, '09:05') };
+const givenAm: MedDose = { id: 'med-1', petId: juniper.id, courseId: 'course-1', slot: 0, at: at(5, 14, '09:10'), by: BY, createdAt: at(5, 14, '09:10') };
 
 const valid = (items: AgendaEntry[]) => {
   for (const i of items) expect(() => agendaDoc('pet', { ...i, ref: 'x' }, BY, NOW)).not.toThrow();
@@ -113,7 +116,7 @@ describe('care reminders', () => {
     expect(items).toEqual([
       {
         kind: 'due',
-        title: 'Flea and tick',
+        title: 'Flea and tick for Pepper',
         start: allDayStart(day(5, 20)),
         allDay: true,
         detail: 'Every month',
@@ -131,6 +134,12 @@ describe('care reminders', () => {
     expect(reminderAgenda(reminder({ due: day(1, 2) }), pets, NOW, URL)[0].status).toBe('overdue');
   });
 
+  test('a reminder for a pet no longer in the household keeps its own title, without a who', () => {
+    const item = reminderAgenda(reminder({ petId: 'gone' }), pets, NOW, URL)[0];
+    expect(item.title).toBe('Flea and tick');
+    expect(item).not.toHaveProperty('who');
+  });
+
   test('every 3 months reads so; a one-off reads once; a given one-off is left out', () => {
     expect(reminderAgenda(reminder({ every: 3, unit: 'month' }), pets, NOW, URL)[0].detail).toBe('Every 3 months');
     expect(reminderAgenda(reminder({ every: undefined, unit: undefined }), pets, NOW, URL)[0].detail).toBe('Once');
@@ -144,7 +153,7 @@ describe('medicine courses', () => {
     expect(items).toEqual([
       {
         kind: 'medicine',
-        title: 'Antibiotic',
+        title: 'Antibiotic for Juniper',
         start: allDayStart(day(5, 12)),
         end: allDayStart(day(5, 19)),
         allDay: true,
@@ -164,6 +173,34 @@ describe('medicine courses', () => {
   test('a one-day course spans its day; one finished long ago is left out', () => {
     expect(courseAgenda(course({ days: 1, startDate: day(5, 14) }), pets, NOW, URL)[0]).toMatchObject({ start: allDayStart(day(5, 14)), end: allDayStart(day(5, 15)) });
     expect(courseAgenda(course({ startDate: day(1, 2) }), pets, NOW, URL)).toEqual([]);
+  });
+});
+
+describe('medicine doses', () => {
+  test("today's and tomorrow's doses at their times, done once given, so the portal's Today can tick them off", () => {
+    const list = doseAgenda(course(), [givenAm], pets, NOW, URL);
+    expect(list.map((d) => d.ref)).toEqual(['dose:course-1:2031-05-14:0', 'dose:course-1:2031-05-14:1', 'dose:course-1:2031-05-15:0', 'dose:course-1:2031-05-15:1']);
+    expect(list[0].items).toEqual([
+      {
+        kind: 'medicine',
+        title: 'Antibiotic for Juniper',
+        start: at(5, 14, '09:00'),
+        allDay: false,
+        detail: '1 tablet',
+        url: `${URL}/`,
+        who: 'Juniper',
+        status: 'done',
+      },
+    ]);
+    expect(list[1].items[0]).toMatchObject({ start: at(5, 14, '19:00'), status: 'upcoming' });
+    expect(list[2].items[0]).toMatchObject({ start: at(5, 15, '09:00'), status: 'upcoming' });
+    valid(list.flatMap((d) => d.items));
+  });
+
+  test('a dose not given by its time stays upcoming for the kit to call overdue; none outside the course', () => {
+    expect(doseAgenda(course(), [], pets, at(5, 14, '11:00'), URL)[0].items[0].status).toBe('upcoming');
+    expect(doseAgenda(course({ startDate: day(5, 1) }), [], pets, NOW, URL)).toEqual([]);
+    expect(doseAgenda(course({ startDate: day(5, 15), days: 1 }), [], pets, NOW, URL).map((d) => d.ref)).toEqual(['dose:course-1:2031-05-15:0', 'dose:course-1:2031-05-15:1']);
   });
 });
 
@@ -191,16 +228,16 @@ describe('feeding', () => {
     expect(list[0].items).toEqual([
       {
         kind: 'feeding',
-        title: 'Pepper: AM',
+        title: 'Feed Pepper · AM',
         start: mealAt('09:00', NOW),
         allDay: false,
         detail: 'Lamb kibble, 1 cup',
-        url: `${URL}/?tab=pets&pet=pet-pepper`,
+        url: `${URL}/`,
         who: 'Pepper',
         status: 'done',
       },
     ]);
-    expect(list[1].items[0]).toMatchObject({ title: 'Pepper: PM', start: mealAt('19:00', NOW), status: 'upcoming' });
+    expect(list[1].items[0]).toMatchObject({ title: 'Feed Pepper · PM', start: mealAt('19:00', NOW), status: 'upcoming' });
     expect(list[1].items[0]).not.toHaveProperty('detail');
     valid(list.flatMap((m) => m.items));
   });
@@ -220,6 +257,7 @@ describe('everything Pet publishes', () => {
     appointments: [appointment()],
     reminders: [reminder(), reminder({ id: 'rem-done', every: undefined, unit: undefined, lastDoneAt: at(5, 1) })],
     courses: [course()],
+    medDoses: [],
     meals,
     feedings: [fedAm],
   };
@@ -232,6 +270,10 @@ describe('everything Pet publishes', () => {
         'birthday:pet-juniper',
         'birthday:pet-pepper',
         'course:course-1',
+        'dose:course-1:2031-05-14:0',
+        'dose:course-1:2031-05-14:1',
+        'dose:course-1:2031-05-15:0',
+        'dose:course-1:2031-05-15:1',
         'meal:meal-am:2031-05-14',
         'meal:meal-pm:2031-05-14',
         'reminder:rem-1',
@@ -252,6 +294,10 @@ describe('everything Pet publishes', () => {
         'feeding meal:meal-am:2031-05-14',
         'feeding meal:meal-pm:2031-05-14',
         'medicine course:course-1',
+        'medicine dose:course-1:2031-05-14:0',
+        'medicine dose:course-1:2031-05-14:1',
+        'medicine dose:course-1:2031-05-15:0',
+        'medicine dose:course-1:2031-05-15:1',
       ].sort(),
     );
     for (const i of items) expect(() => agendaDoc('pet', i, BY, NOW)).not.toThrow();
@@ -264,6 +310,40 @@ describe('everything Pet publishes', () => {
 
   test('links default to the live app', () => {
     expect(tabUrl('care')).toBe('https://huishouden-pet.web.app/?tab=care');
-    expect(agendaItems(data, NOW).every((i) => i.url.startsWith('https://huishouden-pet.web.app/?tab='))).toBe(true);
+    expect(agendaItems(data, NOW).every((i) => i.url.startsWith('https://huishouden-pet.web.app/'))).toBe(true);
+  });
+
+  test('the course span has no status, so the portal shows it on the calendar but not on Today', () => {
+    expect(agendaByRef(data, NOW, URL).get('course:course-1')![0]).not.toHaveProperty('status');
+  });
+});
+
+describe('writes after a change', () => {
+  const data: AgendaData = { pets, appointments: [appointment()], reminders: [reminder()], courses: [course()], medDoses: [], meals, feedings: [] };
+  const writtenFrom = (d: AgendaData) => new Map([...agendaByRef(d, NOW, URL)].map(([ref, items]) => [ref, JSON.stringify(items)]));
+
+  test('nothing to write when nothing changed', () => {
+    expect(agendaChanges(writtenFrom(data), agendaByRef(data, NOW, URL))).toEqual({ replace: [], remove: [] });
+  });
+
+  test('ticking a meal rewrites only that meal, now done', () => {
+    const { replace, remove } = agendaChanges(writtenFrom(data), agendaByRef({ ...data, feedings: [fedAm] }, NOW, URL));
+    expect(replace.map(([ref]) => ref)).toEqual(['meal:meal-am:2031-05-14']);
+    expect(replace[0][1][0].status).toBe('done');
+    expect(remove).toEqual([]);
+  });
+
+  test('giving a dose rewrites only that dose, now done; un-ticking puts it back', () => {
+    const given = { ...data, medDoses: [givenAm] };
+    const tick = agendaChanges(writtenFrom(data), agendaByRef(given, NOW, URL));
+    expect(tick.replace.map(([ref]) => ref)).toEqual(['dose:course-1:2031-05-14:0']);
+    expect(tick.replace[0][1][0].status).toBe('done');
+    const untick = agendaChanges(writtenFrom(given), agendaByRef(data, NOW, URL));
+    expect(untick.replace.map(([ref, items]) => [ref, items[0].status])).toEqual([['dose:course-1:2031-05-14:0', 'upcoming']]);
+  });
+
+  test('a deleted course removes its span and its doses', () => {
+    const { remove } = agendaChanges(writtenFrom(data), agendaByRef({ ...data, courses: [] }, NOW, URL));
+    expect(remove.sort()).toEqual(['course:course-1', 'dose:course-1:2031-05-14:0', 'dose:course-1:2031-05-14:1', 'dose:course-1:2031-05-15:0', 'dose:course-1:2031-05-15:1']);
   });
 });

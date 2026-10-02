@@ -2,24 +2,30 @@
 
 Looking after the pets, together.
 
-The living-room tablet shows one board for every pet: who has been fed today and by whom, which
-medicine doses are given, and anything that is late, in the same place the household used to keep a
-paper chart. Below it are the care reminders coming due and the next vet visit. The rest of the app
-holds each pet's weight, records and the people who look after them, and everyone in the household
-sees and updates the same.
+Open it and the first thing you see answers "what needs doing for the pets right now?": every
+medicine dose, meal and care reminder that is due or late, most overdue first, each with one tap
+(Given, Fed) and Undo. When nothing is due it says so, and what is next. Below that are the rest of
+today, what is coming up (care due soon, visits, birthdays within three months), the day's feeding
+and medicine board, and the pets; tap a pet for its page, which holds its profile, weight, records,
+medicine courses and care. On a pet's birthday, Today and its page celebrate. Everyone in the
+household sees and updates the same.
 
 Live at https://huishouden-pet.web.app, also linked from the [Huishouden portal](https://huishouden-piekstra.web.app).
 Installable on the tablet, phones and laptops, and works offline (changes sync when the connection is back).
 
 ## Screenshots
 
-| Today | Care |
+| Today | Phone |
 |---|---|
-| ![The feeding and medicine board for each pet, care that needs attention and the next appointment](docs/screenshots/today.png) | ![Reminders grouped by overdue, this week and later](docs/screenshots/care.png) |
+| ![Needs doing: the overdue flea treatment, the late antibiotic and breakfast, each with one tap; a birthday card; later today and coming up](docs/screenshots/today.png) | ![Needs doing first on a phone](docs/screenshots/phone-today.png) |
 
-| A pet | Phone |
+| A pet | Birthday |
 |---|---|
-| ![Profile, feeding history, medicine course, care, weight chart and records](docs/screenshots/pet.png) | ![The board on a phone](docs/screenshots/phone-today.png) |
+| ![Profile, feeding history, medicine course, care, weight chart and records](docs/screenshots/pet.png) | ![The pet's page on its birthday](docs/screenshots/birthday.png) |
+
+| Care | |
+|---|---|
+| ![Reminders grouped by overdue, this week and later](docs/screenshots/care.png) | |
 
 | Appointments | Contacts |
 |---|---|
@@ -82,15 +88,17 @@ can read it, so it carries titles, pet names, places and doses, never notes:
 | Kind | From | Status |
 |---|---|---|
 | `appointment` | each appointment at its time, with its place; `who` is the pet, or the pets joined | none |
-| `due` (all day) | each care reminder's next due day, with how often ("Every month"); not a given one-off | `upcoming`, `overdue` once the day has passed |
-| `medicine` (all day) | each course, one item from its first day through its last ("1 tablet, twice a day, with food") | none |
+| `due` (all day) | each care reminder's next due day ("Heartworm prevention for Pepper"), with how often ("Every month"); not a given one-off | `upcoming`, `overdue` once the day has passed |
+| `medicine` (all day) | each course ("Antibiotic for Pepper"), one item from its first day through its last ("1 tablet, twice a day, with food"), for the calendar; with no status, the portal's Today leaves it out | none |
+| `medicine` | today's and tomorrow's doses at their times ("Antibiotic for Pepper", the dose as the detail), ref `dose:<courseId>:<day>:<slot>` | `done` once given, else `upcoming` |
 | `birthday` (all day) | a pet's next birthday within 180 days ("Pepper turns 5"); not for an approximate birth date | none |
-| `feeding` | today's meals at their times ("Pepper: AM"), with food and portion | `done` once fed today, else `upcoming` |
+| `feeding` | today's meals at their times ("Feed Pepper · AM"), with food and portion as the detail when set | `done` once fed today, else `upcoming` |
 
 Items cover 30 days back to 180 days ahead (overdue reminders whatever their age) and link to
-`?tab=care`, `?tab=appointments` or `?tab=pets&pet=<id>`. Logs (doses given, feeds, weights,
+Today (meals and doses), `?tab=care`, `?tab=appointments` or `?tab=pets&pet=<id>`. Logs (doses given, feeds, weights,
 records) stay in the app. Opening the app, and each new day, reconciles everything once every list
-has loaded; after that each changed record's items are replaced, and a deleted record's removed.
+has loaded; after that, two seconds after changes settle, each changed record's items are replaced
+(a tick on a meal or dose reaches the portal within seconds), and a deleted record's removed.
 The signed-out sample writes nothing. The mapping is `src/lib/agenda.ts`; the writes are
 `src/data/agendaSync.ts`.
 
