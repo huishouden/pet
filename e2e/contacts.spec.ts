@@ -66,3 +66,52 @@ test('an appointment with the vet takes their address and shows their phone', as
   await expect(row).toContainText('Miso');
   await expect(row.getByRole('link', { name: 'Call Example Vet Clinic, (555) 010-0150' })).toHaveAttribute('href', 'tel:5550100150');
 });
+
+// Businesses OpenStreetMap lacks: Google Maps' Share menu, a listing screenshot, or pasted text.
+
+test('a place shared from Google Maps opens a new contact, prefilled', async ({ page }) => {
+  const text = 'Example Animal Hospital\n1234 Example Ave, Springfield, IL 62704\nhttps://maps.app.goo.gl/example1';
+  await page.goto(`/?share_title=${encodeURIComponent('Example Animal Hospital')}&share_text=${encodeURIComponent(text)}`);
+  const dialog = page.getByRole('dialog', { name: 'New contact' });
+  await expect(dialog.getByLabel('Name')).toHaveValue('Example Animal Hospital');
+  await expect(dialog.getByLabel('Address')).toHaveValue('1234 Example Ave, Springfield, IL 62704');
+  await expect(dialog).toContainText('Filled in the name and address from what was shared. Check them before saving.');
+  await expect(page).toHaveURL(/\/\?tab=contacts$/);
+});
+
+test('the installed app is offered in the Share menu', async ({ request }) => {
+  const manifest = await (await request.get('/manifest.webmanifest')).json();
+  expect(manifest.share_target).toEqual({
+    action: '/',
+    method: 'GET',
+    enctype: 'application/x-www-form-urlencoded',
+    params: { title: 'share_title', text: 'share_text', url: 'share_url' },
+  });
+});
+
+test('pasted listing text fills the contact and shows what was not used', async ({ page }) => {
+  await page.goto('/?tab=contacts');
+  await page.getByRole('button', { name: 'Add contact' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New contact' });
+  await dialog.getByRole('button', { name: 'Paste listing text' }).click();
+  await dialog.getByLabel('Listing text').fill('Example Pet Hospital\n4.7 (210)\nVeterinarian · 1.2 mi\n55 Example Rd, Springfield, IL 62704\n(555) 010-0177\nexample.com\n"So kind to our old cat."');
+  await dialog.getByRole('button', { name: 'Fill in' }).click();
+  await expect(dialog.getByLabel('Name')).toHaveValue('Example Pet Hospital');
+  await expect(dialog.getByLabel('Phone')).toHaveValue('(555) 010-0177');
+  await expect(dialog.getByLabel('Website')).toHaveValue('https://example.com');
+  await expect(dialog).toContainText('Not used:');
+  await expect(dialog).toContainText('So kind to our old cat.');
+});
+
+test('a Google Maps screenshot is read on the device and fills the contact', async ({ page }) => {
+  test.setTimeout(120_000); // the OCR engine downloads on first use
+  await page.goto('/?tab=contacts');
+  await page.getByRole('button', { name: 'Add contact' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New contact' });
+  await expect(dialog).toContainText('Take a screenshot of the business in Google Maps, then choose it here.');
+  await dialog.getByLabel('Screenshot of the business').setInputFiles('e2e/fixtures/listing-screenshot.png');
+  await expect(dialog.getByLabel('Name')).toHaveValue('Maple Grove Animal Hospital', { timeout: 100_000 });
+  await expect(dialog.getByLabel('Address')).toHaveValue('1234 Elm St, Springfield, IL 62704');
+  await expect(dialog.getByLabel('Phone')).toHaveValue('(217) 555-0142');
+  await expect(dialog.getByLabel('Website')).toHaveValue('https://maplegrove.example.com');
+});
