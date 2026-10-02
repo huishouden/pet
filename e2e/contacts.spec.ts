@@ -99,7 +99,8 @@ test('pasted listing text fills the contact and shows what was not used', async 
   await expect(dialog.getByLabel('Name')).toHaveValue('Example Pet Hospital');
   await expect(dialog.getByLabel('Phone')).toHaveValue('(555) 010-0177');
   await expect(dialog.getByLabel('Website')).toHaveValue('https://example.com');
-  await expect(dialog).toContainText('Not used:');
+  // Lines the fill didn't use are folded away (pwa-kit 0.28.1), one tap from view.
+  await dialog.getByText("Show the text that wasn't used").click();
   await expect(dialog).toContainText('So kind to our old cat.');
 });
 
