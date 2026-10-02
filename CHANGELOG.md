@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/huishouden/pet/compare/v1.3.0...v1.4.0) (2026-10-02)
+
+
+### Features
+
+* Today leads with what needs doing for the pets right now ([#19](https://github.com/huishouden/pet/issues/19)) ([ae9b66e](https://github.com/huishouden/pet/commit/ae9b66e5c173ae90588b05c3b88be8bababdacfc))
+
 ## [1.3.0](https://github.com/huishouden/pet/compare/v1.2.0...v1.3.0) (2026-10-02)
 
 
