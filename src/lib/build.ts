@@ -3,6 +3,7 @@
 
 import type { AppointmentData, AppointmentKind, CourseData, DoseData, FeedingData, MealData, MedDoseData, PetData, RecordData, ReminderData, ReminderKind, Species, WeightData } from './model';
 import { LIMITS, type PetPhotoData } from './model';
+import { giversFields } from '@huishouden/pwa-kit/roles';
 import { isPhotoDataUrl } from '@huishouden/pwa-kit/photo';
 import { isRecurring, type Unit } from './schedule';
 import { isYmd } from '@huishouden/pwa-kit/time';
@@ -100,6 +101,8 @@ export interface AppointmentInput {
   contactId?: string;
   calendarEventId?: string;
   calendarLink?: string;
+  /** Only admins and members. */
+  private?: boolean;
 }
 
 export function appointmentDoc(a: AppointmentInput, by: string, createdAt: number): AppointmentData {
@@ -113,6 +116,8 @@ export function appointmentDoc(a: AppointmentInput, by: string, createdAt: numbe
     contactId: a.contactId || undefined,
     calendarEventId: a.calendarEventId || undefined,
     calendarLink: a.calendarLink && /^https:\/\//.test(a.calendarLink) ? a.calendarLink : undefined,
+    // Always written: one without the flag counts as private to helpers and kids.
+    private: a.private === true,
     createdAt: Math.round(createdAt),
     by,
   });
@@ -186,7 +191,14 @@ export function feedingDoc(f: FeedingInput, by: string, createdAt: number, updat
   });
 }
 
-export type CourseInput = Omit<CourseDraft, 'days' | 'withFood' | 'notes'> & { petId: string; days: number; withFood: boolean; notes?: string };
+export type CourseInput = Omit<CourseDraft, 'days' | 'withFood' | 'notes'> & {
+  petId: string;
+  days: number;
+  withFood: boolean;
+  notes?: string;
+  givers?: 'all' | 'approved';
+  approvedHelpers?: string[];
+};
 
 export function courseDoc(c: CourseInput, by: string, createdAt: number, updatedAt?: number): CourseData {
   const times = [...new Set(c.times.filter(isMealTime))].sort().slice(0, MAX_TIMES_PER_DAY);
@@ -202,6 +214,7 @@ export function courseDoc(c: CourseInput, by: string, createdAt: number, updated
     days: Math.min(Math.max(1, Math.round(c.days)), MAX_COURSE_DAYS),
     withFood: !!c.withFood,
     notes: trimmed(c.notes, LIMITS.courseNotes),
+    ...giversFields(c.givers ?? 'all', c.approvedHelpers),
     createdAt: Math.round(createdAt),
     updatedAt: updatedAt === undefined ? undefined : Math.round(updatedAt),
     by,

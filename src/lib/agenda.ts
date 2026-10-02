@@ -58,6 +58,8 @@ export function appointmentAgenda(a: Appointment, pets: Pick<Pet, 'id' | 'name'>
         ...(location ? { detail: location } : {}),
         url: tabUrl('appointments', a.petIds.length === 1 ? a.petIds[0] : undefined, appUrl),
         ...(who ? { who } : {}),
+        // A private appointment stays private on the agenda: helpers and kids never read it.
+        ...(a.private ? { private: true } : {}),
       },
     ],
     now,

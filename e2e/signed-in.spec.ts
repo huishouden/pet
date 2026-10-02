@@ -1,10 +1,16 @@
 import { expect, test, type Page } from '@playwright/test';
 import { signInTestUser } from '@huishouden/pwa-kit/e2e';
+import { seedTestHousehold } from '@huishouden/pwa-kit/staging';
 
 // Signed in as an invented test user on the staging site (pwa-kit STANDARD.md "Staging"): the real
 // staging Firestore and rules, the seeded test household. Other runs share that household and it
 // keeps its data, so the test adds its pet only once and starts from an unticked meal.
 test.skip(!process.env.HH_STAGING_SA, 'signed-in tests run against staging, in CI');
+
+// Another app's run may have reseeded the household with an older kit, without the helper.
+test.beforeAll(async () => {
+  if (process.env.HH_STAGING_ACCESS_TOKEN) await seedTestHousehold({ accessToken: process.env.HH_STAGING_ACCESS_TOKEN });
+});
 
 const PET = 'Test pet';
 const board = (page: Page) => page.getByRole('region', { name: 'Feeding' });
@@ -50,4 +56,57 @@ test('the morning feed one member ticks shows as fed for the other', async ({ pa
   } finally {
     await other.close();
   }
+});
+
+const PILL = 'Restricted pill';
+const pill = (page: Page) => board(page).getByRole('button', { name: new RegExp(`^${PET} ${PILL}`) }).first();
+
+/** test-a's year-long course for the test pet that only approved helpers may give (none are). */
+async function restrictedCourse(page: Page) {
+  await openBoard(page);
+  if ((await pill(page).count()) > 0) return;
+  await page.getByRole('button', { name: 'Pets', exact: true }).click();
+  await page.getByRole('button', { name: PET }).first().click();
+  await page.getByRole('region', { name: `${PET}'s medicine` }).getByRole('button', { name: 'Add course' }).click();
+  const dialog = page.getByRole('dialog', { name: `Medicine course for ${PET}` });
+  await dialog.getByLabel('Medicine', { exact: true }).fill(PILL);
+  await dialog.getByPlaceholder('1 tablet').fill('1 tablet');
+  await dialog.getByLabel('Number of days').fill('365');
+  await dialog.getByText('Only approved helpers').click();
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await expect(pill(page)).toBeVisible({ timeout: 20_000 });
+}
+
+test('a helper is refused a course only approved helpers give, and logs a feed', async ({ page, browser }) => {
+  const admin = await browser.newContext({ baseURL: test.info().project.use.baseURL });
+  try {
+    const theirs = await admin.newPage();
+    await signInTestUser(theirs, { email: 'test-a@example.com' });
+    await restrictedCourse(theirs);
+  } finally {
+    await admin.close();
+  }
+
+  await signInTestUser(page, { email: 'test-helper@example.com' });
+  await openBoard(page);
+  // Refused: the dose, in words, and nothing written.
+  await expect(pill(page)).toBeVisible({ timeout: 20_000 });
+  const before = await pill(page).getAttribute('aria-label');
+  await pill(page).click();
+  await expect(page.getByText(`Only approved helpers can give ${PILL}.`)).toBeVisible();
+  await expect(pill(page)).toHaveAttribute('aria-label', before!);
+
+  // Permitted: a feed of their own, saved by the rules (no error toast) and shown as theirs.
+  const note = `Helper feed ${Date.now()}`;
+  await page.getByRole('button', { name: 'Pets', exact: true }).click();
+  await page.getByRole('button', { name: PET }).first().click();
+  await page.getByRole('region', { name: `${PET}'s feeding` }).getByRole('button', { name: 'Log a feed' }).click();
+  const dialog = page.getByRole('dialog', { name: `Log a feed for ${PET}` });
+  await dialog.getByLabel('Note (optional)').fill(note);
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText(/^Logged a feed at/)).toBeVisible();
+  await expect(page.getByText(/only admins and members can do that/)).toHaveCount(0);
+  await page.waitForTimeout(3000);
+  await expect(page.getByText(/only admins and members can do that/)).toHaveCount(0);
 });

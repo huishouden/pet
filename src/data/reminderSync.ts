@@ -11,7 +11,7 @@ import { db } from './firebase';
  * day turns. Only refs whose reminders changed since the last write are rewritten, and refs whose
  * course or pet disappeared are cancelled.
  */
-export function useReminderSync(householdId: string, me: string, data: PetHouseholdData, ready: boolean, onError: (message: string) => void) {
+export function useReminderSync(householdId: string, me: string, data: PetHouseholdData, ready: boolean, onError: (message: string) => void, restricted = false) {
   const written = useRef(new Map<string, string>());
   const errorRef = useRef(onError);
   errorRef.current = onError;
@@ -32,7 +32,7 @@ export function useReminderSync(householdId: string, me: string, data: PetHouseh
         if (written.current.get(ref) === signature) continue;
         written.current.set(ref, signature);
         jobs.push(
-          replaceReminders(db, householdId, ref, list, me, now).catch((e) => {
+          replaceReminders(db, householdId, ref, list, me, now, { restricted }).catch((e) => {
             written.current.delete(ref);
             throw e;
           }),
@@ -41,10 +41,10 @@ export function useReminderSync(householdId: string, me: string, data: PetHouseh
       for (const ref of [...written.current.keys()]) {
         if (wanted.has(ref)) continue;
         written.current.delete(ref);
-        jobs.push(cancelReminders(db, householdId, ref));
+        jobs.push(cancelReminders(db, householdId, ref, { restricted }));
       }
       Promise.all(jobs).catch(() => errorRef.current("Couldn't update the notifications. They will catch up next time Pet opens."));
     }, 2000);
     return () => clearTimeout(id);
-  }, [householdId, me, ready, day, data.courses, data.medDoses, data.pets, data.meals, data.feedings]);
+  }, [householdId, me, restricted, ready, day, data.courses, data.medDoses, data.pets, data.meals, data.feedings]);
 }

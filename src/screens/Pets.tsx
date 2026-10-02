@@ -14,6 +14,7 @@ import type { Open } from '../PetApp';
 import { PetAvatar, PetChips } from '../components/PetAvatar';
 import { WeightChart } from '../components/WeightChart';
 import { FeedingCard, MedicineCard } from '../components/PetFeedingCards';
+import { permissions } from '../lib/permissions';
 import { ReminderRow } from './Care';
 import { cardClass, ghostButton, iconButton, overline, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
@@ -64,6 +65,7 @@ function PetDetail({ pet, pets, store, open, now, onGive, notify }: {
     now,
   );
   const weights = store.data.weights.filter((w) => w.petId === pet.id);
+  const perms = permissions(store.role, store.me);
   const last = latest(weights);
   const t = trend(weights, pet.weightUnit);
   const TrendIcon = t?.direction === 'up' ? TrendingUp : t?.direction === 'down' ? TrendingDown : MoveRight;
@@ -136,7 +138,7 @@ function PetDetail({ pet, pets, store, open, now, onGive, notify }: {
       </div>
 
       <div className="flex flex-col gap-5">
-        <MedicineCard pet={pet} courses={store.data.courses} medDoses={store.data.medDoses} now={now} open={open} />
+        <MedicineCard pet={pet} courses={store.data.courses} medDoses={store.data.medDoses} now={now} open={open} perms={perms} />
         <section className={`${cardClass} p-6`} aria-label={`${pet.name}'s care`}>
           <div className="flex items-center justify-between gap-4">
             <h3 className={overline}>Care</h3>
@@ -194,7 +196,7 @@ function PetDetail({ pet, pets, store, open, now, onGive, notify }: {
                 <li key={w.id} className="flex min-h-11 items-center gap-3 border-b border-stone-200 last:border-b-0">
                   <span className="w-32 shrink-0 text-base text-stone-600">{formatDateShort(w.at)}</span>
                   <span className="flex-1 text-base font-medium text-stone-800 tabular-nums">{formatWeight(convert(w.value, w.unit, pet.weightUnit), pet.weightUnit)}</span>
-                  <button
+                  {perms.mayChange(w) && <button
                     type="button"
                     className={iconButton}
                     aria-label={`Delete the weighing on ${formatDayShort(w.at)}`}
@@ -204,7 +206,7 @@ function PetDetail({ pet, pets, store, open, now, onGive, notify }: {
                     }}
                   >
                     <X size={18} />
-                  </button>
+                  </button>}
                 </li>
               ))}
             </ul>

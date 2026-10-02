@@ -134,3 +134,48 @@ test('scan the label', async ({ page }) => {
     },
   });
 });
+
+// Roles: the sample seen by its admin (who chooses who may give a course, and what is private) and
+// by Jo, its helper (`?as=helper`): no course set-up, no deleting what others logged, and a dose
+// only approved helpers may give refused in words.
+test('who can give a course', ({ page }) =>
+  captureScreenshot(page, 'course-givers', {
+    path: '/?tab=pets&pet=demo-pet-biscuit',
+    fixedTime,
+    prepare: async (p) => {
+      await p.getByRole('button', { name: 'Edit Antibiotic' }).click();
+      await expect(p.getByText('Who can give it')).toBeVisible();
+      await p.getByText('Who can give it').scrollIntoViewIfNeeded();
+    },
+  }));
+
+test('a private appointment', ({ page }) =>
+  captureScreenshot(page, 'appointment-private', {
+    path: '/?tab=appointments',
+    fixedTime,
+    prepare: async (p) => {
+      await p.getByRole('button', { name: /^Add appointment|^New appointment|^Add$/ }).first().click();
+      await p.getByText('Only admins and members').click();
+      await p.getByText('Helpers and kids won’t see it.').scrollIntoViewIfNeeded();
+    },
+  }));
+
+test('a helper’s pet page', ({ page }) =>
+  captureScreenshot(page, 'helper-pet', {
+    path: '/?tab=pets&pet=demo-pet-biscuit&as=helper',
+    fixedTime,
+    prepare: async (p) => {
+      await expect(p.getByText('Only approved helpers can give Antibiotic.')).toBeVisible();
+      await p.getByText('Only approved helpers can give Antibiotic.').scrollIntoViewIfNeeded();
+    },
+  }));
+
+test('a helper’s refused dose', ({ page }) =>
+  captureScreenshot(page, 'helper-dose-refused', {
+    path: '/?as=helper',
+    fixedTime,
+    prepare: async (p) => {
+      await p.getByRole('button', { name: /^Biscuit Antibiotic/ }).first().click();
+      await expect(p.getByText('Only approved helpers can give Antibiotic.')).toBeVisible();
+    },
+  }));

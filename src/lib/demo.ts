@@ -12,6 +12,14 @@ import { toYmd } from '@huishouden/pwa-kit/time';
 export const DEMO_NOW = new Date(2031, 4, 14, 10, 30).getTime();
 
 export const DEMO_MEMBERS = ['sam@example.com', 'alex@example.com'];
+/** The sample household's helper (a pet sitter), for `?as=helper` and `?as=kid`. */
+export const DEMO_HELPER = 'jo@example.com';
+
+/** Whose eyes the sample is seen through: the admin, or `?as=helper` / `?as=kid`. */
+export function demoRole(search: string): 'admin' | 'helper' | 'kid' {
+  const as = new URLSearchParams(search).get('as');
+  return as === 'helper' || as === 'kid' ? as : 'admin';
+}
 const [SAM, ALEX] = DEMO_MEMBERS;
 
 export interface PetHouseholdData {
@@ -241,6 +249,9 @@ function courses(): Course[] {
       days: 7,
       withFood: true,
       notes: 'For the ear infection. Finish the whole course.',
+      // Only helpers the household approves give it; the sample's helper, Jo, isn't one.
+      givers: 'approved',
+      approvedHelpers: [],
       createdAt: on(5, 12, '09:00'),
       by: SAM,
     },

@@ -36,6 +36,9 @@ import { Care } from './screens/Care';
 import { Appointments } from './screens/Appointments';
 import { Pets } from './screens/Pets';
 import { Contacts } from './screens/Contacts';
+import { COURSE_REFUSAL, permissions } from './lib/permissions';
+import { helpersOf, refusal } from '@huishouden/pwa-kit/roles';
+import { personName } from '@huishouden/pwa-kit/people';
 
 export type TabId = 'today' | 'care' | 'appointments' | 'pets' | 'contacts';
 
@@ -106,6 +109,12 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   const photos = useMemo(() => new Map(store.data.photos.map((p) => [p.id, p.data])), [store.data.photos]);
   const calendar = calendarAvailable(user);
   const { actions } = store;
+  const perms = useMemo(() => permissions(store.role, store.me), [store.role, store.me]);
+  /** Opens a record's dialog, or says why not: helpers and kids change only what they added. */
+  const editable = <T extends { by?: string }>(record: T | null, then: () => void) => {
+    if (record && !perms.mayChange(record)) notify(refusal('edit-others'));
+    else then();
+  };
   // Birthday events keep their own flow (Set birthday in Import from calendar), so they are never suggested as visits.
   const suggested = useCalendarSuggestions({
     auth,
@@ -140,15 +149,15 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
 
   const open: Open = {
     tab: chooseTab,
-    pet: (pet, birthday) => setPetDialog({ pet, birthday }),
-    reminder: (r, petId) => setReminder({ reminder: r, petId }),
-    appointment: (a, petId) => setAppointment({ appointment: a, petId }),
+    pet: (pet, birthday) => editable(pet, () => setPetDialog({ pet, birthday })),
+    reminder: (r, petId) => editable(r, () => setReminder({ reminder: r, petId })),
+    appointment: (a, petId) => editable(a, () => setAppointment({ appointment: a, petId })),
     weight: (petId) => setWeightFor(petId),
-    record: (r, petId) => setRecord({ record: r, petId }),
-    contact: (c, role) => setContact({ contact: c, role }),
-    meal: (m, petId) => setMeal({ meal: m, petId }),
-    feeding: (f, petId) => setFeeding({ feeding: f, petId }),
-    course: (c, petId) => setCourse({ course: c, petId }),
+    record: (r, petId) => editable(r, () => setRecord({ record: r, petId })),
+    contact: (c, role) => editable(c, () => setContact({ contact: c, role })),
+    meal: (m, petId) => editable(m, () => setMeal({ meal: m, petId })),
+    feeding: (f, petId) => editable(f, () => setFeeding({ feeding: f, petId })),
+    course: (c, petId) => (perms.managesCourses ? setCourse({ course: c, petId }) : notify(COURSE_REFUSAL)),
     doseLog: (c) => {
       setBackfill(null);
       setDoseLog(c.id);
@@ -160,6 +169,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   };
 
   const give = (r: Reminder) => {
+    if (!perms.givesCare) return notify(refusal('give-medicine'));
     const dose = actions.giveDose(r, read());
     const pet = pets.find((p) => p.id === r.petId);
     const next = isRecurring(r) ? parseYmd(markGiven(r, dose.at).due) : null;
@@ -181,6 +191,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
     const past = startOfDay(day) < startOfDay(at);
     const done = fedTodayFor(store.data.feedings, m.id, past ? day : at);
     const when = onDay(toYmd(day));
+    if (done.some((f) => !perms.mayChange(f))) return notify(refusal('edit-others'));
     if (done.length) {
       actions.deleteFeedings(done);
       notify(`${pet.name} ${m.name}${when}: not fed`, () => actions.restoreFeedings(done));
@@ -195,6 +206,8 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
     const past = d < toYmd(at);
     const done = givenOnFor(store.data.medDoses, c.id, slot, d);
     const who = pet ? `${pet.name} ${c.name}` : c.name;
+    if (!perms.mayGiveCourse(c)) return notify(perms.courseRefusal(c));
+    if (done.some((x) => !perms.mayChange(x))) return notify(refusal('edit-others'));
     if (done.length) {
       actions.deleteMedDoses(done);
       notify(`${who}${onDay(d)}: not given`, () => actions.restoreMedDoses(done));
@@ -269,7 +282,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
             }
           }}
           onDelete={
-            petDialog.pet
+            petDialog.pet && perms.mayChange(petDialog.pet)
               ? () => {
                   const bundle = actions.removePet(petDialog.pet!);
                   if (shownPet === bundle.pet.id) setShownPet(null);
@@ -312,6 +325,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           now={now}
           contacts={store.data.contacts}
           calendarAvailable={calendar}
+          canMarkPrivate={perms.seesPrivate}
           onClose={() => setAppointment(null)}
           onSave={(input) => {
             actions.saveAppointment(appointment.appointment?.id ?? null, input);
@@ -371,6 +385,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           prefill={contact.prefill}
           searchPlaceholder="Clinic or business, and town"
           namePlaceholder="Example Vet Clinic"
+          canMarkPrivate={perms.seesPrivate}
           onClose={() => setContact(null)}
           onSave={(input) => {
             actions.saveContact(contact.contact?.id ?? null, input);
@@ -439,6 +454,8 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           pet={pets.find((p) => p.id === course.petId)}
           meals={store.data.meals}
           now={now}
+          helpers={helpersOf(store.household)}
+          nameOf={(email) => personName(email)}
           onClose={() => setCourse(null)}
           onSave={(input) => {
             const id = actions.saveCourse(course.course?.id ?? null, input);
