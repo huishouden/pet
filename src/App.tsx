@@ -9,7 +9,7 @@ import { DEMO_NOW } from './lib/demo';
 import { ClockProvider } from '@huishouden/pwa-kit/react/clock';
 import { PetApp } from './PetApp';
 import { Header } from './components/Header';
-import { cardClass, primaryButton, useToast } from '@huishouden/pwa-kit/react/ui';
+import { cardClass, primaryButton, SampleBanner, useToast } from '@huishouden/pwa-kit/react/ui';
 import { PORTAL_URL } from './lib/portal';
 import { NotificationsCard, VAPID_PUBLIC_KEY } from './components/NotificationsCard';
 
@@ -122,12 +122,7 @@ function DemoApp({ signInError, ...frame }: FrameProps & { signInError: string |
 function DemoInner({ read, signInError, ...frame }: FrameProps & { read: () => number; signInError: string | null }) {
   const { toast, notify, clear } = useToast();
   const store = useDemoStore(read);
-  const banner = (
-    <div className={`${cardClass} flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2`} role="note">
-      <span className="rounded-full bg-terracotta-light px-3 py-1 text-sm font-semibold text-terracotta-dark">Sample data</span>
-      <p className="min-w-0 flex-1 text-base text-stone-600">{signInError ?? 'Two invented pets. Nothing is saved. Sign in to use your household’s own.'}</p>
-    </div>
-  );
+  const banner = <SampleBanner text="Two invented pets. Nothing is saved. Sign in to use your household’s own." notice={signInError ?? undefined} />;
   return <PetApp store={store} user={null} {...frame} toast={toast} notify={notify} clearToast={clear} banner={banner} />;
 }
 
