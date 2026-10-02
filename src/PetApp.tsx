@@ -19,6 +19,7 @@ import { AppointmentDialog } from './components/AppointmentDialog';
 import { WeightDialog } from './components/WeightDialog';
 import { RecordDialog } from './components/RecordDialog';
 import { ContactDialog } from '@huishouden/pwa-kit/react/contacts';
+import { clearSharedPlace, readSharedPlace, type ParsedPlace } from '@huishouden/pwa-kit/places';
 import { APP, ROLES } from './lib/contacts';
 import { MealDialog } from './components/MealDialog';
 import { FeedingDialog } from './components/FeedingDialog';
@@ -79,13 +80,17 @@ export interface Open {
 /** Everything inside the frame once there is data to show (live or sample). */
 export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, notify, clearToast, banner, deviceSettings }: Props) {
   const { now, read } = useClock();
-  const [tab, setTab] = useState<TabId>(() => initialTab());
+  // Opened from another app's Share menu (Google Maps → Share → Pet): a new contact, prefilled.
+  const [shared] = useState(() => readSharedPlace(location));
+  const [tab, setTab] = useState<TabId>(() => (shared ? 'contacts' : initialTab()));
   const [petDialog, setPetDialog] = useState<{ pet: Pet | null; birthday?: BirthdayGuess } | null>(null);
   const [reminder, setReminder] = useState<{ reminder: Reminder | null; petId?: string } | null>(null);
   const [appointment, setAppointment] = useState<{ appointment: Appointment | null; petId?: string } | null>(null);
   const [weightFor, setWeightFor] = useState<string | null>(null);
   const [record, setRecord] = useState<{ record: PetRecord | null; petId: string } | null>(null);
-  const [contact, setContact] = useState<{ contact: Contact | null; role?: string } | null>(null);
+  const [contact, setContact] = useState<{ contact: Contact | null; role?: string; prefill?: ParsedPlace } | null>(() =>
+    shared ? { contact: null, prefill: shared.place } : null,
+  );
   const [shownPet, setShownPet] = useState<string | null>(() => new URLSearchParams(location.search).get('pet'));
   const [meal, setMeal] = useState<{ meal: Meal | null; petId: string } | null>(null);
   const [feeding, setFeeding] = useState<{ feeding: Feeding | null; petId: string } | null>(null);
@@ -101,6 +106,12 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   useEffect(() => {
     document.title = 'Huishouden Pet';
   }, []);
+
+  useEffect(() => {
+    if (!shared) return;
+    clearSharedPlace();
+    chooseTab('contacts');
+  }, [shared]);
 
   const chooseTab = (id: TabId) => {
     setTab(id);
@@ -329,6 +340,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           app={APP}
           roles={ROLES}
           role={contact.role}
+          prefill={contact.prefill}
           searchPlaceholder="Clinic or business, and town"
           namePlaceholder="Example Vet Clinic"
           onClose={() => setContact(null)}

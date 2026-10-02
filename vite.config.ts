@@ -24,6 +24,7 @@ export default defineConfig({
       url: 'https://huishouden-pet.web.app',
       push: true,
       ocr: true,
+      shareTarget: true,
       themeColor: '#1b4332',
       backgroundColor: '#faf9f5',
       includeAssets: ['icon.svg', 'apple-touch-icon.png', 'og.png'],
