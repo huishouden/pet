@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.0](https://github.com/huishouden/pet/compare/v1.5.1...v1.6.0) (2026-10-02)
+
+
+### Features
+
+* error, speed and anonymous usage reports (pwa-kit observability) ([#23](https://github.com/huishouden/pet/issues/23)) ([8458dad](https://github.com/huishouden/pet/commit/8458dad41f916036eaae9e4475cb37dab764ec51))
+* **roles:** helpers and kids in Pet: who can give a course, private appointments, own records only ([#27](https://github.com/huishouden/pet/issues/27)) ([277efef](https://github.com/huishouden/pet/commit/277efefdb5cf36de43870cf3ff5a1d30b6686065))
+
 ## [1.5.1](https://github.com/huishouden/pet/compare/v1.5.0...v1.5.1) (2026-10-02)
 
 
