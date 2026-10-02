@@ -75,6 +75,25 @@ household's `reminders` collection (`@huishouden/pwa-kit/reminders`), which the 
 delivers as notifications to each member who turned them on for a device (Care, "Notifications on
 this device", shown once the repo has `VITE_VAPID_PUBLIC_KEY`).
 
+Pet also publishes to the household agenda (`households/{householdId}/agenda`, app `pet`, through
+`@huishouden/pwa-kit/agenda`), which the portal shows as one calendar and a Today view. Every member
+can read it, so it carries titles, pet names, places and doses, never notes:
+
+| Kind | From | Status |
+|---|---|---|
+| `appointment` | each appointment at its time, with its place; `who` is the pet, or the pets joined | none |
+| `due` (all day) | each care reminder's next due day, with how often ("Every month"); not a given one-off | `upcoming`, `overdue` once the day has passed |
+| `medicine` (all day) | each course, one item from its first day through its last ("1 tablet, twice a day, with food") | none |
+| `birthday` (all day) | a pet's next birthday within 180 days ("Pepper turns 5"); not for an approximate birth date | none |
+| `feeding` | today's meals at their times ("Pepper: AM"), with food and portion | `done` once fed today, else `upcoming` |
+
+Items cover 30 days back to 180 days ahead (overdue reminders whatever their age) and link to
+`?tab=care`, `?tab=appointments` or `?tab=pets&pet=<id>`. Logs (doses given, feeds, weights,
+records) stay in the app. Opening the app, and each new day, reconciles everything once every list
+has loaded; after that each changed record's items are replaced, and a deleted record's removed.
+The signed-out sample writes nothing. The mapping is `src/lib/agenda.ts`; the writes are
+`src/data/agendaSync.ts`.
+
 Find in my calendar and Import from calendar read Google Calendar (read-only) through
 `@huishouden/pwa-kit/calendar`; Google asks once for permission the first time. Find a business looks
 places up on OpenStreetMap (`@huishouden/pwa-kit/places`), only when Search is pressed. A pet's birthday can come
