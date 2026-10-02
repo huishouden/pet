@@ -54,7 +54,11 @@ accept nothing else.
 | `petWeights` | petId, at, value, unit, by, createdAt |
 | `petRecords` | petId, title, date, text, createdAt, updatedAt, by |
 
-The daily board is not stored: it is today's feeds and doses, so it starts empty each morning. New
+The daily board is not stored: it is today's feeds and doses, so it starts empty each morning.
+Yesterday switches it to the day before, and a course's "Doses by day" lists every day from its
+start; ticking an earlier day logs the feed or dose at its own time that day (a dose's time can be
+changed after). A course saved with a start date in the past offers to mark the doses already
+given. A course day is complete when all its doses were given. New
 pets start with an AM and a PM meal. Contacts live in the household-wide `contacts` collection
 shared by every app (`@huishouden/pwa-kit/contacts`); Pet shows those whose `apps` include `pet`.
 The Firestore rules live in the repo that owns the project's rules file

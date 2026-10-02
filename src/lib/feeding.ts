@@ -43,11 +43,16 @@ export function mealsOf<M extends MealLike>(meals: M[], petId: string): M[] {
  * not yet due, or late (its time has passed and nobody has logged it).
  */
 export function todaysMeals<M extends MealLike, F extends FeedingLike>(meals: M[], feedings: F[], petId: string, now: number): { meal: M; status: MealStatus<F> }[] {
-  const today = startOfDay(now);
-  const fedToday = feedings.filter((f) => f.petId === petId && f.mealId && startOfDay(f.at) === today);
+  return mealsOn(meals, feedings, petId, now, now);
+}
+
+/** Each of the pet's meals on the day of `day` (today, or an earlier day being filled in), as `todaysMeals`. */
+export function mealsOn<M extends MealLike, F extends FeedingLike>(meals: M[], feedings: F[], petId: string, day: number, now: number): { meal: M; status: MealStatus<F> }[] {
+  const start = startOfDay(day);
+  const fedThatDay = feedings.filter((f) => f.petId === petId && f.mealId && startOfDay(f.at) === start);
   return mealsOf(meals, petId).map((meal) => {
-    const feeding = fedToday.filter((f) => f.mealId === meal.id).sort((a, b) => b.at - a.at)[0];
-    const at = mealAt(meal.time, now);
+    const feeding = fedThatDay.filter((f) => f.mealId === meal.id).sort((a, b) => b.at - a.at)[0];
+    const at = mealAt(meal.time, day);
     if (feeding) return { meal, status: { state: 'fed', feeding, at: feeding.at } };
     return { meal, status: { state: now > at ? 'late' : 'due', at } };
   });
@@ -109,8 +114,8 @@ export function defaultMeals(petId: string): (MealLike & { time: string })[] {
   ];
 }
 
-/** Today's feeds for one meal: what un-ticking it removes. */
-export function fedTodayFor<F extends FeedingLike>(feedings: F[], mealId: string, now: number): F[] {
-  const today = startOfDay(now);
-  return feedings.filter((f) => f.mealId === mealId && startOfDay(f.at) === today);
+/** One meal's feeds on the day of `day` (today's, by default): what un-ticking it removes. */
+export function fedTodayFor<F extends FeedingLike>(feedings: F[], mealId: string, day: number): F[] {
+  const start = startOfDay(day);
+  return feedings.filter((f) => f.mealId === mealId && startOfDay(f.at) === start);
 }

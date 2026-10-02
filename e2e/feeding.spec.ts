@@ -109,3 +109,64 @@ test('Scan the label fills the course from the photo and lists what it did not u
   await dialog.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('region', { name: "Miso's medicine" })).toContainText('Day 1 of 10');
 });
+
+test('a course that started yesterday: mark yesterday’s doses as given, at their times', async ({ page }) => {
+  await page.getByRole('button', { name: 'Pets', exact: true }).click();
+  await page.getByRole('button', { name: 'Miso', exact: true }).click();
+  await page.getByRole('region', { name: "Miso's medicine" }).getByRole('button', { name: 'Add course' }).click();
+  const form = page.getByRole('dialog', { name: 'Medicine course for Miso' });
+  await form.getByLabel('Medicine').fill('Eye drops');
+  await form.getByLabel('Dose', { exact: true }).fill('1 drop');
+  await form.getByLabel('First day').fill('2031-05-13');
+  await form.getByLabel('Number of days').fill('3');
+  await form.getByRole('button', { name: 'Save' }).click();
+
+  await expect(page.getByText('Started on Tuesday, May 13. Mark the doses already given?')).toBeVisible();
+  await page.getByRole('button', { name: 'Mark doses' }).click();
+  const log = page.getByRole('dialog', { name: 'Eye drops: doses by day' });
+  await expect(log).toContainText('Day 2 of 3 · 0 of 6 doses given · 0 of 3 days complete');
+  const day1 = log.getByRole('listitem', { name: 'Day 1, Tuesday, May 13' });
+  await expect(day1.getByRole('button', { name: /^Miso Eye drops AM on Tuesday, May 13: missed/ })).toContainText('Missed');
+
+  await day1.getByRole('button', { name: /^Miso Eye drops AM on Tuesday, May 13/ }).click();
+  await expect(day1.getByRole('button', { name: /^Miso Eye drops AM on Tuesday, May 13: given at 9:00 AM by You/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('Miso Eye drops yesterday: given at 9:00 AM')).toBeVisible();
+  await day1.getByRole('button', { name: /^Miso Eye drops PM on Tuesday, May 13/ }).click();
+  await expect(day1).toContainText('All given');
+  await expect(log).toContainText('2 of 6 doses given · 1 of 3 days complete');
+
+  // The PM dose was really given at 6:30.
+  await day1.getByRole('button', { name: 'Change the time of Eye drops PM on Tuesday, May 13' }).click();
+  await day1.getByLabel('Time Eye drops PM was given on Tuesday, May 13').fill('18:30');
+  await day1.getByRole('button', { name: 'Save' }).click();
+  await expect(day1.getByRole('button', { name: /^Miso Eye drops PM on Tuesday, May 13: given at 6:30 PM by You/ })).toBeVisible();
+
+  // Un-ticking puts it back to missed, with Undo.
+  await day1.getByRole('button', { name: /^Miso Eye drops AM on Tuesday, May 13: given/ }).click();
+  await expect(day1.getByRole('button', { name: /^Miso Eye drops AM on Tuesday, May 13: missed/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(day1.getByRole('button', { name: /^Miso Eye drops AM on Tuesday, May 13: given at 9:00 AM/ })).toBeVisible();
+
+  await log.getByRole('button', { name: 'Done' }).click();
+  await expect(page.getByRole('region', { name: "Miso's medicine" })).toContainText('2 of 6 doses given · 1 of 3 days complete');
+});
+
+test('the board switches to yesterday to tick a meal and a dose at their times', async ({ page }) => {
+  const board = page.getByRole('region', { name: 'Feeding' });
+  await board.getByRole('button', { name: 'Yesterday', exact: true }).click();
+  await expect(board).toContainText('Tuesday, May 13');
+  const miso = board.getByRole('button', { name: /^Miso PM yesterday/ });
+  await expect(miso).toBeVisible();
+  // The sample has Biscuit's antibiotic given both times on the 13th.
+  await expect(board.getByRole('button', { name: /^Biscuit Antibiotic PM yesterday: given at 6:05 PM/ })).toBeVisible();
+  const pm = board.getByRole('button', { name: /^Biscuit Antibiotic PM yesterday/ });
+  await pm.click();
+  await expect(board.getByRole('button', { name: /^Biscuit Antibiotic PM yesterday: missed/ })).toBeVisible();
+  await pm.click();
+  await expect(board.getByRole('button', { name: /^Biscuit Antibiotic PM yesterday: given at 7:00 PM by You/ })).toBeVisible();
+
+  await board.getByRole('button', { name: 'Today', exact: true }).click();
+  await expect(board.getByRole('button', { name: /^Biscuit Antibiotic PM: not yet, Day 3 of 7/ })).toBeVisible();
+  await board.getByRole('button', { name: "Doses by day for Biscuit's Antibiotic" }).click();
+  await expect(page.getByRole('dialog', { name: 'Antibiotic: doses by day' })).toContainText('Day 3 of 7 · 5 of 14 doses given · 2 of 7 days complete');
+});

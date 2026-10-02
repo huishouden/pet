@@ -1,4 +1,4 @@
-import { Pencil, Pill, Plus } from 'lucide-react';
+import { History, Pencil, Pill, Plus } from 'lucide-react';
 import type { Course, Feeding, Meal, MedDose, Pet } from '../lib/model';
 import { dailyCounts, mealsOf, recentFeedings } from '../lib/feeding';
 import { courseState, courseText, lastDay, progress, timesText } from '../lib/courses';
@@ -145,10 +145,15 @@ export function MedicineCard({ pet, courses, medDoses, now, open }: { pet: Pet; 
                 </p>
                 <p className="text-base text-stone-700">
                   <span className="font-semibold text-forest-700">{courseText(c, now)}</span> · {timesText(c.times.length)}
-                  {c.withFood ? ' with food' : ''} · {p.given} of {p.total} doses given
+                  {c.withFood ? ' with food' : ''} · {p.given} of {p.total} doses given · {p.daysComplete} of {p.days} days complete
                 </p>
                 <p className="text-base text-stone-600">Last dose {formatDateShort(parseYmd(lastDay(c))!)}</p>
                 {c.notes && <p className="text-base text-stone-600">{c.notes}</p>}
+                {courseState(c, now) === 'active' && (
+                  <button type="button" className={`${ghostButton} -ml-2 mt-1`} onClick={() => open.doseLog(c)} aria-label={`Doses by day for ${c.name}`}>
+                    <History size={18} /> Doses by day
+                  </button>
+                )}
               </div>
               <button type="button" className={iconButton} onClick={() => open.course(c, pet.id)} aria-label={`Edit ${c.name}`}>
                 <Pencil size={18} />
@@ -161,6 +166,9 @@ export function MedicineCard({ pet, courses, medDoses, now, open }: { pet: Pet; 
             <span className="min-w-0 flex-1 text-base text-stone-600">
               <span className="font-medium text-stone-800">{c.name}</span> · finished {formatDateShort(parseYmd(lastDay(c))!)} · {progress(c, medDoses).given} of {progress(c, medDoses).total} doses
             </span>
+            <button type="button" className={iconButton} onClick={() => open.doseLog(c)} aria-label={`Doses by day for ${c.name}`}>
+              <History size={18} />
+            </button>
             <button type="button" className={iconButton} onClick={() => open.course(c, pet.id)} aria-label={`Edit ${c.name}`}>
               <Pencil size={18} />
             </button>

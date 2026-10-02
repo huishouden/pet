@@ -106,6 +106,19 @@ describe('saving', () => {
     expect(h.data.weights[0].value).toBe(1.86);
   });
 
+  test('a dose ticked for an earlier day keeps that time; changing the time keeps who gave it', () => {
+    const h = harness(emptyData());
+    const petId = h.actions.savePet(null, { name: 'Pip', species: 'dog', weightUnit: 'kg' });
+    const courseId = h.actions.saveCourse(null, { petId, name: 'Antibiotic', dose: '1 tablet', timesPerDay: 2, times: ['09:00', '19:00'], startDate: '2031-05-13', days: 3, withFood: false });
+    const course = h.data.courses.find((c) => c.id === courseId)!;
+    const yesterdayPm = new Date(2031, 4, 13, 19).getTime();
+    const d = h.actions.giveMedDose(course, 1, yesterdayPm);
+    expect(d).toMatchObject({ at: yesterdayPm, by: 'sam@example.com', createdAt: DEMO_NOW });
+    h.actions.moveMedDose({ ...d, by: 'alex@example.com' }, yesterdayPm + 30 * 60_000);
+    expect(h.data.medDoses.find((x) => x.id === d.id)).toMatchObject({ at: yesterdayPm + 30 * 60_000, by: 'alex@example.com', createdAt: DEMO_NOW });
+    expectRuleKeys(h.writes);
+  });
+
   test('editing keeps the original author and creation time', () => {
     const h = harness();
     const r = h.data.records[0];
