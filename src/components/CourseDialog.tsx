@@ -160,14 +160,14 @@ export function CourseDialog({ course, pet, meals, now, onSave, onDelete, onClos
                 </ul>
               )}
               {scan.unparsed.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium text-terracotta-dark">Not understood, check by hand:</p>
-                  <ul aria-label="Not understood" className="list-disc pl-5 text-stone-700">
+                <details className="text-sm text-stone-600">
+                  <summary className="cursor-pointer select-none py-1">Show the label text that wasn't used</summary>
+                  <ul aria-label="Not understood" className="mt-1 list-disc pl-5">
                     {scan.unparsed.map((u) => (
                       <li key={u}>{u}</li>
                     ))}
                   </ul>
-                </div>
+                </details>
               )}
             </div>
           )}
