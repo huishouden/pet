@@ -29,9 +29,9 @@ Installable on the tablet, phones and laptops, and works offline (changes sync w
 |---|---|
 | ![Starting a reminder from a common schedule](docs/screenshots/new-reminder.png) | ![Pet events found in the calendar, each with Add](docs/screenshots/calendar-import.png) |
 
-| Scan the label |
-|---|
-| ![A medicine course filled in from a label photo, with the line it did not understand](docs/screenshots/scan-label.png) |
+| Scan the label | Weight and target |
+|---|---|
+| ![A medicine course filled in from a label photo, with the line it did not understand](docs/screenshots/scan-label.png) | ![The latest weight against the vet's target, which way it is heading, and the target as a dashed line on the chart](docs/screenshots/weight-target.png) |
 
 _Screenshots of the live site signed out, which shows two invented pets dated in 2031. Refreshed by CI after each deploy._
 
@@ -43,7 +43,7 @@ accept nothing else.
 
 | Collection | Fields |
 |---|---|
-| `petProfiles` | name, species, breed, birthDate, weightUnit, notes, createdAt, updatedAt, by |
+| `petProfiles` | name, species, breed, birthDate, weightUnit, targetWeight, targetNote, notes, createdAt, updatedAt, by |
 | `petMeals` | petId, name, time (`HH:MM`, after which an unticked meal is late), food, portion, note, createdAt, updatedAt, by |
 | `petFeedings` | petId, mealId, at, portion, note, by, createdAt, updatedAt |
 | `petMedCourses` | petId, name, dose, timesPerDay, times, startDate, days, withFood, notes, createdAt, updatedAt, by |
@@ -58,20 +58,24 @@ The daily board is not stored: it is today's feeds and doses, so it starts empty
 pets start with an AM and a PM meal. Contacts live in the household-wide `contacts` collection
 shared by every app (`@huishouden/pwa-kit/contacts`); Pet shows those whose `apps` include `pet`.
 The Firestore rules live in the repo that owns the project's rules file
-([huishouden/tasks](https://github.com/huishouden/tasks)). Signing in uses Google with no extra
+([huishouden/rules](https://github.com/huishouden/rules)). Signing in uses Google with no extra
 scopes; the household comes from the shared `households` document, so one invite from the portal
 opens every Huishouden app.
 
 Scan the label reads a medicine label photo on the device (`@huishouden/pwa-kit/dose`, tesseract.js
 loaded on first use) and fills in the course for the person to check; the photo is never stored or
-uploaded. Medicine doses and meals nobody has ticked by their time become reminders in the
+uploaded. Medicine doses, meals nobody has ticked by their time and each pet's next birthday (9:00
+on the day) become reminders in the
 household's `reminders` collection (`@huishouden/pwa-kit/reminders`), which the shared sender
 delivers as notifications to each member who turned them on for a device (Care, "Notifications on
 this device", shown once the repo has `VITE_VAPID_PUBLIC_KEY`).
 
 Find in my calendar and Import from calendar read Google Calendar (read-only) through
 `@huishouden/pwa-kit/calendar`; Google asks once for permission the first time. Find a business looks
-places up on OpenStreetMap (`@huishouden/pwa-kit/places`), only when Search is pressed.
+places up on OpenStreetMap (`@huishouden/pwa-kit/places`), only when Search is pressed. A pet's birthday can come
+from the calendar too: "Find birthday in my calendar" in the pet's profile, and Import from calendar for
+pets without one. A yearly birthday series that began on the day gives the year; an age or year in
+the title ("turns 5", "born 2027") also does; otherwise Pet asks for the year.
 
 ## Develop
 

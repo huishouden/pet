@@ -1,10 +1,11 @@
-import { FilePlus, MoveRight, Pencil, Plus, Scale, TrendingDown, TrendingUp, X } from 'lucide-react';
+import { Cake, FilePlus, MoveRight, Pencil, Plus, Scale, Target, TrendingDown, TrendingUp, X } from 'lucide-react';
 import type { Pet, Reminder } from '../lib/model';
 import { byUrgency } from '../lib/schedule';
 import { formatDayShort, parseYmd } from '@huishouden/pwa-kit/time';
 import { age } from '../lib/time';
 import { formatDateShort } from '../lib/format';
-import { convert, formatWeight, latest, trend } from '../lib/weight';
+import { convert, formatWeight, latest, targetProgress, trend } from '../lib/weight';
+import { birthdayText } from '../lib/birthday';
 import { SPECIES_LABELS } from '../lib/care';
 import { useClock } from '@huishouden/pwa-kit/react/clock';
 import type { PetStore } from '../data/types';
@@ -69,6 +70,8 @@ function PetDetail({ pet, pets, store, open, now, onGive, notify }: {
   const records = store.data.records.filter((r) => r.petId === pet.id).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.createdAt - a.createdAt));
   const born = parseYmd(pet.birthDate);
   const ageText = age(pet.birthDate, now);
+  const birthday = birthdayText(pet.birthDate, now);
+  const target = targetProgress(weights, pet.weightUnit, pet.targetWeight);
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:min-h-0 lg:flex-1 lg:grid-cols-2 lg:overflow-y-auto">
@@ -80,6 +83,17 @@ function PetDetail({ pet, pets, store, open, now, onGive, notify }: {
               <h3 className="text-3xl font-semibold text-stone-800 [overflow-wrap:anywhere]">{pet.name}</h3>
               <p className="mt-0.5 text-lg text-stone-600">{[SPECIES_LABELS[pet.species], pet.breed, ageText].filter(Boolean).join(' · ')}</p>
               {born !== null && <p className="text-base text-stone-600">Born {formatDateShort(born)}</p>}
+              {birthday && (
+                <p className={`mt-0.5 flex items-center gap-1.5 text-base ${birthday === 'Birthday today' ? 'font-semibold text-forest-700' : 'text-stone-600'}`}>
+                  <Cake size={16} aria-hidden="true" /> {birthday}
+                </p>
+              )}
+              {pet.targetWeight !== undefined && (
+                <p className="mt-0.5 flex items-center gap-1.5 text-base text-stone-600">
+                  <Target size={16} aria-hidden="true" /> Target {formatWeight(pet.targetWeight, pet.weightUnit)}
+                  {target ? `: ${target.onTarget ? 'on target' : target.text}` : ''}
+                </p>
+              )}
             </div>
             <button type="button" className={ghostButton} onClick={() => open.pet(pet)} aria-label={`Edit ${pet.name}`}>
               <Pencil size={18} /> <span className="hidden sm:inline">Edit</span>
@@ -148,16 +162,29 @@ function PetDetail({ pet, pets, store, open, now, onGive, notify }: {
                     {t && <TrendIcon size={16} aria-hidden="true" />}
                     {t ? `${t.text} · ` : ''}weighed {formatDayShort(last.at)}
                   </p>
+                  {target && pet.targetWeight !== undefined && (
+                    <p className="mt-1 text-base text-stone-600">
+                      <span className="font-semibold text-stone-800">{target.text}</span>
+                      {` · target ${formatWeight(pet.targetWeight, pet.weightUnit)}`}
+                      {pet.targetNote && ` (${pet.targetNote})`}
+                      {target.headingText && (
+                        <>
+                          {' · '}
+                          <span className={target.heading === 'away' ? 'text-terracotta-dark' : undefined}>{target.headingText}</span>
+                        </>
+                      )}
+                    </p>
+                  )}
                 </>
               ) : (
                 <p className="mt-1 text-lg text-stone-600">Not weighed yet.</p>
               )}
             </div>
-            <button type="button" className={primaryButton} onClick={() => open.weight(pet.id)}>
+            <button type="button" className={`${primaryButton} shrink-0`} onClick={() => open.weight(pet.id)}>
               <Scale size={20} /> Log weight
             </button>
           </div>
-          <WeightChart weights={weights} unit={pet.weightUnit} />
+          <WeightChart weights={weights} unit={pet.weightUnit} target={pet.targetWeight} />
           {recent.length > 0 && (
             <ul className="mt-3 border-t border-stone-200" aria-label="Recent weighings">
               {recent.map((w) => (

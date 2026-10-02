@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "test": "bun test src",
-    "e2e": "playwright test e2e/smoke.spec.ts e2e/feeding.spec.ts e2e/care.spec.ts e2e/pets.spec.ts e2e/contacts.spec.ts e2e/calendar.spec.ts",
+    "e2e": "playwright test e2e/smoke.spec.ts e2e/feeding.spec.ts e2e/care.spec.ts e2e/pets.spec.ts e2e/contacts.spec.ts e2e/calendar.spec.ts e2e/birthdays.spec.ts",
     "screenshots": "playwright test e2e/screenshots.spec.ts",
     "icons": "pwa-logo paw public/icon.svg && pwa-icons --background=#1b4332",
     "prepare": "git config core.hooksPath .githooks",

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { reminderDoc } from '@huishouden/pwa-kit/reminders';
 import { DEMO_NOW, demoData } from './demo';
-import { courseRef, courseReminders, mealReminders, mealsRef, petUrl } from './notify';
+import { birthdayReminders, courseRef, courseReminders, mealReminders, mealsRef, petUrl } from './notify';
 import { mealAt } from './feeding';
 
 const d = demoData();
@@ -48,4 +48,12 @@ describe('meal reminders', () => {
     const pmFed = { id: 'f', petId: miso.id, mealId: `${miso.id}-pm`, at: DEMO_NOW, by: 'sam@example.com', createdAt: DEMO_NOW };
     expect(mealReminders(miso, d.meals, [...d.feedings, pmFed], DEMO_NOW)).toHaveLength(2);
   });
+});
+
+test('a pet with a birthday gets one notification for the next one, linked to its page', () => {
+  const now = new Date(2031, 4, 14, 10, 30).getTime();
+  const [r] = birthdayReminders({ id: 'p1', name: 'Biscuit', birthDate: '2027-03-08' }, now);
+  expect(r).toMatchObject({ app: 'pet', ref: 'pet:birthday:p1', title: "Biscuit's birthday", body: 'Biscuit turns 5 today.', at: new Date(2032, 2, 8, 9).getTime() });
+  expect(r.url).toContain('pet=p1');
+  expect(birthdayReminders({ id: 'p2', name: 'Pip' }, now)).toEqual([]);
 });

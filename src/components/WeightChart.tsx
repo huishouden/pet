@@ -7,8 +7,8 @@ const H = 150;
 const PAD = 14;
 
 /** A small line chart of a pet's weighings, oldest to newest, in the pet's unit. */
-export function WeightChart({ weights, unit }: { weights: Weight[]; unit: WeightUnit }) {
-  const g = chart(weights, unit, W, H, PAD);
+export function WeightChart({ weights, unit, target }: { weights: Weight[]; unit: WeightUnit; target?: number }) {
+  const g = chart(weights, unit, W, H, PAD, target);
   if (!g || g.points.length < 2) return null;
   const first = g.points[0];
   const last = g.points.at(-1)!;
@@ -24,15 +24,33 @@ export function WeightChart({ weights, unit }: { weights: Weight[]; unit: Weight
           className="h-36 w-full min-w-0"
           preserveAspectRatio="none"
           role="img"
-          aria-label={`Weight from ${formatWeight(first.value, unit)} on ${formatDayShort(first.at)} to ${formatWeight(last.value, unit)} on ${formatDayShort(last.at)}`}
+          aria-label={`Weight from ${formatWeight(first.value, unit)} on ${formatDayShort(first.at)} to ${formatWeight(last.value, unit)} on ${formatDayShort(last.at)}${target ? `; target ${formatWeight(target, unit)}` : ''}`}
         >
           <line x1="0" x2={W} y1={PAD} y2={PAD} stroke="#e7e5e4" strokeWidth="1" vectorEffect="non-scaling-stroke" />
           <line x1="0" x2={W} y1={H - PAD} y2={H - PAD} stroke="#e7e5e4" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+          {g.targetY !== undefined && (
+            <line
+              x1="0"
+              x2={W}
+              y1={g.targetY}
+              y2={g.targetY}
+              stroke="#78716c"
+              strokeWidth="1.5"
+              strokeDasharray="6 5"
+              vectorEffect="non-scaling-stroke"
+              data-testid="weight-target-line"
+            />
+          )}
           <path d={g.path} fill="none" stroke="#2d6a4f" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         </svg>
       </div>
       {/* Dots drawn in HTML so they stay round when the chart stretches. */}
       <div className="relative -mt-36 ml-14 h-36" aria-hidden="true">
+        {g.targetY !== undefined && (
+          <span className="absolute right-0 -translate-y-full pb-0.5 text-xs font-medium text-stone-600" style={{ top: `${(g.targetY / H) * 100}%` }}>
+            Target {formatWeight(target!, unit)}
+          </span>
+        )}
         {g.points.map((p) => (
           <span
             key={p.at}

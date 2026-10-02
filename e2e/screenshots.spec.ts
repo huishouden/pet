@@ -28,6 +28,17 @@ test('pet', ({ page }) =>
     prepare: (p) => expect(p.getByRole('region', { name: "Biscuit's weight" })).toBeVisible(),
   }));
 
+test('weight target', ({ page }) =>
+  captureScreenshot(page, 'weight-target', {
+    path: '/?tab=pets',
+    fixedTime,
+    prepare: async (p) => {
+      const weight = p.getByRole('region', { name: "Biscuit's weight" });
+      await weight.scrollIntoViewIfNeeded();
+      await expect(weight.getByText('Moving away from the target')).toBeVisible();
+    },
+  }));
+
 test('appointments', ({ page }) =>
   captureScreenshot(page, 'appointments', {
     path: '/?tab=appointments',

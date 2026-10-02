@@ -79,16 +79,18 @@ export interface ChartGeometry {
   min: number;
   max: number;
   path: string;
+  /** The y of the target line, when there is a target. */
+  targetY?: number;
 }
 
 /**
  * Points of a line chart `width` × `height` (inside `pad`), x by time and y by weight, with the y range
  * padded so a steady weight doesn't look like a cliff.
  */
-export function chart(entries: Entry[], unit: WeightUnit, width: number, height: number, pad = 8): ChartGeometry | null {
+export function chart(entries: Entry[], unit: WeightUnit, width: number, height: number, pad = 8, target?: number): ChartGeometry | null {
   const s = series(entries, unit);
   if (s.length === 0) return null;
-  const values = s.map((e) => e.shown);
+  const values = [...s.map((e) => e.shown), ...(target ? [target] : [])];
   const lo = Math.min(...values);
   const hi = Math.max(...values);
   const margin = Math.max((hi - lo) * 0.25, hi * 0.03, 0.5);
@@ -100,7 +102,36 @@ export function chart(entries: Entry[], unit: WeightUnit, width: number, height:
   const y = (v: number) => pad + (1 - (v - min) / (max - min)) * (height - 2 * pad);
   const points = s.map((e) => ({ x: round(x(e.at)), y: round(y(e.shown)), at: e.at, value: e.shown }));
   const path = points.map((p, i) => `${i ? 'L' : 'M'}${p.x} ${p.y}`).join(' ');
-  return { points, min, max, path };
+  return { points, min, max, path, ...(target ? { targetY: round(y(target)) } : {}) };
 }
 
 const round = (n: number) => Math.round(n * 10) / 10;
+
+export interface TargetProgress {
+  /** Latest weight minus the target, in the pet's unit. */
+  difference: number;
+  onTarget: boolean;
+  /** "1.8 lb to lose", "0.4 kg to gain", "On target". */
+  text: string;
+  /** Which way the recent trend is going relative to the target; null when on target or no trend. */
+  heading: 'toward' | 'away' | 'steady' | null;
+  /** "Heading toward the target", "Moving away from the target", "Holding steady". */
+  headingText: string | null;
+}
+
+/** Within this share of the target, a weight is on target (scales and fur vary that much). */
+export const ON_TARGET_SHARE = 0.02;
+
+/** How the latest weight stands against the target, and whether the trend is closing the gap. */
+export function targetProgress(entries: Entry[], unit: WeightUnit, target: number | undefined): TargetProgress | null {
+  const last = latest(entries);
+  if (!last || !target) return null;
+  const difference = Math.round((convert(last.value, last.unit, unit) - target) * 10) / 10;
+  if (Math.abs(difference) <= target * ON_TARGET_SHARE) return { difference, onTarget: true, text: 'On target', heading: null, headingText: null };
+  const text = `${formatWeight(Math.abs(difference), unit)} to ${difference > 0 ? 'lose' : 'gain'}`;
+  const t = trend(entries, unit);
+  if (!t) return { difference, onTarget: false, text, heading: null, headingText: null };
+  if (t.direction === 'steady') return { difference, onTarget: false, text, heading: 'steady', headingText: 'Holding steady' };
+  const toward = (difference > 0) === (t.direction === 'down');
+  return { difference, onTarget: false, text, heading: toward ? 'toward' : 'away', headingText: toward ? 'Heading toward the target' : 'Moving away from the target' };
+}

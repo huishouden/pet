@@ -7,12 +7,14 @@ import type { Course, Feeding, Meal, MedDose, Pet } from './model';
 import { courseState } from './courses';
 import { fedTodayFor, mealAt, mealsOf } from './feeding';
 import { addDays, startOfDay } from '@huishouden/pwa-kit/time';
+import { birthdayReminder } from './birthday';
 
 export const APP = 'pet';
 export const APP_URL = 'https://huishouden-pet.web.app';
 
 export const courseRef = (courseId: string) => `${APP}:course:${courseId}`;
 export const mealsRef = (petId: string) => `${APP}:meals:${petId}`;
+export const birthdayRef = (petId: string) => `${APP}:birthday:${petId}`;
 
 /** A link that opens Pet on one pet's page. */
 export const petUrl = (petId: string) => `${APP_URL}/?tab=pets&pet=${encodeURIComponent(petId)}`;
@@ -57,4 +59,10 @@ export function mealReminders(pet: Pick<Pet, 'id' | 'name'>, meals: Meal[], feed
     }
   }
   return out;
+}
+
+/** The pet's next birthday, at 9:00 on the day; none without a birth date. */
+export function birthdayReminders(pet: Pick<Pet, 'id' | 'name' | 'birthDate'>, now: number): ReminderInput[] {
+  const r = birthdayReminder(pet, now, { app: APP, url: petUrl(pet.id), ref: birthdayRef(pet.id) });
+  return r ? [r] : [];
 }

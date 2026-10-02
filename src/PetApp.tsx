@@ -13,6 +13,7 @@ import { calendarAvailable } from '@huishouden/pwa-kit/react/calendar';
 import { Header, type Tab } from './components/Header';
 import { Toast, type ToastState } from '@huishouden/pwa-kit/react/ui';
 import { PetDialog } from './components/PetDialog';
+import type { BirthdayGuess } from './lib/birthday';
 import { ReminderDialog } from './components/ReminderDialog';
 import { AppointmentDialog } from './components/AppointmentDialog';
 import { WeightDialog } from './components/WeightDialog';
@@ -56,7 +57,8 @@ interface Props {
 /** What the screens can ask the frame to open. */
 export interface Open {
   tab: (id: TabId) => void;
-  pet: (pet: Pet | null) => void;
+  /** `birthday`: one found in the calendar without its year, to finish in the dialog. */
+  pet: (pet: Pet | null, birthday?: BirthdayGuess) => void;
   reminder: (reminder: Reminder | null, petId?: string) => void;
   appointment: (appointment: Appointment | null, petId?: string) => void;
   weight: (petId: string) => void;
@@ -73,7 +75,7 @@ export interface Open {
 export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, notify, clearToast, banner, deviceSettings }: Props) {
   const { now, read } = useClock();
   const [tab, setTab] = useState<TabId>(() => initialTab());
-  const [petDialog, setPetDialog] = useState<{ pet: Pet | null } | null>(null);
+  const [petDialog, setPetDialog] = useState<{ pet: Pet | null; birthday?: BirthdayGuess } | null>(null);
   const [reminder, setReminder] = useState<{ reminder: Reminder | null; petId?: string } | null>(null);
   const [appointment, setAppointment] = useState<{ appointment: Appointment | null; petId?: string } | null>(null);
   const [weightFor, setWeightFor] = useState<string | null>(null);
@@ -101,7 +103,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
 
   const open: Open = {
     tab: chooseTab,
-    pet: (pet) => setPetDialog({ pet }),
+    pet: (pet, birthday) => setPetDialog({ pet, birthday }),
     reminder: (r, petId) => setReminder({ reminder: r, petId }),
     appointment: (a, petId) => setAppointment({ appointment: a, petId }),
     weight: (petId) => setWeightFor(petId),
@@ -168,6 +170,8 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
         <PetDialog
           pet={petDialog.pet}
           now={now}
+          calendarAvailable={calendar}
+          birthday={petDialog.birthday}
           onClose={() => setPetDialog(null)}
           onSave={(input) => {
             const id = actions.savePet(petDialog.pet?.id ?? null, input);
