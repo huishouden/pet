@@ -2,14 +2,14 @@ import { CalendarPlus, Check, ChevronRight, MapPin, PawPrint, Plus } from 'lucid
 import type { Course, Meal, Pet, Reminder } from '../lib/model';
 import { byUrgency, describeRecurrence, dueState, headline, needsAttention } from '../lib/schedule';
 import { petNames } from '../lib/pets';
-import { relativeDay } from '../lib/time';
-import { formatDayLong, formatTime, formatWhenGiven } from '../lib/format';
-import { useClock } from '../clock';
+import { formatDayLong, formatTime, relativeDay } from '@huishouden/pwa-kit/time';
+import { formatWhenGiven } from '../lib/format';
+import { useClock } from '@huishouden/pwa-kit/react/clock';
 import type { PetStore } from '../data/types';
 import type { Open } from '../PetApp';
 import { PetAvatar } from '../components/PetAvatar';
 import { FeedingBoard } from '../components/FeedingBoard';
-import { cardClass, ghostButton, overline, primaryButton } from '../components/ui';
+import { cardClass, ghostButton, overline, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
 const SHOWN = 4;
 

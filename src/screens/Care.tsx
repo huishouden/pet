@@ -2,13 +2,13 @@ import { useState, type ReactNode } from 'react';
 import { Check, Pencil, Plus } from 'lucide-react';
 import type { Pet, Reminder } from '../lib/model';
 import { describeRecurrence, dueState, dueText, groupByDue } from '../lib/schedule';
-import { parseYmd } from '../lib/time';
-import { formatDayShort, formatWhenGiven } from '../lib/format';
-import { useClock } from '../clock';
+import { formatDayShort, parseYmd } from '@huishouden/pwa-kit/time';
+import { formatWhenGiven } from '../lib/format';
+import { useClock } from '@huishouden/pwa-kit/react/clock';
 import type { PetStore } from '../data/types';
 import type { Open } from '../PetApp';
 import { PetAvatar, PetChips } from '../components/PetAvatar';
-import { cardClass, iconButton, overline, primaryButton, secondaryButton } from '../components/ui';
+import { cardClass, iconButton, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 
 /** Every reminder, grouped by how soon it is due, with one-tap Given. */
 export function Care({ store, pets, open, onGive, deviceSettings }: {

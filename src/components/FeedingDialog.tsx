@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import type { Feeding, Meal, Pet } from '../lib/model';
 import { LIMITS } from '../lib/model';
-import { fromLocalInput, toLocalInput } from '../lib/time';
-import { personName } from '../lib/people';
+import { fromLocalInput, toLocalInput } from '@huishouden/pwa-kit/time';
+import { personName } from '@huishouden/pwa-kit/people';
 import type { FeedingInput } from '../lib/build';
-import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from './ui';
+import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
 /** Logs an extra feed, or fixes one: which meal, the time, the portion. Who fed it stays. */
 export function FeedingDialog({ feeding, pet, meals, me, now, onSave, onDelete, onClose }: {

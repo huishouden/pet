@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { Contact } from '@huishouden/pwa-kit/contacts';
-import { contactForRole, contactInput, displayWebsite, groupContacts, knownRole, normalizeWebsite } from './contacts';
+import { groupContacts, type Contact } from '@huishouden/pwa-kit/contacts';
+import { ROLES, contactForRole, knownRole } from './contacts';
 
 const c = (id: string, name: string, role?: string): Contact => ({ id, name, role, apps: ['pet'], createdAt: 1, by: 'sam@example.com' });
 
@@ -26,7 +26,7 @@ describe('roles', () => {
 });
 
 test('groups: known roles in order, then typed roles, then Other', () => {
-  const groups = groupContacts([c('1', 'B', 'Groomer'), c('2', 'A', 'vet'), c('3', 'C'), c('4', 'D', 'Farrier'), c('5', 'E', 'Emergency vet')]);
+  const groups = groupContacts([c('1', 'B', 'Groomer'), c('2', 'A', 'vet'), c('3', 'C'), c('4', 'D', 'Farrier'), c('5', 'E', 'Emergency vet')], ROLES);
   expect(groups.map((g) => [g.role, g.contacts.map((x) => x.id)])).toEqual([
     ['Vet', ['2']],
     ['Emergency vet', ['5']],
@@ -34,19 +34,4 @@ test('groups: known roles in order, then typed roles, then Other', () => {
     ['Farrier', ['4']],
     ['Other', ['3']],
   ]);
-});
-
-test('websites', () => {
-  expect(normalizeWebsite('vet.example.com')).toBe('https://vet.example.com');
-  expect(normalizeWebsite(' ')).toBeUndefined();
-  expect(displayWebsite('https://www.vet.example.com/pets/')).toBe('vet.example.com/pets');
-});
-
-test('saved contacts are trimmed and shown in Pet, keeping other apps', () => {
-  const input = contactInput({ name: '  Example Vet Clinic ', role: 'Vet', phone: ' ', website: 'vet.example.com', notes: 'x'.repeat(2000) }, ['baby']);
-  expect(input.name).toBe('Example Vet Clinic');
-  expect(input.phone).toBeUndefined();
-  expect(input.website).toBe('https://vet.example.com');
-  expect(input.notes!.length).toBe(1000);
-  expect(input.apps).toEqual(['baby', 'pet']);
 });

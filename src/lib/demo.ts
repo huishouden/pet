@@ -1,6 +1,6 @@
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import type { Appointment, Course, Dose, Feeding, Meal, MedDose, Pet, PetRecord, Reminder, Weight } from './model';
-import { toYmd } from './time';
+import { toYmd } from '@huishouden/pwa-kit/time';
 
 // Invented sample data for the signed-out app: README screenshots and first impressions. Everything
 // is relative to one fixed day in 2031 so nothing resembles a real household's dates.

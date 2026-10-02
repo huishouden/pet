@@ -1,21 +1,19 @@
 import { useState } from 'react';
-import { CalendarArrowDown, CalendarPlus, ChevronDown, ChevronUp, ExternalLink, MapPin, Pencil, Phone, Plus, UserRound } from 'lucide-react';
-import type { CalendarMatch } from '@huishouden/pwa-kit/calendar';
+import { CalendarArrowDown, CalendarPlus, ChevronDown, ChevronUp, ExternalLink, MapPin, Pencil, Phone, UserRound } from 'lucide-react';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import { telHref } from '@huishouden/pwa-kit/places';
 import type { Appointment, Pet } from '../lib/model';
-import { PET_CALENDAR_QUERIES, fromCalendar, notImported } from '../lib/calendarImport';
+import { PET_CALENDAR_QUERIES, fromCalendar } from '../lib/calendarImport';
 import { APPOINTMENT_LABELS } from '../lib/care';
 import { petNames } from '../lib/pets';
-import { relativeDay } from '../lib/time';
-import { formatDayLong, formatDayShort, formatTime, monthShort } from '../lib/format';
-import { useClock } from '../clock';
+import { formatDayLong, formatTime, monthShort, relativeDay } from '@huishouden/pwa-kit/time';
+import { useClock } from '@huishouden/pwa-kit/react/clock';
 import type { PetStore } from '../data/types';
-import { useCalendarSearch } from '../data/calendar';
+import { CalendarHint, CalendarImportDialog, useCalendarSearch } from '@huishouden/pwa-kit/react/calendar';
+import { auth } from '../data/firebase';
 import type { Open } from '../PetApp';
-import { CalendarHint } from '../components/AppointmentDialog';
 import { PetAvatar, PetChips } from '../components/PetAvatar';
-import { Dialog, ErrorNotice, cardClass, ghostButton, iconButton, linkClass, primaryButton, secondaryButton } from '../components/ui';
+import { cardClass, ghostButton, iconButton, linkClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 
 export function Appointments({ store, pets, open, calendarAvailable, notify }: {
   store: PetStore;
@@ -28,7 +26,7 @@ export function Appointments({ store, pets, open, calendarAvailable, notify }: {
   const [petId, setPetId] = useState<string | null>(null);
   const [showPast, setShowPast] = useState(false);
   const [importing, setImporting] = useState(false);
-  const scan = useCalendarSearch();
+  const scan = useCalendarSearch(auth, 'Pet');
   const all = store.data.appointments;
   const shown = all.filter((a) => !petId || a.petIds.includes(petId));
   const contacts = store.data.contacts;
@@ -60,7 +58,7 @@ export function Appointments({ store, pets, open, calendarAvailable, notify }: {
           </div>
         </div>
         <div className="mt-1 flex justify-end text-right">
-          <CalendarHint available={calendarAvailable} />
+          <CalendarHint app="Pet" available={calendarAvailable} />
         </div>
       </div>
       {pets.length > 1 && <PetChips pets={pets} selected={petId} onSelect={setPetId} />}
@@ -90,9 +88,12 @@ export function Appointments({ store, pets, open, calendarAvailable, notify }: {
       )}
 
       {importing && (
-        <ImportDialog
+        <CalendarImportDialog
           state={scan.state}
-          appointments={all}
+          intro="Vet, grooming, vaccine, boarding and kennel events from last week to a year ahead."
+          noneFound="No pet events found in your calendars."
+          allImported="Every pet event in your calendar is already in Pet."
+          records={all}
           onRetry={runScan}
           onAdd={(list) => {
             for (const m of list) store.actions.saveAppointment(null, fromCalendar(m, pets));
@@ -161,75 +162,5 @@ function Row({ a, now, pets, contacts, first, onEdit }: { a: Appointment; now: n
         <Pencil size={18} />
       </button>
     </li>
-  );
-}
-
-function ImportDialog({ state, appointments, onRetry, onAdd, onClose }: {
-  state: ReturnType<typeof useCalendarSearch>['state'];
-  appointments: Appointment[];
-  onRetry: () => void;
-  onAdd: (matches: CalendarMatch[]) => void;
-  onClose: () => void;
-}) {
-  // Recomputed as appointments arrive, so an added event leaves the list.
-  const fresh = state.status === 'done' ? notImported(state.matches, appointments) : [];
-  return (
-    <Dialog
-      title="Import from calendar"
-      onClose={onClose}
-      footer={
-        <>
-          <button type="button" className={ghostButton} onClick={onClose}>
-            Done
-          </button>
-          {fresh.length > 1 && (
-            <button
-              type="button"
-              className={primaryButton}
-              onClick={() => {
-                onAdd(fresh);
-                onClose();
-              }}
-            >
-              Add all {fresh.length}
-            </button>
-          )}
-        </>
-      }
-    >
-      <p className="text-base text-stone-600">Vet, grooming, vaccine, boarding and kennel events from last week to a year ahead.</p>
-      <div className="mt-4">
-        {(state.status === 'searching' || state.status === 'idle') && (
-          <p role="status" className="text-base text-stone-600">
-            Searching your calendars
-          </p>
-        )}
-        {state.status === 'error' && <ErrorNotice message={state.message} onRetry={onRetry} />}
-        {state.status === 'done' && fresh.length === 0 && (
-          <p role="status" className="text-base text-stone-600">
-            {state.matches.length ? 'Every pet event in your calendar is already in Pet.' : 'No pet events found in your calendars.'}
-          </p>
-        )}
-        {fresh.length > 0 && (
-          <ul className="divide-y divide-stone-200 rounded-2xl border border-stone-200" aria-label="Calendar events">
-            {fresh.map((m) => (
-              <li key={`${m.id}-${m.start}`} className="flex items-center gap-3 px-3 py-2">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-stone-800 [overflow-wrap:anywhere]">{m.title}</p>
-                  <p className="text-sm text-stone-600">
-                    {formatDayShort(m.start)}
-                    {m.allDay ? ', all day' : `, ${formatTime(m.start)}`} · {m.calendarName}
-                  </p>
-                  {m.location && <p className="text-sm text-stone-600 [overflow-wrap:anywhere]">{m.location}</p>}
-                </div>
-                <button type="button" className={secondaryButton} onClick={() => onAdd([m])} aria-label={`Add ${m.title}`}>
-                  <Plus size={18} /> Add
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </Dialog>
   );
 }

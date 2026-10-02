@@ -6,7 +6,7 @@ import { remindersForCourse, type ReminderInput } from '@huishouden/pwa-kit/remi
 import type { Course, Feeding, Meal, MedDose, Pet } from './model';
 import { courseState } from './courses';
 import { fedTodayFor, mealAt, mealsOf } from './feeding';
-import { addDays, startOfDay } from './time';
+import { addDays, startOfDay } from '@huishouden/pwa-kit/time';
 
 export const APP = 'pet';
 export const APP_URL = 'https://huishouden-pet.web.app';

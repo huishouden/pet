@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import type { CalendarMatch } from '@huishouden/pwa-kit/calendar';
+import { calendarError, isImported, notImported, plainText, type CalendarMatch } from '@huishouden/pwa-kit/calendar';
 import fixture from './__fixtures__/calendar-matches.json';
-import { calendarError, fromCalendar, guessKind, guessPets, isImported, notImported, plainText } from './calendarImport';
+import { fromCalendar, guessKind, guessPets } from './calendarImport';
 import type { Appointment } from './model';
 import { LIMITS } from './model';
 
@@ -19,7 +19,7 @@ describe('notes from a calendar description', () => {
   });
 
   test('long descriptions are cut to the notes limit', () => {
-    const out = plainText('word '.repeat(400));
+    const out = plainText('word '.repeat(400), LIMITS.notes);
     expect(out.length).toBeLessThanOrEqual(LIMITS.notes);
     expect(out.endsWith('…')).toBe(true);
   });

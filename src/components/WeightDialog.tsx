@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import type { Pet } from '../lib/model';
 import { WEIGHT_UNITS, parseWeight, type WeightUnit } from '../lib/weight';
-import { parseYmd, startOfDay, toYmd } from '../lib/time';
-import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from './ui';
+import { parseYmd, startOfDay, toYmd } from '@huishouden/pwa-kit/time';
+import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
 /** Logs one weighing: today by default, in the pet's unit. */
 export function WeightDialog({ pet, now, onSave, onClose }: {

@@ -4,7 +4,7 @@ import type { Meal, Pet } from '../lib/model';
 import { LIMITS } from '../lib/model';
 import { isMealTime } from '../lib/feeding';
 import type { MealInput } from '../lib/build';
-import { Dialog, Field, ghostButton, inputClass, primaryButton } from './ui';
+import { Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
 /** One meal on a pet's board: its name, when it counts as missed, and optionally what and how much. */
 export function MealDialog({ meal, pet, onSave, onDelete, onClose }: {

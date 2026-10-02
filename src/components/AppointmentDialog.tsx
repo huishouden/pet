@@ -1,17 +1,17 @@
 import { useState } from 'react';
-import { CalendarSearch, ExternalLink, MapPin, Trash2, X } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import type { CalendarMatch } from '@huishouden/pwa-kit/calendar';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import type { Appointment, AppointmentKind, Pet } from '../lib/model';
 import { APPOINTMENT_KINDS, LIMITS } from '../lib/model';
 import { APPOINTMENT_LABELS } from '../lib/care';
 import { fromCalendar, guessKind } from '../lib/calendarImport';
-import { addDays, fromLocalInput, toLocalInput } from '../lib/time';
-import { formatDayShort, formatTime } from '../lib/format';
+import { addDays, fromLocalInput, toLocalInput } from '@huishouden/pwa-kit/time';
 import type { AppointmentInput } from '../lib/build';
-import { calendarAsked, useCalendarSearch } from '../data/calendar';
+import { CalendarFind, LinkedEvent } from '@huishouden/pwa-kit/react/calendar';
+import { auth } from '../data/firebase';
 import { PetAvatar } from './PetAvatar';
-import { Chip, Dialog, ErrorNotice, Field, ghostButton, iconButton, inputClass, linkClass, primaryButton } from './ui';
+import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
 export function AppointmentDialog({ appointment, petId, pets, now, contacts, calendarAvailable, onSave, onDelete, onClose }: {
   appointment: Appointment | null;
@@ -35,7 +35,6 @@ export function AppointmentDialog({ appointment, petId, pets, now, contacts, cal
   const [notes, setNotes] = useState(appointment?.notes ?? '');
   const [contactId, setContactId] = useState(appointment?.contactId ?? '');
   const [event, setEvent] = useState(appointment?.calendarEventId || appointment?.calendarLink ? { id: appointment.calendarEventId, link: appointment.calendarLink } : null);
-  const search = useCalendarSearch();
   const at = fromLocalInput(`${date}T${time}`);
   const valid = title.trim().length > 0 && at !== null;
   // A contact that was deleted (or no longer shown in Pet) still appears until another is picked.
@@ -57,7 +56,6 @@ export function AppointmentDialog({ appointment, petId, pets, now, contacts, cal
     if (filled.kind !== 'other') setKind(filled.kind);
     if (filled.petIds.length && petIds.length === 0) setPetIds(filled.petIds);
     setEvent({ id: filled.calendarEventId, link: filled.calendarLink });
-    search.reset();
   };
 
   const pickContact = (id: string) => {
@@ -119,43 +117,7 @@ export function AppointmentDialog({ appointment, petId, pets, now, contacts, cal
           />
         </Field>
 
-        <div className="space-y-2">
-          <button
-            type="button"
-            className={`${ghostButton} bg-forest-50 text-forest-700 hover:bg-forest-100 disabled:opacity-50`}
-            disabled={!calendarAvailable || !title.trim() || search.state.status === 'searching'}
-            onClick={() => void search.run(title)}
-          >
-            <CalendarSearch size={18} /> {search.state.status === 'searching' ? 'Searching your calendars' : 'Find in my calendar'}
-          </button>
-          <CalendarHint available={calendarAvailable} />
-          {search.state.status === 'error' && <ErrorNotice message={search.state.message} onRetry={() => void search.run(title)} />}
-          {search.state.status === 'done' && search.state.matches.length === 0 && (
-            <p role="status" className="text-base text-stone-600">
-              No events matching "{title.trim()}" in your calendars from last week to a year ahead.
-            </p>
-          )}
-          {search.state.status === 'done' && search.state.matches.length > 0 && (
-            <ul className="grid gap-1.5" aria-label="Calendar matches">
-              {search.state.matches.map((m) => (
-                <li key={`${m.id}-${m.start}`}>
-                  <button type="button" onClick={() => pickMatch(m)} className="w-full rounded-xl border border-stone-200 px-3 py-2 text-left hover:border-forest-500 hover:bg-forest-50">
-                    <span className="block font-medium text-stone-800 [overflow-wrap:anywhere]">{m.title}</span>
-                    <span className="block text-sm text-stone-600">
-                      {formatDayShort(m.start)}
-                      {m.allDay ? ', all day' : `, ${formatTime(m.start)}`} · {m.calendarName}
-                    </span>
-                    {m.location && (
-                      <span className="flex items-start gap-1 text-sm text-stone-600 [overflow-wrap:anywhere]">
-                        <MapPin size={14} className="mt-0.5 shrink-0" aria-hidden="true" /> {m.location}
-                      </span>
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <CalendarFind auth={auth} app="Pet" query={title} available={calendarAvailable} onPick={pickMatch} />
 
         {pets.length > 0 && (
           <fieldset>
@@ -208,28 +170,9 @@ export function AppointmentDialog({ appointment, petId, pets, now, contacts, cal
         <Field label="Notes (optional)">
           <textarea className={`${inputClass} min-h-20`} maxLength={LIMITS.notes} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </Field>
-        {event && (
-          <div className="flex items-center gap-2 rounded-xl bg-forest-50 py-0.5 pr-1 pl-3 text-base text-stone-700">
-            <span className="min-w-0 flex-1">From your calendar.</span>
-            {event.link && (
-              <a className={linkClass} href={event.link} target="_blank" rel="noopener noreferrer">
-                <ExternalLink size={16} aria-hidden="true" /> Open in Calendar
-              </a>
-            )}
-            <button type="button" className={iconButton} aria-label="Unlink from the calendar event" onClick={() => setEvent(null)}>
-              <X size={18} />
-            </button>
-          </div>
-        )}
+        {event && <LinkedEvent link={event.link} onUnlink={() => setEvent(null)} />}
         <button type="submit" hidden />
       </form>
     </Dialog>
   );
-}
-
-/** One line before Google's first permission window, or why the search is off. */
-export function CalendarHint({ available }: { available: boolean }) {
-  if (!available) return <p className="text-base text-stone-600">Sign in to search your calendar.</p>;
-  if (!calendarAsked()) return <p className="text-base text-stone-600">Google will ask once to let Pet read your calendar. Pet never changes it.</p>;
-  return null;
 }

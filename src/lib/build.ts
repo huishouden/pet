@@ -4,7 +4,7 @@
 import type { AppointmentData, AppointmentKind, CourseData, DoseData, FeedingData, MealData, MedDoseData, PetData, RecordData, ReminderData, ReminderKind, Species, WeightData } from './model';
 import { LIMITS } from './model';
 import { isRecurring, type Unit } from './schedule';
-import { isYmd } from './time';
+import { isYmd } from '@huishouden/pwa-kit/time';
 import { isMealTime } from './feeding';
 import { MAX_COURSE_DAYS, MAX_TIMES_PER_DAY, type CourseDraft } from './courses';
 import type { WeightUnit } from './weight';

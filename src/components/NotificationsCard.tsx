@@ -3,7 +3,7 @@ import { Bell, BellOff } from 'lucide-react';
 import type { User } from 'firebase/auth';
 import { disablePush, enablePush, pushEnabled, pushSupport } from '@huishouden/pwa-kit/push';
 import { db } from '../data/firebase';
-import { cardClass, overline, primaryButton, secondaryButton } from './ui';
+import { cardClass, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 
 /** The VAPID key the shared sender signs with; the toggle is hidden until the repo sets it. */
 export const VAPID_PUBLIC_KEY: string = import.meta.env.VITE_VAPID_PUBLIC_KEY ?? '';

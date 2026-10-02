@@ -5,9 +5,9 @@ import type { Course, Meal, Pet } from '../lib/model';
 import { LIMITS } from '../lib/model';
 import { MAX_COURSE_DAYS, MAX_TIMES_PER_DAY, daysUntil, defaultTimes, lastDay, type CourseDraft } from '../lib/courses';
 import { isMealTime, mealsOf } from '../lib/feeding';
-import { isYmd, toYmd } from '../lib/time';
+import { isYmd, toYmd } from '@huishouden/pwa-kit/time';
 import type { CourseInput } from '../lib/build';
-import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton, secondaryButton } from './ui';
+import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 
 declare global {
   interface Window {

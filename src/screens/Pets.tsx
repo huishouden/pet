@@ -1,18 +1,19 @@
 import { FilePlus, MoveRight, Pencil, Plus, Scale, TrendingDown, TrendingUp, X } from 'lucide-react';
 import type { Pet, Reminder } from '../lib/model';
 import { byUrgency } from '../lib/schedule';
-import { age, parseYmd } from '../lib/time';
-import { formatDateShort, formatDayShort } from '../lib/format';
+import { formatDayShort, parseYmd } from '@huishouden/pwa-kit/time';
+import { age } from '../lib/time';
+import { formatDateShort } from '../lib/format';
 import { convert, formatWeight, latest, trend } from '../lib/weight';
 import { SPECIES_LABELS } from '../lib/care';
-import { useClock } from '../clock';
+import { useClock } from '@huishouden/pwa-kit/react/clock';
 import type { PetStore } from '../data/types';
 import type { Open } from '../PetApp';
 import { PetAvatar, PetChips } from '../components/PetAvatar';
 import { WeightChart } from '../components/WeightChart';
 import { FeedingCard, MedicineCard } from '../components/PetFeedingCards';
 import { ReminderRow } from './Care';
-import { cardClass, ghostButton, iconButton, overline, primaryButton } from '../components/ui';
+import { cardClass, ghostButton, iconButton, overline, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
 /** One pet at a time: profile and care notes, its reminders, the weight log and its records. */
 export function Pets({ store, pets, open, shown, onShow, onGive, notify }: {

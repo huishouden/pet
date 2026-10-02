@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import fixture from './__fixtures__/feeding.json';
 import { dailyCounts, defaultMeals, fedTodayFor, formatAgo, formatDuration, isMealTime, lastFed, mealAt, recentFeedings, todaysMeals } from './feeding';
-import { HOUR, MINUTE } from './time';
+import { HOUR, MINUTE } from '@huishouden/pwa-kit/time';
 
 const now = new Date(fixture.now).getTime();
 const meals = fixture.meals;

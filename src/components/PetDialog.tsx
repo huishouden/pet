@@ -3,10 +3,10 @@ import { Trash2 } from 'lucide-react';
 import type { Pet, Species } from '../lib/model';
 import { LIMITS, SPECIES } from '../lib/model';
 import { SPECIES_LABELS } from '../lib/care';
-import { toYmd } from '../lib/time';
+import { toYmd } from '@huishouden/pwa-kit/time';
 import { WEIGHT_UNITS, type WeightUnit } from '../lib/weight';
 import type { PetInput } from '../lib/build';
-import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from './ui';
+import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
 export function PetDialog({ pet, now, onSave, onDelete, onClose }: {
   pet: Pet | null;

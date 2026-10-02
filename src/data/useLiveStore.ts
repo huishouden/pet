@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, doc, onSnapshot, query, where, writeBatch, type Query } from 'firebase/firestore';
 import { addContact, removeContactFromApp, restoreContact, updateContact, watchContacts } from '@huishouden/pwa-kit/contacts';
+import { readError } from '@huishouden/pwa-kit/feedback';
 import { APP } from '../lib/contacts';
 import { emptyData, type PetHouseholdData } from '../lib/demo';
-import { DAY } from '../lib/time';
+import { DAY } from '@huishouden/pwa-kit/time';
 import { db } from './firebase';
 import { createActions, type Backend } from './actions';
 import { useReminderSync } from './reminderSync';
@@ -90,11 +91,4 @@ export function useLiveStore(householdId: string, me: string, members: string[],
   useReminderSync(householdId, me, data, ready, onError);
 
   return { data, ready, actions, members, me };
-}
-
-export function readError(e: unknown, prefix: string): string {
-  const code = (e as { code?: string })?.code;
-  if (code === 'permission-denied') return `${prefix}: this household doesn't allow it yet.`;
-  if (code === 'unavailable') return `${prefix}: offline. It will retry when the connection is back.`;
-  return `${prefix}.`;
 }

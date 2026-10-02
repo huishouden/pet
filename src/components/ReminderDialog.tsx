@@ -4,12 +4,12 @@ import type { Dose, Pet, Reminder, ReminderKind } from '../lib/model';
 import { LIMITS, REMINDER_KINDS } from '../lib/model';
 import { KIND_LABELS, presetsFor, type Preset } from '../lib/care';
 import { UNITS, describeRecurrence, isRecurring, type Unit } from '../lib/schedule';
-import { isYmd, toYmd } from '../lib/time';
-import { formatDateShort, formatTime } from '../lib/format';
-import { personName } from '../lib/people';
+import { formatTime, isYmd, toYmd } from '@huishouden/pwa-kit/time';
+import { formatDateShort } from '../lib/format';
+import { personName } from '@huishouden/pwa-kit/people';
 import type { ReminderInput } from '../lib/build';
 import { PetAvatar } from './PetAvatar';
-import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from './ui';
+import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
 export function ReminderDialog({ reminder, petId: initialPet, pets, doses, members: _members, me, now, onSave, onDelete, onClose }: {
   reminder: Reminder | null;

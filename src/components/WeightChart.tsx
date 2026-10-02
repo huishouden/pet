@@ -1,6 +1,6 @@
 import type { Weight } from '../lib/model';
 import { chart, formatWeight, type WeightUnit } from '../lib/weight';
-import { formatDayShort } from '../lib/format';
+import { formatDayShort } from '@huishouden/pwa-kit/time';
 
 const W = 560;
 const H = 150;

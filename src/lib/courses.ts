@@ -1,9 +1,9 @@
 // Short medicine courses ("1 tablet twice daily for 7 days with food"): which day of the course it is,
 // today's doses as given / not yet / missed, and default dose times from the pet's meals. Pure.
 
-import type { MedCourse } from '@huishouden/pwa-kit/dose';
-import { isMealTime, mealAt } from './feeding';
-import { addDays, calendarDaysBetween, parseYmd, startOfDay, toYmd } from './time';
+import { doseSlots, doseState, type MedCourse } from '@huishouden/pwa-kit/dose';
+import { isMealTime } from './feeding';
+import { addDays, daysBetween, parseYmd, startOfDay, toYmd } from '@huishouden/pwa-kit/time';
 
 /**
  * What "Scan the label" hands over: the kit's `MedCourse` (read on the device and parsed by
@@ -42,7 +42,7 @@ export function lastDay(c: Pick<CourseLike, 'startDate' | 'days'>): string {
 /** 1-based day of the course on the day of `now`; below 1 before it starts, above `days` after it ends. */
 export function courseDay(c: Pick<CourseLike, 'startDate'>, now: number): number {
   const start = parseYmd(c.startDate);
-  return start === null ? 0 : calendarDaysBetween(start, now) + 1;
+  return start === null ? 0 : daysBetween(start, now) + 1;
 }
 
 export type CourseState = 'upcoming' | 'active' | 'finished';
@@ -63,16 +63,21 @@ export function courseText(c: Pick<CourseLike, 'startDate' | 'days'>, now: numbe
 
 export type DoseStatus<D> = { state: 'given'; dose: D; at: number } | { state: 'due'; at: number } | { state: 'missed'; at: number };
 
-/** Today's doses of an active course, one per time; empty when the course isn't running today. */
+/**
+ * Today's doses of an active course, one per time; empty when the course isn't running today. The
+ * slots are the kit's (`doseSlots`); a dose is due until its time and missed after it.
+ */
 export function todaysDoses<C extends CourseLike, D extends DoseLike>(c: C, doses: D[], now: number): { slot: number; time: string; status: DoseStatus<D> }[] {
   if (courseState(c, now) !== 'active') return [];
   const today = startOfDay(now);
   const mine = doses.filter((d) => d.courseId === c.id && startOfDay(d.at) === today);
+  const slots = doseSlots({ startDate: toYmd(today), days: 1, times: c.times }, today, addDays(today, 1) - 1);
   return c.times.map((time, slot) => {
     const dose = mine.filter((d) => d.slot === slot).sort((a, b) => b.at - a.at)[0];
-    const at = mealAt(time, now);
     if (dose) return { slot, time, status: { state: 'given', dose, at: dose.at } };
-    return { slot, time, status: { state: now > at ? 'missed' : 'due', at } };
+    const due = slots.find((s) => s.time === time)!;
+    const state = doseState(due, [], now, { earlyMinutes: Number.POSITIVE_INFINITY, graceMinutes: 0 });
+    return { slot, time, status: { state: state === 'missed' ? 'missed' : 'due', at: due.at } };
   });
 }
 
@@ -109,7 +114,7 @@ export function daysUntil(startDate: string, until: string): number | null {
   const a = parseYmd(startDate);
   const b = parseYmd(until);
   if (a === null || b === null) return null;
-  const n = calendarDaysBetween(a, b) + 1;
+  const n = daysBetween(a, b) + 1;
   return n >= 1 ? n : null;
 }
 
