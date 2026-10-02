@@ -4,6 +4,7 @@ import { markGiven } from '../lib/schedule';
 import { defaultMeals } from '../lib/feeding';
 import type { PetHouseholdData } from '../lib/demo';
 import type { DataKey, PetActions, PetBundle } from './types';
+import { track } from '@huishouden/pwa-kit/observability';
 
 /** One document write: `data` null deletes. */
 export interface Op {
@@ -101,6 +102,7 @@ export function createActions(b: Backend): PetActions {
     deleteReminder: (r) => del('reminders', r.id),
     restoreReminder: (r) => put('reminders', r.id, withoutId(r)),
     giveDose: (r, at) => {
+      track('give dose');
       const now = b.now();
       const next = markGiven(r, at);
       const dose = { id: b.newId('doses'), ...doseDoc({ petId: r.petId, reminderId: r.id, title: r.title, at }, b.me, now) };
@@ -116,12 +118,14 @@ export function createActions(b: Backend): PetActions {
         { key: 'reminders', id: before.id, data: withoutId(before) },
       ]),
     saveAppointment: (id, input) => {
+      track('save appointment');
       const existing = find('appointments', id);
       put('appointments', id ?? b.newId('appointments'), appointmentDoc(input, existing?.by ?? b.me, existing?.createdAt ?? b.now()));
     },
     deleteAppointment: (a) => del('appointments', a.id),
     restoreAppointment: (a) => put('appointments', a.id, withoutId(a)),
     logWeight: (input) => {
+      track('log weight');
       const w = { id: b.newId('weights'), ...weightDoc(input, b.me, b.now()) };
       put('weights', w.id, withoutId(w));
       return w;
@@ -143,6 +147,7 @@ export function createActions(b: Backend): PetActions {
     deleteMeal: (m) => del('meals', m.id),
     restoreMeal: (m) => put('meals', m.id, withoutId(m)),
     logFeeding: (input) => {
+      track('log feed');
       const f = { id: b.newId('feedings'), ...feedingDoc(input, b.me, b.now()) };
       put('feedings', f.id, withoutId(f));
       return f;
@@ -151,6 +156,7 @@ export function createActions(b: Backend): PetActions {
     deleteFeedings: (list) => b.write(list.map((f) => ({ key: 'feedings', id: f.id, data: null }))),
     restoreFeedings: (list) => b.write(list.map((f) => ({ key: 'feedings', id: f.id, data: withoutId(f) }))),
     saveCourse: (id, input) => {
+      track('save medicine course');
       const existing = find('courses', id);
       const now = b.now();
       const courseId = id ?? b.newId('courses');
@@ -160,6 +166,7 @@ export function createActions(b: Backend): PetActions {
     deleteCourse: (c) => del('courses', c.id),
     restoreCourse: (c) => put('courses', c.id, withoutId(c)),
     giveMedDose: (c, slot, at) => {
+      track('give medicine');
       const d = { id: b.newId('medDoses'), ...medDoseDoc({ petId: c.petId, courseId: c.id, slot, at }, b.me, b.now()) };
       put('medDoses', d.id, withoutId(d));
       return d;
