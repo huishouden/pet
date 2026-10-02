@@ -69,8 +69,8 @@ async function restrictedCourse(page: Page) {
   await page.getByRole('button', { name: PET }).first().click();
   await page.getByRole('region', { name: `${PET}'s medicine` }).getByRole('button', { name: 'Add course' }).click();
   const dialog = page.getByRole('dialog', { name: `Medicine course for ${PET}` });
-  await dialog.getByLabel('Medicine').fill(PILL);
-  await dialog.getByLabel('Dose').fill('1 tablet');
+  await dialog.getByLabel('Medicine', { exact: true }).fill(PILL);
+  await dialog.getByPlaceholder('1 tablet').fill('1 tablet');
   await dialog.getByLabel('Number of days').fill('365');
   await dialog.getByText('Only approved helpers').click();
   await dialog.getByRole('button', { name: 'Save' }).click();
