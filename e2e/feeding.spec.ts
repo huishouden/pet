@@ -105,6 +105,9 @@ test('Scan the label fills the course from the photo and lists what it did not u
   await expect(dialog.getByLabel('Dose 2 time')).toHaveValue('19:00');
   await expect(dialog.getByLabel('Number of days')).toHaveValue('10');
   await expect(dialog.getByLabel('Give with food')).toBeChecked();
+  // Unused label text is collapsed so it doesn't lead the result; it's one tap away.
+  await expect(dialog.getByRole('list', { name: 'Not understood' })).toBeHidden();
+  await dialog.getByText("Show the label text that wasn't used").click();
   await expect(dialog.getByRole('list', { name: 'Not understood' })).toContainText('zq7 smudge');
   await dialog.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('region', { name: "Miso's medicine" })).toContainText('Day 1 of 10');
