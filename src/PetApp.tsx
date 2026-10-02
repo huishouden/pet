@@ -213,7 +213,18 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   else if (tab === 'appointments') content = <Appointments store={store} pets={pets} open={open} calendarAvailable={calendar} notify={notify} onImport={importEvents} />;
   else if (tab === 'pets') content = <Pets store={store} pets={pets} open={open} shown={shownPet} onShow={setShownPet} onGive={give} notify={notify} />;
   else if (tab === 'contacts') content = <Contacts store={store} open={open} notify={notify} />;
-  else content = <Today store={store} pets={pets} open={open} onGive={give} onToggleMeal={toggleMeal} onToggleDose={(pet, c, slot, day) => toggleDose(pet, c, slot, day)} />;
+  else
+    content = (
+      <Today
+        store={store}
+        pets={pets}
+        open={open}
+        onGive={give}
+        onToggleMeal={toggleMeal}
+        onToggleDose={(pet, c, slot, day) => toggleDose(pet, c, slot, day)}
+        afterNeeds={<CalendarSuggestions suggestions={suggested.suggestions} now={now} onAdd={(m) => importEvents([m])} onDismiss={suggested.dismiss} />}
+      />
+    );
 
   return (
     <PetPhotos.Provider value={photos}>
@@ -221,9 +232,6 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
       <Header tabs={TABS} tab={tab} onTab={(id) => chooseTab(id as TabId)} user={user} onSignIn={onSignIn} onSignOut={onSignOut} signingIn={signingIn} />
       <main className="mx-auto flex w-full max-w-[1200px] min-h-0 flex-1 flex-col gap-4 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-6">
         {banner}
-        {tab === 'today' && store.ready && (
-          <CalendarSuggestions suggestions={suggested.suggestions} now={now} onAdd={(m) => importEvents([m])} onDismiss={suggested.dismiss} />
-        )}
         {backfillCourse && (
           <div role="status" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-stone-200 bg-white px-5 py-3 shadow-sm">
             <p className="min-w-0 flex-1 text-base text-stone-800">
