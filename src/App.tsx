@@ -12,6 +12,7 @@ import { Header } from './components/Header';
 import { cardClass, primaryButton } from './components/ui';
 import { useToast } from './useToast';
 import { PORTAL_URL } from './lib/portal';
+import { NotificationsCard, VAPID_PUBLIC_KEY } from './components/NotificationsCard';
 
 export default function App() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
@@ -94,7 +95,15 @@ function LiveApp({ householdId, members, user, ...frame }: FrameProps & { househ
   const read = useCallback(() => Date.now(), []);
   return (
     <ClockProvider read={read}>
-      <PetApp store={store} user={user} {...frame} toast={toast} notify={notify} clearToast={clear} />
+      <PetApp
+        store={store}
+        user={user}
+        {...frame}
+        toast={toast}
+        notify={notify}
+        clearToast={clear}
+        deviceSettings={VAPID_PUBLIC_KEY ? <NotificationsCard householdId={householdId} user={user} /> : undefined}
+      />
     </ClockProvider>
   );
 }

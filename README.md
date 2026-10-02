@@ -29,6 +29,10 @@ Installable on the tablet, phones and laptops, and works offline (changes sync w
 |---|---|
 | ![Starting a reminder from a common schedule](docs/screenshots/new-reminder.png) | ![Pet events found in the calendar, each with Add](docs/screenshots/calendar-import.png) |
 
+| Scan the label |
+|---|
+| ![A medicine course filled in from a label photo, with the line it did not understand](docs/screenshots/scan-label.png) |
+
 _Screenshots of the live site signed out, which shows two invented pets dated in 2031. Refreshed by CI after each deploy._
 
 ## Data
@@ -57,6 +61,13 @@ The Firestore rules live in the repo that owns the project's rules file
 ([huishouden/tasks](https://github.com/huishouden/tasks)). Signing in uses Google with no extra
 scopes; the household comes from the shared `households` document, so one invite from the portal
 opens every Huishouden app.
+
+Scan the label reads a medicine label photo on the device (`@huishouden/pwa-kit/dose`, tesseract.js
+loaded on first use) and fills in the course for the person to check; the photo is never stored or
+uploaded. Medicine doses and meals nobody has ticked by their time become reminders in the
+household's `reminders` collection (`@huishouden/pwa-kit/reminders`), which the shared sender
+delivers as notifications to each member who turned them on for a device (Care, "Notifications on
+this device", shown once the repo has `VITE_VAPID_PUBLIC_KEY`).
 
 Find in my calendar and Import from calendar read Google Calendar (read-only) through
 `@huishouden/pwa-kit/calendar`; Google asks once for permission the first time. Find a business looks

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { captureScreenshot } from '@huishouden/pwa-kit/e2e';
 import places from './fixtures/nominatim.json' with { type: 'json' };
@@ -94,5 +95,22 @@ test('phone: pet', async ({ page }) => {
     path: '/?tab=pets',
     fixedTime,
     prepare: (p) => expect(p.getByRole('region', { name: "Biscuit's weight" })).toBeVisible(),
+  });
+});
+
+test('scan the label', async ({ page }) => {
+  const label = readFileSync(new URL('./fixtures/label.txt', import.meta.url), 'utf8');
+  await page.addInitScript((text) => {
+    (window as unknown as { __mockLabelText: string }).__mockLabelText = text;
+  }, label);
+  await captureScreenshot(page, 'scan-label', {
+    path: '/?tab=pets&pet=demo-pet-miso',
+    fixedTime,
+    prepare: async (p) => {
+      await p.getByRole('region', { name: "Miso's medicine" }).getByRole('button', { name: 'Add course' }).click();
+      const dialog = p.getByRole('dialog', { name: 'Medicine course for Miso' });
+      await dialog.getByLabel('Label photo').setInputFiles({ name: 'label.jpg', mimeType: 'image/jpeg', buffer: Buffer.from('photo') });
+      await expect(dialog.getByText('Filled in from the label. Check each field before saving.')).toBeVisible();
+    },
   });
 });

@@ -144,13 +144,13 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
               <span className="flex items-center gap-2">
                 <span className="text-base text-stone-700">every</span>
                 <input
-                  className={`${inputClass} w-20 text-center tabular-nums`}
+                  className={`${inputClass} max-w-20 text-center tabular-nums`}
                   inputMode="numeric"
                   value={every}
                   onChange={(e) => setEvery(e.target.value.replace(/\D/g, '').slice(0, 3))}
                   aria-label="Every how many"
                 />
-                <select className={`${inputClass} w-32`} value={unit} onChange={(e) => setUnit(e.target.value as Unit)} aria-label="Unit">
+                <select className={`${inputClass} max-w-32`} value={unit} onChange={(e) => setUnit(e.target.value as Unit)} aria-label="Unit">
                   {UNITS.map((u) => (
                     <option key={u} value={u}>
                       {everyN === 1 ? u : `${u}s`}

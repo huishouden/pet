@@ -51,7 +51,7 @@ export function WeightDialog({ pet, now, onSave, onClose }: {
         <div className="flex items-end gap-3">
           <Field label="Weight">
             <input
-              className={`${inputClass} w-40 text-2xl tabular-nums`}
+              className={`${inputClass} max-w-40 text-2xl tabular-nums`}
               inputMode="decimal"
               value={value}
               onChange={(e) => setValue(e.target.value.replace(/[^\d.,]/g, '').slice(0, 7))}

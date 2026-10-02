@@ -49,6 +49,8 @@ interface Props {
   clearToast: () => void;
   /** Shown above the content: the sample-data banner. */
   banner?: ReactNode;
+  /** Per-device settings shown under Care: notifications, for a signed-in member. */
+  deviceSettings?: ReactNode;
 }
 
 /** What the screens can ask the frame to open. */
@@ -68,7 +70,7 @@ export interface Open {
 }
 
 /** Everything inside the frame once there is data to show (live or sample). */
-export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, notify, clearToast, banner }: Props) {
+export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, notify, clearToast, banner, deviceSettings }: Props) {
   const { now, read } = useClock();
   const [tab, setTab] = useState<TabId>(() => initialTab());
   const [petDialog, setPetDialog] = useState<{ pet: Pet | null } | null>(null);
@@ -77,7 +79,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   const [weightFor, setWeightFor] = useState<string | null>(null);
   const [record, setRecord] = useState<{ record: PetRecord | null; petId: string } | null>(null);
   const [contact, setContact] = useState<{ contact: Contact | null; role?: string } | null>(null);
-  const [shownPet, setShownPet] = useState<string | null>(null);
+  const [shownPet, setShownPet] = useState<string | null>(() => new URLSearchParams(location.search).get('pet'));
   const [meal, setMeal] = useState<{ meal: Meal | null; petId: string } | null>(null);
   const [feeding, setFeeding] = useState<{ feeding: Feeding | null; petId: string } | null>(null);
   const [course, setCourse] = useState<{ course: Course | null; petId: string } | null>(null);
@@ -148,7 +150,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
 
   let content: ReactNode;
   if (!store.ready) content = <p className="p-2 text-lg text-stone-600">Loading the pets</p>;
-  else if (tab === 'care') content = <Care store={store} pets={pets} open={open} onGive={give} notify={notify} />;
+  else if (tab === 'care') content = <Care store={store} pets={pets} open={open} onGive={give} notify={notify} deviceSettings={deviceSettings} />;
   else if (tab === 'appointments') content = <Appointments store={store} pets={pets} open={open} calendarAvailable={calendar} notify={notify} />;
   else if (tab === 'pets') content = <Pets store={store} pets={pets} open={open} shown={shownPet} onShow={setShownPet} onGive={give} notify={notify} />;
   else if (tab === 'contacts') content = <Contacts store={store} open={open} notify={notify} />;
