@@ -1,0 +1,28 @@
+{
+  "description": "Invented reminders checked on Wednesday 14 May 2031 at 10:30 local time.",
+  "now": "2031-05-14T10:30:00",
+  "intervals": [
+    { "from": "2031-05-14", "every": 1, "unit": "day", "to": "2031-05-15" },
+    { "from": "2031-05-14", "every": 2, "unit": "week", "to": "2031-05-28" },
+    { "from": "2031-01-31", "every": 1, "unit": "month", "to": "2031-02-28" },
+    { "from": "2032-01-31", "every": 1, "unit": "month", "to": "2032-02-29" },
+    { "from": "2031-11-30", "every": 3, "unit": "month", "to": "2032-02-29" },
+    { "from": "2031-12-15", "every": 1, "unit": "month", "to": "2032-01-15" },
+    { "from": "2032-02-29", "every": 1, "unit": "year", "to": "2033-02-28" },
+    { "from": "2031-03-30", "every": 1, "unit": "week", "to": "2031-04-06" }
+  ],
+  "states": [
+    { "title": "Flea and tick", "due": "2031-05-12", "every": 1, "unit": "month", "state": "overdue", "text": "2 days overdue", "headline": "Overdue: flea and tick" },
+    { "title": "Heartworm prevention", "due": "2031-05-13", "every": 1, "unit": "month", "state": "overdue", "text": "1 day overdue", "headline": "Overdue: heartworm prevention" },
+    { "title": "Kidney supplement", "due": "2031-05-14", "every": 1, "unit": "day", "state": "today", "text": "Due today", "headline": "Kidney supplement due today" },
+    { "title": "Heartworm prevention", "due": "2031-05-15", "every": 1, "unit": "month", "state": "soon", "text": "Due tomorrow", "headline": "Heartworm prevention due tomorrow" },
+    { "title": "Heartworm", "due": "2031-05-17", "every": 1, "unit": "month", "state": "soon", "text": "Due in 3 days", "headline": "Heartworm due in 3 days" },
+    { "title": "Flea treatment", "due": "2031-05-26", "every": 1, "unit": "month", "state": "later", "text": "Due in 12 days", "headline": "Flea treatment due in 12 days" },
+    { "title": "Rabies vaccine", "due": "2031-06-10", "every": 1, "unit": "year", "state": "soon", "text": "Due in 3 weeks", "headline": "Rabies vaccine due in 3 weeks" },
+    { "title": "FVRCP vaccine", "due": "2031-09-22", "every": 1, "unit": "year", "state": "later", "text": "Due in 4 months", "headline": "FVRCP vaccine due in 4 months" },
+    { "title": "FVRCP booster", "due": "2031-05-01", "every": 1, "unit": "year", "state": "overdue", "text": "13 days overdue", "headline": "Overdue: FVRCP booster" },
+    { "title": "Daily tablet", "due": "2031-05-16", "every": 1, "unit": "day", "state": "soon", "text": "Due in 2 days", "headline": "Daily tablet due in 2 days" },
+    { "title": "Ear drops", "due": "2031-05-09", "lastDoneAt": "2031-05-09T20:00:00", "state": "done", "text": "Given", "headline": "Ear drops given" },
+    { "title": "Stitches out", "due": "2031-05-20", "state": "soon", "text": "Due in 6 days", "headline": "Stitches out due in 6 days" }
+  ]
+}

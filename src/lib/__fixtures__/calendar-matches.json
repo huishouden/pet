@@ -1,0 +1,45 @@
+{
+  "description": "Invented Google Calendar matches as @huishouden/pwa-kit/calendar returns them.",
+  "matches": [
+    {
+      "id": "evt-vaccines",
+      "title": "Biscuit vet: rabies vaccine",
+      "start": 1938841800000,
+      "allDay": false,
+      "location": "Example Vet Clinic, 25 Example Street, Springfield",
+      "description": "<p>Bring the <b>vaccine</b> card.</p><p>Ask about the&nbsp;ear drops &amp; weight.</p>",
+      "link": "https://www.google.com/calendar/event?eid=evt-vaccines",
+      "calendarName": "Family"
+    },
+    {
+      "id": "evt-groom",
+      "title": "Grooming",
+      "start": 1939129200000,
+      "allDay": false,
+      "location": "",
+      "description": "",
+      "link": "https://www.google.com/calendar/event?eid=evt-groom",
+      "calendarName": "Alex"
+    },
+    {
+      "id": "evt-kennel",
+      "title": "Drop off at the kennel",
+      "start": 1940335200000,
+      "allDay": true,
+      "location": "Example Pet Lodge",
+      "description": "Line one\nLine two",
+      "link": "https://www.google.com/calendar/event?eid=evt-kennel",
+      "calendarName": "Family"
+    },
+    {
+      "id": "evt-vaccines",
+      "title": "Biscuit vet: rabies vaccine",
+      "start": 1938841800000,
+      "allDay": false,
+      "location": "",
+      "description": "",
+      "link": "https://www.google.com/calendar/event?eid=evt-vaccines",
+      "calendarName": "Sam"
+    }
+  ]
+}

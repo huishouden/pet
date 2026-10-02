@@ -1,0 +1,18 @@
+{
+  "description": "An invented AM/PM board checked at 10:30 on Wednesday 14 May 2031.",
+  "now": "2031-05-14T10:30:00",
+  "meals": [
+    { "id": "p1-pm", "petId": "p1", "name": "PM", "time": "19:00" },
+    { "id": "p1-am", "petId": "p1", "name": "AM", "time": "09:00" },
+    { "id": "p2-am", "petId": "p2", "name": "AM", "time": "09:00" },
+    { "id": "p2-pm", "petId": "p2", "name": "PM", "time": "19:00" }
+  ],
+  "feedings": [
+    { "id": "f1", "petId": "p1", "mealId": "p1-am", "at": "2031-05-14T07:04:00", "by": "sam@example.com" },
+    { "id": "f2", "petId": "p1", "mealId": "p1-am", "at": "2031-05-14T07:30:00", "by": "alex@example.com" },
+    { "id": "f3", "petId": "p1", "mealId": "p1-pm", "at": "2031-05-13T18:10:00", "by": "alex@example.com" },
+    { "id": "f4", "petId": "p2", "mealId": "p2-pm", "at": "2031-05-13T18:40:00", "by": "sam@example.com" },
+    { "id": "f5", "petId": "p2", "at": "2031-05-12T15:00:00", "by": "sam@example.com" },
+    { "id": "f6", "petId": "p2", "mealId": "p2-am", "at": "2031-04-30T07:00:00", "by": "sam@example.com" }
+  ]
+}

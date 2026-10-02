@@ -1,0 +1,20 @@
+[
+  {
+    "osm_type": "node",
+    "osm_id": 1000011,
+    "lat": "40.0011",
+    "lon": "-75.0011",
+    "name": "Example Animal Clinic",
+    "display_name": "Example Animal Clinic, 14 Sample Avenue, Springfield, 00000, United States",
+    "extratags": { "phone": "+1 555 010 0133", "website": "animals.example.com" }
+  },
+  {
+    "osm_type": "way",
+    "osm_id": 1000012,
+    "lat": "40.0012",
+    "lon": "-75.0012",
+    "name": "Example Dog Grooming",
+    "display_name": "Example Dog Grooming, 3 Demo Lane, Springfield, 00000, United States",
+    "extratags": {}
+  }
+]
