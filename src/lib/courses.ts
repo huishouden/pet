@@ -1,27 +1,16 @@
 // Short medicine courses ("1 tablet twice daily for 7 days with food"): which day of the course it is,
 // today's doses as given / not yet / missed, and default dose times from the pet's meals. Pure.
 
+import type { MedCourse } from '@huishouden/pwa-kit/dose';
 import { isMealTime, mealAt } from './feeding';
 import { addDays, calendarDaysBetween, parseYmd, startOfDay, toYmd } from './time';
 
 /**
- * What "Scan the label" hands over: the same shape as the kit's `MedCourse` (src/dose.ts, read on
- * the device and parsed; not yet an exported subpath in v0.18.0). `days` and `withFood` may be
- * missing when the label doesn't say; the form keeps its own values then.
+ * What "Scan the label" hands over: the kit's `MedCourse` (read on the device and parsed by
+ * `@huishouden/pwa-kit/dose`). `days` and `withFood` are missing when the label doesn't say; the
+ * form keeps its own values then.
  */
-export interface CourseDraft {
-  name: string;
-  /** "1 tablet", "5 drops in the left ear". */
-  dose: string;
-  timesPerDay: number;
-  /** 'HH:MM' per dose, earliest first. */
-  times: string[];
-  /** YYYY-MM-DD of the first day. */
-  startDate: string;
-  days?: number;
-  withFood?: boolean;
-  notes: string;
-}
+export type CourseDraft = MedCourse;
 
 export const MAX_TIMES_PER_DAY = 6;
 export const MAX_COURSE_DAYS = 365;

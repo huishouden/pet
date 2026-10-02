@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
 // The sample board (signed out, nothing saved). The clock is pinned to the sample's morning: Biscuit
@@ -66,7 +67,7 @@ test('a new course defaults to the pet’s AM and PM times and appears on the bo
   await page.getByRole('button', { name: 'Miso', exact: true }).click();
   await page.getByRole('region', { name: "Miso's medicine" }).getByRole('button', { name: 'Add course' }).click();
   const dialog = page.getByRole('dialog', { name: 'Medicine course for Miso' });
-  await expect(dialog.getByRole('button', { name: 'Scan the label' })).toHaveCount(0);
+  await expect(dialog.getByText('It is read on this device and not kept.', { exact: false })).toBeVisible();
   await expect(dialog.getByLabel('Dose 1 time')).toHaveValue('09:00');
   await expect(dialog.getByLabel('Dose 2 time')).toHaveValue('19:00');
   await dialog.getByLabel('Medicine').fill('Eye drops');
@@ -85,4 +86,26 @@ test('renaming a meal changes the board', async ({ page }) => {
   await dialog.getByRole('button', { name: 'Save' }).click();
   await page.getByRole('button', { name: 'Today', exact: true }).click();
   await expect(page.getByRole('button', { name: /^Biscuit Dinner: not yet/ })).toBeVisible();
+});
+
+test('Scan the label fills the course from the photo and lists what it did not understand', async ({ page }) => {
+  const label = readFileSync(new URL('./fixtures/label.txt', import.meta.url), 'utf8');
+  await page.addInitScript((text) => {
+    (window as unknown as { __mockLabelText: string }).__mockLabelText = text;
+  }, label);
+  await page.goto('/?tab=pets&pet=demo-pet-miso');
+  await page.getByRole('region', { name: "Miso's medicine" }).getByRole('button', { name: 'Add course' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Medicine course for Miso' });
+  await expect(dialog.getByRole('button', { name: 'Scan the label' })).toBeVisible();
+  await dialog.getByLabel('Label photo').setInputFiles({ name: 'label.jpg', mimeType: 'image/jpeg', buffer: Buffer.from('not a real photo') });
+  await expect(dialog.getByText('Filled in from the label. Check each field before saving.')).toBeVisible();
+  await expect(dialog.getByLabel('Medicine')).toHaveValue('Amoxicillin 50 mg');
+  await expect(dialog.getByLabel('Dose', { exact: true })).toHaveValue('1 tablet');
+  await expect(dialog.getByLabel('Dose 1 time')).toHaveValue('09:00');
+  await expect(dialog.getByLabel('Dose 2 time')).toHaveValue('19:00');
+  await expect(dialog.getByLabel('Number of days')).toHaveValue('10');
+  await expect(dialog.getByLabel('Give with food')).toBeChecked();
+  await expect(dialog.getByRole('list', { name: 'Not understood' })).toContainText('zq7 smudge');
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('region', { name: "Miso's medicine" })).toContainText('Day 1 of 10');
 });

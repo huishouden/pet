@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { parseDirections, readLabel, toMedCourse } from '@huishouden/pwa-kit/dose';
 import { ScanText, Trash2 } from 'lucide-react';
 import type { Course, Meal, Pet } from '../lib/model';
 import { LIMITS } from '../lib/model';
@@ -8,15 +9,21 @@ import { isYmd, toYmd } from '../lib/time';
 import type { CourseInput } from '../lib/build';
 import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton, secondaryButton } from './ui';
 
-/**
- * "Scan the label": reading a medicine label on the device and turning it into a `CourseDraft` is
- * being built in the shared kit. Until it ships the button stays hidden; when it does, pass
- * `onScanLabel` (resolving to a draft, or null when the person cancels) and flip this on.
- */
-export const SCAN_LABEL_ENABLED = false;
+declare global {
+  interface Window {
+    /** Browser tests set this to stand in for the label photo's text (OCR needs a real photo). */
+    __mockLabelText?: string;
+  }
+}
+
+type Scan =
+  | { status: 'idle' }
+  | { status: 'reading'; progress: number }
+  | { status: 'done'; unparsed: string[]; assumptions: string[]; empty: boolean }
+  | { status: 'error' };
 
 /** A short medicine course: what, how much, how often, from when and for how long. */
-export function CourseDialog({ course, pet, meals, now, onSave, onDelete, onClose, onScanLabel }: {
+export function CourseDialog({ course, pet, meals, now, onSave, onDelete, onClose }: {
   course: Course | null;
   pet: Pet | undefined;
   meals: Meal[];
@@ -24,7 +31,6 @@ export function CourseDialog({ course, pet, meals, now, onSave, onDelete, onClos
   onSave: (input: CourseInput) => void;
   onDelete?: () => void;
   onClose: () => void;
-  onScanLabel?: () => Promise<CourseDraft | null>;
 }) {
   const mealTimes = pet ? mealsOf(meals, pet.id).map((m) => m.time) : [];
   const [name, setName] = useState(course?.name ?? '');
@@ -40,18 +46,40 @@ export function CourseDialog({ course, pet, meals, now, onSave, onDelete, onClos
   const valid = !!pet && name.trim().length > 0 && isYmd(startDate) && times.length > 0 && times.every(isMealTime) && !!total && total >= 1 && total <= MAX_COURSE_DAYS;
 
   const setCount = (n: number) => setTimes(defaultTimes(n, mealTimes));
+  const photo = useRef<HTMLInputElement>(null);
+  const [scan, setScan] = useState<Scan>({ status: 'idle' });
+
+  // "Scan the label": the photo is read on this device and never stored or uploaded.
+  const readPhoto = async (file: File) => {
+    setScan({ status: 'reading', progress: 0 });
+    try {
+      const text = window.__mockLabelText ?? (await readLabel(file, { onProgress: (progress) => setScan({ status: 'reading', progress }) }));
+      const parsed = parseDirections(text);
+      const am = mealsOf(meals, pet?.id ?? '').find((m) => m.name === 'AM')?.time;
+      const pm = mealsOf(meals, pet?.id ?? '').find((m) => m.name === 'PM')?.time;
+      const draft = toMedCourse(parsed, { startDate: toYmd(now), defaultTimes: { ...(am ? { morning: am } : {}), ...(pm ? { evening: pm } : {}) } });
+      const empty = !draft.name && !draft.dose && draft.times.length === 0;
+      if (!empty) fill(draft);
+      setScan({ status: 'done', unparsed: parsed.unparsed, assumptions: parsed.assumptions, empty });
+    } catch {
+      setScan({ status: 'error' });
+    } finally {
+      if (photo.current) photo.current.value = '';
+    }
+  };
 
   const fill = (d: CourseDraft) => {
-    setName(d.name);
-    setDose(d.dose);
-    setTimes(d.times.length ? d.times : defaultTimes(d.timesPerDay, mealTimes));
+    if (d.name) setName(d.name.slice(0, LIMITS.courseName));
+    if (d.dose) setDose(d.dose.slice(0, LIMITS.courseDose));
+    if (d.times.length) setTimes(d.times.slice(0, MAX_TIMES_PER_DAY));
+    else if (d.timesPerDay) setTimes(defaultTimes(d.timesPerDay, mealTimes));
     if (isYmd(d.startDate)) setStartDate(d.startDate);
     if (d.days) {
       setLength('days');
       setDays(String(d.days));
     }
     if (d.withFood !== undefined) setWithFood(d.withFood);
-    setNotes(d.notes ?? '');
+    if (d.notes) setNotes(d.notes.slice(0, LIMITS.courseNotes));
   };
 
   const save = () => {
@@ -94,18 +122,56 @@ export function CourseDialog({ course, pet, meals, now, onSave, onDelete, onClos
           save();
         }}
       >
-        {SCAN_LABEL_ENABLED && onScanLabel && (
-          <button
-            type="button"
-            className={secondaryButton}
-            onClick={async () => {
-              const draft = await onScanLabel();
-              if (draft) fill(draft);
+        <div className="space-y-2 rounded-2xl border border-stone-200 p-4">
+          <input
+            ref={photo}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            aria-label="Label photo"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void readPhoto(file);
             }}
-          >
-            <ScanText size={18} /> Scan the label
+          />
+          <button type="button" className={secondaryButton} disabled={scan.status === 'reading'} onClick={() => photo.current?.click()}>
+            <ScanText size={18} /> {scan.status === 'reading' ? `Reading the label ${Math.round(scan.progress * 100)}%` : 'Scan the label'}
           </button>
-        )}
+          {scan.status === 'idle' && <p className="text-sm text-stone-600">Take a photo of the pharmacy or vet label. It is read on this device and not kept.</p>}
+          {scan.status === 'error' && (
+            <p role="alert" className="text-base text-red-700">
+              Couldn't read that photo. Try again in good light with the label flat, or fill it in below.
+            </p>
+          )}
+          {scan.status === 'done' && scan.empty && (
+            <p role="status" className="text-base text-stone-700">
+              No directions found on that photo. Try again closer, or fill it in below.
+            </p>
+          )}
+          {scan.status === 'done' && !scan.empty && (
+            <div role="status" className="space-y-1 text-base text-stone-700">
+              <p className="font-medium text-forest-700">Filled in from the label. Check each field before saving.</p>
+              {scan.assumptions.length > 0 && (
+                <ul aria-label="Assumptions" className="list-disc pl-5 text-stone-700">
+                  {scan.assumptions.map((a) => (
+                    <li key={a}>{a}</li>
+                  ))}
+                </ul>
+              )}
+              {scan.unparsed.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-terracotta-dark">Not understood, check by hand:</p>
+                  <ul aria-label="Not understood" className="list-disc pl-5 text-stone-700">
+                    {scan.unparsed.map((u) => (
+                      <li key={u}>{u}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Medicine">
             <input className={inputClass} value={name} maxLength={LIMITS.courseName} onChange={(e) => setName(e.target.value)} placeholder="Antibiotic" autoComplete="off" />
@@ -127,7 +193,7 @@ export function CourseDialog({ course, pet, meals, now, onSave, onDelete, onClos
             {times.map((t, i) => (
               <input
                 key={i}
-                className={`${inputClass} w-36`}
+                className={`${inputClass} max-w-36`}
                 type="time"
                 value={t}
                 aria-label={`Dose ${i + 1} time`}
@@ -152,14 +218,14 @@ export function CourseDialog({ course, pet, meals, now, onSave, onDelete, onClos
               {length === 'days' ? (
                 <>
                   <input
-                    className={`${inputClass} w-20 text-center tabular-nums`}
+                    className={`${inputClass} max-w-20 text-center tabular-nums`}
                     inputMode="numeric"
                     value={days}
                     onChange={(e) => setDays(e.target.value.replace(/\D/g, '').slice(0, 3))}
                     aria-label="Number of days"
                   />
                   <span className="text-base text-stone-700">days</span>
-                  <button type="button" className={ghostButton} onClick={() => setLength('until')}>
+                  <button type="button" className={`${ghostButton} whitespace-nowrap`} onClick={() => setLength('until')}>
                     Until a date
                   </button>
                 </>

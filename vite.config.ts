@@ -22,6 +22,8 @@ export default defineConfig({
       shortName: 'Pet',
       description: 'Looking after the pets, together',
       url: 'https://huishouden-pet.web.app',
+      push: true,
+      ocr: true,
       themeColor: '#1b4332',
       backgroundColor: '#faf9f5',
       includeAssets: ['icon.svg', 'apple-touch-icon.png', 'og.png'],

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Check, Pencil, Plus } from 'lucide-react';
 import type { Pet, Reminder } from '../lib/model';
 import { describeRecurrence, dueState, dueText, groupByDue } from '../lib/schedule';
@@ -11,12 +11,13 @@ import { PetAvatar, PetChips } from '../components/PetAvatar';
 import { cardClass, iconButton, overline, primaryButton, secondaryButton } from '../components/ui';
 
 /** Every reminder, grouped by how soon it is due, with one-tap Given. */
-export function Care({ store, pets, open, onGive }: {
+export function Care({ store, pets, open, onGive, deviceSettings }: {
   store: PetStore;
   pets: Pet[];
   open: Open;
   onGive: (r: Reminder) => void;
   notify: (message: string, undo?: () => void) => void;
+  deviceSettings?: ReactNode;
 }) {
   const { now } = useClock();
   const [petId, setPetId] = useState<string | null>(null);
@@ -48,6 +49,7 @@ export function Care({ store, pets, open, onGive }: {
           </ul>
         </section>
       ))}
+      {deviceSettings}
     </div>
   );
 }

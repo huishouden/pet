@@ -6,6 +6,7 @@ import { emptyData, type PetHouseholdData } from '../lib/demo';
 import { DAY } from '../lib/time';
 import { db } from './firebase';
 import { createActions, type Backend } from './actions';
+import { useReminderSync } from './reminderSync';
 import { COLLECTIONS, type DataKey, type PetStore } from './types';
 
 /** How far back dose history reads: a year of daily medication, and every monthly one. */
@@ -84,7 +85,11 @@ export function useLiveStore(householdId: string, me: string, members: string[],
     return createActions(backend);
   }, [base, householdId, me]);
 
-  return { data, ready: answered.pets && answered.reminders, actions, members, me };
+  const ready = answered.pets && answered.reminders;
+  // Push notifications for doses and meal cut-offs, delivered by the household's shared sender.
+  useReminderSync(householdId, me, data, ready, onError);
+
+  return { data, ready, actions, members, me };
 }
 
 export function readError(e: unknown, prefix: string): string {
