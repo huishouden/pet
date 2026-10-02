@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/huishouden/pet/compare/v1.5.0...v1.5.1) (2026-10-02)
+
+
+### Bug Fixes
+
+* an entry saved just before the app closes is no longer lost ([#22](https://github.com/huishouden/pet/issues/22)) ([e90927d](https://github.com/huishouden/pet/commit/e90927d1d1e6be3c874b6afb6c2ff1577c0612f0))
+
 ## [1.5.0](https://github.com/huishouden/pet/compare/v1.4.0...v1.5.0) (2026-10-02)
 
 
