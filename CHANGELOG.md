@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.0](https://github.com/huishouden/pet/compare/v1.1.1...v1.2.0) (2026-10-02)
+
+
+### Features
+
+* **contacts:** open a new contact from Google Maps' Share menu; fill from a screenshot or pasted listing ([#14](https://github.com/huishouden/pet/issues/14)) ([ce3ba5f](https://github.com/huishouden/pet/commit/ce3ba5f45e4e6797b16ff00444da2212638617f5))
+* mark earlier days' doses and meals as given ([#11](https://github.com/huishouden/pet/issues/11)) ([154f7bf](https://github.com/huishouden/pet/commit/154f7bf85106d1049410641cd058ea77fb030f73))
+* pet photos as avatars (kit v0.27.0) ([#13](https://github.com/huishouden/pet/issues/13)) ([59e3e80](https://github.com/huishouden/pet/commit/59e3e80b63e6c4d50ca528a4b81a262f7ad0d6c7))
+
 ## [1.1.1](https://github.com/huishouden/pet/compare/v1.1.0...v1.1.1) (2026-10-02)
 
 
