@@ -4,6 +4,7 @@ import { expectCleanLoad, expectGoogleSignInPopup, expectHuishoudenFrame, expect
 test('loads without runtime errors and shows the sample board', async ({ page }) => {
   await expectCleanLoad(page);
   await expect(page.getByText('Sample data')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Needs doing' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Feeding' })).toBeVisible();
   await expectHuishoudenFrame(page, { app: 'Pet', portalUrl: 'https://huishouden-piekstra.web.app' });
   await expect(page).toHaveTitle('Huishouden Pet');

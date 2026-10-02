@@ -4,7 +4,9 @@ import { DEMO_PHOTOS } from './demoPhotos';
 import { toYmd } from '@huishouden/pwa-kit/time';
 
 // Invented sample data for the signed-out app: README screenshots and first impressions. Everything
-// is relative to one fixed day in 2031 so nothing resembles a real household's dates.
+// is relative to one fixed day in 2031 so nothing resembles a real household's dates. The sample
+// morning has something to do: Biscuit's 9:00 antibiotic and Miso's breakfast are late, the flea
+// treatment is overdue, and it is Biscuit's birthday (Miso's is three weeks away).
 
 /** Wednesday 14 May 2031, 10:30 local time (the suite's sample day). The demo's clock starts here. */
 export const DEMO_NOW = new Date(2031, 4, 14, 10, 30).getTime();
@@ -54,7 +56,7 @@ function pets(): Pet[] {
       name: 'Biscuit',
       species: 'dog',
       breed: 'Beagle',
-      birthDate: ymd(3, 8, 2027),
+      birthDate: ymd(5, 14, 2027),
       weightUnit: 'lb',
       targetWeight: 24,
       targetNote: "Vet's goal",
@@ -67,7 +69,7 @@ function pets(): Pet[] {
       name: 'Miso',
       species: 'cat',
       breed: 'Domestic shorthair',
-      birthDate: ymd(9, 20, 2029),
+      birthDate: ymd(6, 4, 2029),
       weightUnit: 'lb',
       targetWeight: 10,
       targetNote: 'Keep her weight up',
@@ -177,7 +179,7 @@ function records(): PetRecord[] {
   const rows: [string, string, string, string?][] = [
     [BISCUIT, 'Ear infection', ymd(4, 30), 'Left ear. Drops twice a day for 10 days; recheck if he scratches it again.'],
     [BISCUIT, 'Chicken allergy confirmed', ymd(11, 14, 2030), 'Skin test at Example Vet Clinic. Lamb-based food only, no chicken treats.'],
-    [BISCUIT, 'Microchip registered', ymd(6, 1, 2027), 'The number is on the adoption papers in the blue folder.'],
+    [BISCUIT, 'Microchip registered', ymd(8, 1, 2027), 'The number is on the adoption papers in the blue folder.'],
     [MISO, 'Kidney diet started', ymd(4, 22), 'Blood test showed early kidney changes. Renal wet food twice a day and a supplement each morning. Recheck in 3 months.'],
     [MISO, 'Spayed', ymd(3, 10, 2030)],
   ];
@@ -225,7 +227,7 @@ function feedings(ms: Meal[]): Feeding[] {
   return out;
 }
 
-/** Biscuit is on day 3 of a week of antibiotics (morning dose given); Miso finished a short course in April. */
+/** Biscuit is on day 3 of a week of antibiotics (this morning's dose not given yet); Miso finished a short course in April. */
 function courses(): Course[] {
   return [
     {
@@ -268,7 +270,6 @@ function medDoses(): MedDose[] {
     add('demo-course-1', BISCUIT, 5, day, 0, '07:08', day % 2 ? ALEX : SAM);
     add('demo-course-1', BISCUIT, 5, day, 1, '18:05', day % 2 ? SAM : ALEX);
   }
-  add('demo-course-1', BISCUIT, 5, 14, 0, '07:06', ALEX);
   for (const day of [22, 23, 24, 25, 26]) add('demo-course-2', MISO, 4, day, 0, '07:40', day % 2 ? ALEX : SAM);
   return out;
 }

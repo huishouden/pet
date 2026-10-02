@@ -5,7 +5,8 @@ import { formatDayShort, parseYmd } from '@huishouden/pwa-kit/time';
 import { age } from '../lib/time';
 import { formatDateShort } from '../lib/format';
 import { convert, formatWeight, latest, targetProgress, trend } from '../lib/weight';
-import { birthdayText } from '../lib/birthday';
+import { birthdayCountdown, birthdayText } from '../lib/birthday';
+import { BirthdayBand } from '../components/Celebration';
 import { SPECIES_LABELS } from '../lib/care';
 import { useClock } from '@huishouden/pwa-kit/react/clock';
 import type { PetStore } from '../data/types';
@@ -71,19 +72,21 @@ function PetDetail({ pet, pets, store, open, now, onGive, notify }: {
   const born = parseYmd(pet.birthDate);
   const ageText = age(pet.birthDate, now, pet.birthDateApprox);
   const birthday = birthdayText(pet.birthDate, now, pet.birthDateApprox);
+  const party = birthdayCountdown(pet.birthDate, now, pet.birthDateApprox);
   const target = targetProgress(weights, pet.weightUnit, pet.targetWeight);
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:min-h-0 lg:flex-1 lg:grid-cols-2 lg:overflow-y-auto">
       <div className="flex flex-col gap-5">
         <section className={`${cardClass} p-6`} aria-label={`${pet.name}'s profile`}>
+          {party?.days === 0 && <BirthdayBand pet={pet} turns={party.turns} />}
           <div className="flex items-start gap-4">
             <PetAvatar pet={pet} pets={pets} size={64} />
             <div className="min-w-0 flex-1">
               <h3 className="text-3xl font-semibold text-stone-800 [overflow-wrap:anywhere]">{pet.name}</h3>
               <p className="mt-0.5 text-lg text-stone-600">{[SPECIES_LABELS[pet.species], pet.breed, ageText].filter(Boolean).join(' · ')}</p>
               {born !== null && !pet.birthDateApprox && <p className="text-base text-stone-600">Born {formatDateShort(born)}</p>}
-              {birthday && (
+              {birthday && party?.days !== 0 && (
                 <p className={`mt-0.5 flex items-center gap-1.5 text-base ${birthday === 'Birthday today' ? 'font-semibold text-forest-700' : 'text-stone-600'}`}>
                   <Cake size={16} aria-hidden="true" /> {birthday}
                 </p>

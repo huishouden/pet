@@ -6,14 +6,15 @@ test.beforeEach(async ({ page }) => {
 
 test('Today leads with what is overdue, and Given moves it on with an undo', async ({ page }) => {
   await page.goto('/');
-  const attention = page.getByRole('region', { name: 'Needs attention' });
-  await expect(attention.getByText('Overdue: flea and tick')).toBeVisible();
-  await expect(attention.getByText('Heartworm prevention due in 3 days')).toBeVisible();
-  await attention.getByRole('button', { name: 'Mark Flea and tick given to Biscuit' }).click();
+  const needs = page.getByRole('region', { name: 'Needs doing' });
+  await expect(needs.getByRole('listitem').first()).toContainText('Flea and tick for Biscuit');
+  await expect(needs.getByRole('listitem').first()).toContainText('Overdue by 2 days');
+  await expect(page.getByRole('region', { name: 'Coming up' }).getByText('Heartworm prevention due in 3 days')).toBeVisible();
+  await needs.getByRole('button', { name: 'Given: Flea and tick for Biscuit' }).click();
   await expect(page.getByText(/Flea and tick given to Biscuit\. Next due .*Jun 14/)).toBeVisible();
-  await expect(attention.getByText('Overdue: flea and tick')).toHaveCount(0);
+  await expect(needs.getByText('Flea and tick for Biscuit')).toHaveCount(0);
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await expect(attention.getByText('Overdue: flea and tick')).toBeVisible();
+  await expect(needs.getByText('Flea and tick for Biscuit')).toBeVisible();
 });
 
 test('Care groups reminders by when they are due, filtered by pet', async ({ page }) => {
