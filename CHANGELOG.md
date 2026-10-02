@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/huishouden/pet/compare/v1.1.0...v1.1.1) (2026-10-02)
+
+
+### Bug Fixes
+
+* ask for an age or year instead of trusting a calendar series as the birth year; age without a birthday ([#9](https://github.com/huishouden/pet/issues/9)) ([b41aa70](https://github.com/huishouden/pet/commit/b41aa701840fe0d8c4b2eb7b8f1d7439c4f7b93e))
+
 ## [1.1.0](https://github.com/huishouden/pet/compare/v1.0.1...v1.1.0) (2026-10-02)
 
 
