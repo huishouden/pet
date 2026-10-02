@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { collection, doc, onSnapshot, query, where, writeBatch, type Query } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, where, type Query } from 'firebase/firestore';
+import { writeBatch } from '@huishouden/pwa-kit/firestore';
 import { addContact, removeContactFromApp, restoreContact, updateContact, watchContacts } from '@huishouden/pwa-kit/contacts';
 import { readError } from '@huishouden/pwa-kit/feedback';
 import { APP } from '../lib/contacts';
