@@ -17,7 +17,7 @@ const warn = (e: unknown) => console.warn("Couldn't update the household agenda"
  * changes settle (2 seconds, so a tick on a meal or a dose reaches the portal within seconds): `replaceAgenda` for each record whose items changed and `removeAgenda` for each one
  * that is gone. A failure never fails a save; the next open repairs it.
  */
-export function useAgendaSync(householdId: string, me: string, data: AgendaData, ready: boolean) {
+export function useAgendaSync(householdId: string, me: string, data: AgendaData, ready: boolean, restricted = false) {
   const written = useRef(new Map<string, string>());
   const syncedDay = useRef<string | null>(null);
   const day = useToday();
@@ -33,7 +33,7 @@ export function useAgendaSync(householdId: string, me: string, data: AgendaData,
         syncedDay.current = today;
         written.current = new Map([...wanted].map(([ref, items]) => [ref, JSON.stringify(items)]));
         const items = [...wanted].flatMap(([ref, list]) => list.map((i) => ({ ...i, ref })));
-        syncAgenda(db, householdId, AGENDA_APP, items, { by: me, now }).catch((e) => {
+        syncAgenda(db, householdId, AGENDA_APP, items, { by: me, now, restricted }).catch((e) => {
           syncedDay.current = null;
           written.current = new Map();
           warn(e);
@@ -44,18 +44,18 @@ export function useAgendaSync(householdId: string, me: string, data: AgendaData,
       const { replace, remove } = agendaChanges(written.current, wanted);
       for (const [ref, items, signature] of replace) {
         written.current.set(ref, signature);
-        replaceAgenda(db, householdId, AGENDA_APP, ref, items, { by: me, now }).catch((e) => {
+        replaceAgenda(db, householdId, AGENDA_APP, ref, items, { by: me, now, restricted }).catch((e) => {
           written.current.delete(ref);
           warn(e);
         });
       }
       for (const ref of remove) {
         written.current.delete(ref);
-        removeAgenda(db, householdId, AGENDA_APP, ref).catch(warn);
+        removeAgenda(db, householdId, AGENDA_APP, ref, { restricted }).catch(warn);
       }
     }, 2000);
     return () => clearTimeout(id);
-  }, [householdId, me, ready, day, data.pets, data.appointments, data.reminders, data.courses, data.medDoses, data.meals, data.feedings]);
+  }, [householdId, me, restricted, ready, day, data.pets, data.appointments, data.reminders, data.courses, data.medDoses, data.meals, data.feedings]);
 }
 
 /** Today's date, changing at midnight and when the app comes back into view on a later day. */

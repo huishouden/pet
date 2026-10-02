@@ -108,6 +108,11 @@ describe('appointments', () => {
   test('one long past is left out', () => {
     expect(appointmentAgenda(appointment({ at: at(1, 2) }), pets, NOW, URL)).toEqual([]);
   });
+
+  test('a private appointment stays private on the agenda', () => {
+    expect(appointmentAgenda(appointment({ private: true }), pets, NOW, URL)[0]?.private).toBe(true);
+    expect(appointmentAgenda(appointment(), pets, NOW, URL)[0]?.private).toBeUndefined();
+  });
 });
 
 describe('care reminders', () => {

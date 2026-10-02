@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { signInSilently } from '@huishouden/pwa-kit/auth';
-import { markJoined, saveMyProfile, watchHousehold, type HouseholdState } from '@huishouden/pwa-kit/household';
+import { markJoined, saveMyProfile, watchHousehold, type Household, type HouseholdState } from '@huishouden/pwa-kit/household';
 import { auth, db, googleClientId, signInWithGoogle, signOutEverywhere } from './data/firebase';
 import { useLiveStore } from './data/useLiveStore';
 import { useDemoStore } from './data/useDemoStore';
@@ -66,7 +66,7 @@ function SignedIn({ user, ...frame }: FrameProps & { user: User }) {
     if (householdId) saveMyProfile(db, householdId, user).catch(() => {});
   }, [householdId, user]);
 
-  if (state.status === 'ready') return <LiveApp householdId={state.household.id} members={state.household.members} user={user} {...frame} />;
+  if (state.status === 'ready') return <LiveApp householdId={state.household.id} household={state.household} user={user} {...frame} />;
   if (state.status === 'loading') return <Plain user={user} {...frame}>Finding your household.</Plain>;
   if (state.status === 'error')
     return (
@@ -88,9 +88,9 @@ function SignedIn({ user, ...frame }: FrameProps & { user: User }) {
   );
 }
 
-function LiveApp({ householdId, members, user, ...frame }: FrameProps & { householdId: string; members: string[]; user: User }) {
+function LiveApp({ householdId, household, user, ...frame }: FrameProps & { householdId: string; household: Household; user: User }) {
   const { toast, notify, fail, clear } = useToast();
-  const store = useLiveStore(householdId, (user.email ?? '').toLowerCase(), members, fail);
+  const store = useLiveStore(householdId, (user.email ?? '').toLowerCase(), household, fail);
   const read = useCallback(() => Date.now(), []);
   return (
     <ClockProvider read={read}>

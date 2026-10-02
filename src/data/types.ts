@@ -1,4 +1,5 @@
 import type { Contact, ContactInput } from '@huishouden/pwa-kit/contacts';
+import type { Role } from '@huishouden/pwa-kit/roles';
 import type { Appointment, Course, Dose, Feeding, Meal, MedDose, Pet, PetPhoto, PetRecord, Reminder, Weight } from '../lib/model';
 import type { AppointmentInput, CourseInput, FeedingInput, MealInput, PetInput, RecordInput, ReminderInput } from '../lib/build';
 import type { PetHouseholdData } from '../lib/demo';
@@ -99,4 +100,8 @@ export interface PetStore {
   members: string[];
   /** The signed-in member's email (or the sample's). */
   me: string;
+  /** Their role in the household (the sample's admin, or `?as=helper`/`?as=kid` in the sample). */
+  role: Role | null;
+  /** Members and roles, for the helpers a medicine course can be restricted to. */
+  household: { members: string[]; roles?: Record<string, Role> };
 }

@@ -98,6 +98,8 @@ export interface AppointmentData {
   /** The Google Calendar event it came from, so an import never adds it twice. */
   calendarEventId?: string;
   calendarLink?: string;
+  /** Only admins and members see it (helpers and kids never read it). Always written. */
+  private?: boolean;
   createdAt: number;
   by: string;
 }
@@ -178,6 +180,9 @@ export interface CourseData {
   days: number;
   withFood: boolean;
   notes?: string;
+  /** Who can give it: every helper (the default) or only `approvedHelpers`. Admins and members always can; kids never. */
+  givers?: 'all' | 'approved';
+  approvedHelpers?: string[];
   createdAt: number;
   updatedAt?: number;
   by: string;
@@ -204,12 +209,12 @@ export const FIELDS = {
   petProfiles: ['name', 'species', 'breed', 'birthDate', 'birthDateApprox', 'weightUnit', 'targetWeight', 'targetNote', 'notes', 'createdAt', 'updatedAt', 'by'],
   petReminders: ['petId', 'kind', 'title', 'every', 'unit', 'due', 'lastDoneAt', 'notes', 'createdAt', 'updatedAt', 'by'],
   petDoses: ['petId', 'reminderId', 'title', 'at', 'by', 'createdAt'],
-  petAppointments: ['petIds', 'kind', 'title', 'at', 'location', 'notes', 'contactId', 'calendarEventId', 'calendarLink', 'createdAt', 'by'],
+  petAppointments: ['petIds', 'kind', 'title', 'at', 'location', 'notes', 'contactId', 'calendarEventId', 'calendarLink', 'private', 'createdAt', 'by'],
   petWeights: ['petId', 'at', 'value', 'unit', 'by', 'createdAt'],
   petRecords: ['petId', 'title', 'date', 'text', 'createdAt', 'updatedAt', 'by'],
   petMeals: ['petId', 'name', 'time', 'food', 'portion', 'note', 'createdAt', 'updatedAt', 'by'],
   petFeedings: ['petId', 'mealId', 'at', 'portion', 'note', 'by', 'createdAt', 'updatedAt'],
-  petMedCourses: ['petId', 'name', 'dose', 'timesPerDay', 'times', 'startDate', 'days', 'withFood', 'notes', 'createdAt', 'updatedAt', 'by'],
+  petMedCourses: ['petId', 'name', 'dose', 'timesPerDay', 'times', 'startDate', 'days', 'withFood', 'notes', 'givers', 'approvedHelpers', 'createdAt', 'updatedAt', 'by'],
   petMedDoses: ['petId', 'courseId', 'slot', 'at', 'by', 'createdAt'],
   petPhotos: ['data', 'updatedAt', 'by'],
 } as const;

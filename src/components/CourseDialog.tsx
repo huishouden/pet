@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { GiversField, type GiversValue } from '@huishouden/pwa-kit/react/roles';
 import { parseDirections, readLabel, toMedCourse } from '@huishouden/pwa-kit/dose';
 import { ScanText, Trash2 } from 'lucide-react';
 import type { Course, Meal, Pet } from '../lib/model';
@@ -23,11 +24,14 @@ type Scan =
   | { status: 'error' };
 
 /** A short medicine course: what, how much, how often, from when and for how long. */
-export function CourseDialog({ course, pet, meals, now, onSave, onDelete, onClose }: {
+export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (e) => e, onSave, onDelete, onClose }: {
   course: Course | null;
   pet: Pet | undefined;
   meals: Meal[];
   now: number;
+  /** The household's helpers, who the course can be restricted to. */
+  helpers?: string[];
+  nameOf?: (email: string) => string;
   onSave: (input: CourseInput) => void;
   onDelete?: () => void;
   onClose: () => void;
@@ -42,6 +46,7 @@ export function CourseDialog({ course, pet, meals, now, onSave, onDelete, onClos
   const [until, setUntil] = useState(course ? lastDay(course) : '');
   const [withFood, setWithFood] = useState(course?.withFood ?? false);
   const [notes, setNotes] = useState(course?.notes ?? '');
+  const [givers, setGivers] = useState<GiversValue>({ givers: course?.givers ?? 'all', approvedHelpers: course?.approvedHelpers ?? [] });
   const total = length === 'days' ? Math.round(Number(days)) : daysUntil(startDate, until);
   const valid = !!pet && name.trim().length > 0 && isYmd(startDate) && times.length > 0 && times.every(isMealTime) && !!total && total >= 1 && total <= MAX_COURSE_DAYS;
 
@@ -84,7 +89,7 @@ export function CourseDialog({ course, pet, meals, now, onSave, onDelete, onClos
 
   const save = () => {
     if (!valid || !pet || !total) return;
-    onSave({ petId: pet.id, name, dose, timesPerDay: times.length, times, startDate, days: total, withFood, notes });
+    onSave({ petId: pet.id, name, dose, timesPerDay: times.length, times, startDate, days: total, withFood, notes, ...givers });
     onClose();
   };
 
@@ -247,6 +252,7 @@ export function CourseDialog({ course, pet, meals, now, onSave, onDelete, onClos
         <Field label="Notes (optional)">
           <textarea className={`${inputClass} min-h-20`} maxLength={LIMITS.courseNotes} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="What it is for, how to give it" />
         </Field>
+        <GiversField value={givers} onChange={setGivers} helpers={helpers} name={nameOf} />
         <button type="submit" hidden />
       </form>
     </Dialog>

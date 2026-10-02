@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, doc, onSnapshot, query, where, type Query } from 'firebase/firestore';
 import { writeBatch } from '@huishouden/pwa-kit/firestore';
-import { addContact, removeContactFromApp, restoreContact, updateContact, watchContacts } from '@huishouden/pwa-kit/contacts';
+import { addContact, markUnflaggedOpen, removeContactFromApp, restoreContact, updateContact, watchContacts } from '@huishouden/pwa-kit/contacts';
+import { can, householdRole, isRestricted, type Role } from '@huishouden/pwa-kit/roles';
 import { readError } from '@huishouden/pwa-kit/feedback';
 import { APP } from '../lib/contacts';
 import { emptyData, type PetHouseholdData } from '../lib/demo';
@@ -21,7 +22,11 @@ const FEEDING_HISTORY_DAYS = 15;
  * Live household data from Firestore with onSnapshot listeners. Writes are fire-and-forget: the
  * persistent cache applies them locally at once (also offline) and syncs later.
  */
-export function useLiveStore(householdId: string, me: string, members: string[], onError: (message: string) => void): PetStore {
+export function useLiveStore(householdId: string, me: string, household: { members: string[]; roles?: Record<string, Role> }, onError: (message: string) => void): PetStore {
+  const { members } = household;
+  const role = householdRole(household, me);
+  // Helpers and kids read only appointments and contacts not marked private, and must ask for just those.
+  const restricted = isRestricted(role);
   const [data, setData] = useState<PetHouseholdData>(emptyData);
   // Which lists have answered once (from cache or server), error or not.
   const [answered, setAnswered] = useState<ReadonlySet<DataKey>>(() => new Set());
@@ -52,7 +57,7 @@ export function useLiveStore(householdId: string, me: string, members: string[],
       listen('pets', col('pets'), 'the pets'),
       listen('reminders', col('reminders'), 'the reminders'),
       listen('doses', query(col('doses'), where('at', '>=', Date.now() - DOSE_HISTORY_DAYS * DAY)), 'the dose history'),
-      listen('appointments', col('appointments'), 'the appointments'),
+      listen('appointments', restricted ? query(col('appointments'), where('private', '==', false)) : col('appointments'), 'the appointments'),
       listen('weights', col('weights'), 'the weights'),
       listen('records', col('records'), 'the records'),
       listen('meals', col('meals'), 'the meals'),
@@ -60,10 +65,18 @@ export function useLiveStore(householdId: string, me: string, members: string[],
       listen('photos', col('photos'), "the pets' photos"),
       listen('medDoses', query(col('medDoses'), where('at', '>=', Date.now() - DOSE_HISTORY_DAYS * DAY)), 'the medicine log'),
       listen('feedings', query(col('feedings'), where('at', '>=', Date.now() - FEEDING_HISTORY_DAYS * DAY)), 'the feeding log'),
-      watchContacts(db, householdId, (contacts) => setData((d) => ({ ...d, contacts })), { app: APP, onError: fail('the contacts') }),
+      watchContacts(db, householdId, (contacts) => setData((d) => ({ ...d, contacts })), { app: APP, restricted, onError: fail('the contacts') }),
     ];
     return () => unsubs.forEach((u) => u());
-  }, [base, householdId]);
+  }, [base, householdId, restricted]);
+
+  // Appointments saved before the private flag are hidden from helpers and kids until written with
+  // `private: false`; an admin's or member's device does that once.
+  const seesPrivate = can(role, 'see-private');
+  useEffect(() => {
+    if (!seesPrivate || !data.appointments.some((a) => typeof a.private !== 'boolean')) return;
+    markUnflaggedOpen(db, householdId, COLLECTIONS.appointments, data.appointments).catch(() => {});
+  }, [householdId, seesPrivate, data.appointments]);
 
   const actions = useMemo(() => {
     const report = (p: Promise<unknown>) => void p.catch((e) => errorRef.current(readError(e, "Couldn't save")));
@@ -93,10 +106,10 @@ export function useLiveStore(householdId: string, me: string, members: string[],
 
   const ready = answered.has('pets') && answered.has('reminders');
   // Push notifications for doses and meal cut-offs, delivered by the household's shared sender.
-  useReminderSync(householdId, me, data, ready, onError);
+  useReminderSync(householdId, me, data, ready, onError, restricted);
   // The household agenda (the portal's calendar and Today) waits for every list it is built from:
   // publishing before one has loaded would delete that list's items.
-  useAgendaSync(householdId, me, data, AGENDA_SOURCES.every((k) => answered.has(k)));
+  useAgendaSync(householdId, me, data, AGENDA_SOURCES.every((k) => answered.has(k)), restricted);
 
-  return { data, ready, actions, members, me };
+  return { data, ready, actions, members, me, role, household };
 }

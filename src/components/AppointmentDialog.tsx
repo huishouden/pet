@@ -12,8 +12,9 @@ import { CalendarFind, LinkedEvent } from '@huishouden/pwa-kit/react/calendar';
 import { auth } from '../data/firebase';
 import { PetAvatar } from './PetAvatar';
 import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
+import { PrivateCheckbox } from '@huishouden/pwa-kit/react/contacts';
 
-export function AppointmentDialog({ appointment, petId, pets, now, contacts, calendarAvailable, onSave, onDelete, onClose }: {
+export function AppointmentDialog({ appointment, petId, pets, now, contacts, calendarAvailable, canMarkPrivate = true, onSave, onDelete, onClose }: {
   appointment: Appointment | null;
   /** Preselects a pet for a new appointment. */
   petId?: string;
@@ -21,6 +22,8 @@ export function AppointmentDialog({ appointment, petId, pets, now, contacts, cal
   now: number;
   contacts: Contact[];
   calendarAvailable: boolean;
+  /** Offer "Only admins and members": not to helpers and kids. */
+  canMarkPrivate?: boolean;
   onSave: (input: AppointmentInput) => void;
   onDelete?: () => void;
   onClose: () => void;
@@ -33,6 +36,7 @@ export function AppointmentDialog({ appointment, petId, pets, now, contacts, cal
   const [time, setTime] = useState(initial.slice(11));
   const [location, setLocation] = useState(appointment?.location ?? '');
   const [notes, setNotes] = useState(appointment?.notes ?? '');
+  const [isPrivate, setPrivate] = useState(appointment?.private === true);
   const [contactId, setContactId] = useState(appointment?.contactId ?? '');
   const [event, setEvent] = useState(appointment?.calendarEventId || appointment?.calendarLink ? { id: appointment.calendarEventId, link: appointment.calendarLink } : null);
   const at = fromLocalInput(`${date}T${time}`);
@@ -42,7 +46,7 @@ export function AppointmentDialog({ appointment, petId, pets, now, contacts, cal
 
   const save = () => {
     if (!valid || at === null) return;
-    onSave({ title, kind, petIds, at, location, notes, contactId: contactId || undefined, calendarEventId: event?.id, calendarLink: event?.link });
+    onSave({ title, kind, petIds, at, location, notes, contactId: contactId || undefined, calendarEventId: event?.id, calendarLink: event?.link, private: canMarkPrivate && isPrivate });
     onClose();
   };
 
@@ -170,6 +174,7 @@ export function AppointmentDialog({ appointment, petId, pets, now, contacts, cal
         <Field label="Notes (optional)">
           <textarea className={`${inputClass} min-h-20`} maxLength={LIMITS.notes} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </Field>
+        {canMarkPrivate && <PrivateCheckbox checked={isPrivate} onChange={setPrivate} />}
         {event && <LinkedEvent link={event.link} onUnlink={() => setEvent(null)} />}
         <button type="submit" hidden />
       </form>

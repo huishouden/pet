@@ -6,6 +6,7 @@ import { personInitial, personName } from '@huishouden/pwa-kit/people';
 import { formatDayShort, formatTime, parseYmd, relativeDay, toYmd } from '@huishouden/pwa-kit/time';
 import { formatClock, formatDateShort } from '../lib/format';
 import type { Open } from '../PetApp';
+import { COURSE_REFUSAL, type PetPermissions } from '../lib/permissions';
 import { cardClass, ghostButton, iconButton, overline } from '@huishouden/pwa-kit/react/ui';
 
 const DAYS = 14;
@@ -120,7 +121,8 @@ export function FeedingCard({ pet, meals, feedings, me, now, open }: { pet: Pet;
 
 
 /** Medicine courses: running and upcoming ones with their day and doses given, then finished ones. */
-export function MedicineCard({ pet, courses, medDoses, now, open }: { pet: Pet; courses: Course[]; medDoses: MedDose[]; now: number; open: Open }) {
+export function MedicineCard({ pet, courses, medDoses, now, open, perms }: { pet: Pet; courses: Course[]; medDoses: MedDose[]; now: number; open: Open; perms?: PetPermissions }) {
+  const manages = perms?.managesCourses ?? true;
   const mine = courses.filter((c) => c.petId === pet.id).sort((a, b) => (a.startDate < b.startDate ? 1 : -1));
   const current = mine.filter((c) => courseState(c, now) !== 'finished');
   const finished = mine.filter((c) => courseState(c, now) === 'finished');
@@ -128,10 +130,13 @@ export function MedicineCard({ pet, courses, medDoses, now, open }: { pet: Pet; 
     <section className={`${cardClass} p-6`} aria-label={`${pet.name}'s medicine`}>
       <div className="flex items-center justify-between gap-4">
         <h3 className={overline}>Medicine courses</h3>
-        <button type="button" className={ghostButton} onClick={() => open.course(null, pet.id)}>
-          <Plus size={18} /> Add course
-        </button>
+        {manages && (
+          <button type="button" className={ghostButton} onClick={() => open.course(null, pet.id)}>
+            <Plus size={18} /> Add course
+          </button>
+        )}
       </div>
+      {!manages && <p className="mt-1 text-sm text-stone-600">{COURSE_REFUSAL}</p>}
       {mine.length === 0 && <p className="mt-2 text-base text-stone-600">A short course ("1 tablet twice a day for 7 days") puts each dose on the Today board until it ends.</p>}
       <ul>
         {current.map((c) => {
@@ -149,15 +154,18 @@ export function MedicineCard({ pet, courses, medDoses, now, open }: { pet: Pet; 
                 </p>
                 <p className="text-base text-stone-600">Last dose {formatDateShort(parseYmd(lastDay(c))!)}</p>
                 {c.notes && <p className="text-base text-stone-600">{c.notes}</p>}
+                {perms && !perms.mayGiveCourse(c) && <p className="text-base font-medium text-terracotta-dark">{perms.courseRefusal(c)}</p>}
                 {courseState(c, now) === 'active' && (
                   <button type="button" className={`${ghostButton} -ml-2 mt-1`} onClick={() => open.doseLog(c)} aria-label={`Doses by day for ${c.name}`}>
                     <History size={18} /> Doses by day
                   </button>
                 )}
               </div>
-              <button type="button" className={iconButton} onClick={() => open.course(c, pet.id)} aria-label={`Edit ${c.name}`}>
-                <Pencil size={18} />
-              </button>
+              {manages && (
+                <button type="button" className={iconButton} onClick={() => open.course(c, pet.id)} aria-label={`Edit ${c.name}`}>
+                  <Pencil size={18} />
+                </button>
+              )}
             </li>
           );
         })}
@@ -169,9 +177,11 @@ export function MedicineCard({ pet, courses, medDoses, now, open }: { pet: Pet; 
             <button type="button" className={iconButton} onClick={() => open.doseLog(c)} aria-label={`Doses by day for ${c.name}`}>
               <History size={18} />
             </button>
-            <button type="button" className={iconButton} onClick={() => open.course(c, pet.id)} aria-label={`Edit ${c.name}`}>
-              <Pencil size={18} />
-            </button>
+            {manages && (
+              <button type="button" className={iconButton} onClick={() => open.course(c, pet.id)} aria-label={`Edit ${c.name}`}>
+                <Pencil size={18} />
+              </button>
+            )}
           </li>
         ))}
       </ul>

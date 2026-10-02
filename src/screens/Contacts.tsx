@@ -2,6 +2,7 @@ import { UserPlus } from 'lucide-react';
 import { groupContacts, type Contact } from '@huishouden/pwa-kit/contacts';
 import { ContactCard } from '@huishouden/pwa-kit/react/contacts';
 import { ROLES } from '../lib/contacts';
+import { permissions } from '../lib/permissions';
 import type { PetStore } from '../data/types';
 import type { Open } from '../PetApp';
 import { cardClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
@@ -11,6 +12,7 @@ export function Contacts({ store, open, notify }: { store: PetStore; open: Open;
   const onAdd = () => open.contact(null);
   const onEdit = (c: Contact) => open.contact(c);
   const groups = groupContacts(store.data.contacts, ROLES);
+  const perms = permissions(store.role, store.me);
 
   return (
     <div className="space-y-6 lg:h-full lg:overflow-y-auto">
@@ -30,11 +32,15 @@ export function Contacts({ store, open, notify }: { store: PetStore; open: Open;
               key={c.id}
               contact={c}
               role={g.role}
-              onEdit={() => onEdit(c)}
-              onDelete={() => {
-                store.actions.deleteContact(c);
-                notify(`Deleted ${c.name}`, () => store.actions.restoreContact(c));
-              }}
+              onEdit={perms.mayChange(c) ? () => onEdit(c) : undefined}
+              onDelete={
+                perms.mayChange(c)
+                  ? () => {
+                      store.actions.deleteContact(c);
+                      notify(`Deleted ${c.name}`, () => store.actions.restoreContact(c));
+                    }
+                  : undefined
+              }
             />
           )),
         )}
