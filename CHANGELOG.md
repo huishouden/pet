@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0](https://github.com/huishouden/pet/compare/v1.2.0...v1.3.0) (2026-10-02)
+
+
+### Features
+
+* publish appointments, care, courses, birthdays and today's meals to the household agenda ([#15](https://github.com/huishouden/pet/issues/15)) ([147e1b3](https://github.com/huishouden/pet/commit/147e1b3deaaffb6492d7a61531e901056ea53b27))
+
+
+### Bug Fixes
+
+* collapse the label text a scan didn't use ([#16](https://github.com/huishouden/pet/issues/16)) ([2f2ff68](https://github.com/huishouden/pet/commit/2f2ff68c8e2d5a78736885a8413c17b01eb11da6))
+
 ## [1.2.0](https://github.com/huishouden/pet/compare/v1.1.1...v1.2.0) (2026-10-02)
 
 
