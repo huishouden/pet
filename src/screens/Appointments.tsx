@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarArrowDown, CalendarPlus, ChevronDown, ChevronUp, ExternalLink, MapPin, Pencil, Phone, UserRound } from 'lucide-react';
+import { Cake, CalendarArrowDown, CalendarPlus, ChevronDown, ChevronUp, ExternalLink, MapPin, Pencil, Phone, UserRound } from 'lucide-react';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import { telHref } from '@huishouden/pwa-kit/places';
 import type { Appointment, Pet } from '../lib/model';
@@ -9,6 +9,9 @@ import { petNames } from '../lib/pets';
 import { formatDayLong, formatTime, monthShort, relativeDay } from '@huishouden/pwa-kit/time';
 import { useClock } from '@huishouden/pwa-kit/react/clock';
 import type { PetStore } from '../data/types';
+import { birthdayQueries, guessWords, isBirthdayOf } from '../lib/birthday';
+import { petInputOf } from '../lib/build';
+import { birthdayMatches, guessSource } from '../components/BirthdayFind';
 import { CalendarHint, CalendarImportDialog, useCalendarSearch } from '@huishouden/pwa-kit/react/calendar';
 import { auth } from '../data/firebase';
 import type { Open } from '../PetApp';
@@ -32,7 +35,12 @@ export function Appointments({ store, pets, open, calendarAvailable, notify }: {
   const contacts = store.data.contacts;
   const upcoming = shown.filter((a) => a.at >= now - 3_600_000).sort((a, b) => a.at - b.at);
   const past = shown.filter((a) => a.at < now - 3_600_000).sort((a, b) => b.at - a.at);
-  const runScan = () => void scan.run(PET_CALENDAR_QUERIES, { limit: 25 });
+  // Pets without a birthday are looked for too; their birthday events are offered, not imported as visits.
+  const unborn = pets.filter((p) => !p.birthDate);
+  const runScan = () => void scan.run([...PET_CALENDAR_QUERIES, ...unborn.flatMap((p) => birthdayQueries(p.name))], { limit: 25, seriesStart: true });
+  const found = scan.state.status === 'done' ? scan.state.matches : [];
+  const birthdays = unborn.flatMap((pet) => birthdayMatches(found, pet.name, now).slice(0, 1).map((b) => ({ pet, ...b })));
+  const visits = scan.state.status === 'done' ? { ...scan.state, matches: found.filter((m) => !pets.some((p) => isBirthdayOf(m.title, p.name))) } : scan.state;
 
   return (
     <div className="mx-auto max-w-4xl space-y-5 lg:h-full lg:overflow-y-auto">
@@ -89,7 +97,7 @@ export function Appointments({ store, pets, open, calendarAvailable, notify }: {
 
       {importing && (
         <CalendarImportDialog
-          state={scan.state}
+          state={visits}
           intro="Vet, grooming, vaccine, boarding and kennel events from last week to a year ahead."
           noneFound="No pet events found in your calendars."
           allImported="Every pet event in your calendar is already in Pet."
@@ -103,7 +111,53 @@ export function Appointments({ store, pets, open, calendarAvailable, notify }: {
             setImporting(false);
             scan.reset();
           }}
-        />
+        >
+          {birthdays.length > 0 && (
+            <section className="mt-4" aria-label="Birthdays">
+              <h3 className="text-sm font-medium text-stone-700">Birthdays</h3>
+              <ul className="mt-1.5 divide-y divide-stone-200 rounded-2xl border border-stone-200">
+                {birthdays.map(({ pet, match, guess }) => (
+                  <li key={match.id} className="flex items-center gap-3 px-3 py-2">
+                    <Cake size={20} className="shrink-0 text-forest-700" aria-hidden="true" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-stone-800">
+                        {pet.name}: {guessWords(guess)}
+                      </p>
+                      <p className="text-sm text-stone-600 [overflow-wrap:anywhere]">{guessSource({ match, guess })}</p>
+                    </div>
+                    {guess.date ? (
+                      <button
+                        type="button"
+                        className={secondaryButton}
+                        onClick={() => {
+                          const before = pet;
+                          store.actions.savePet(pet.id, { ...petInputOf(pet), birthDate: guess.date });
+                          notify(`Saved ${pet.name}'s birthday`, () => store.actions.savePet(before.id, petInputOf(before)));
+                        }}
+                        aria-label={`Set ${pet.name}'s birthday`}
+                      >
+                        Set birthday
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className={secondaryButton}
+                        onClick={() => {
+                          setImporting(false);
+                          scan.reset();
+                          open.pet(pet, guess);
+                        }}
+                        aria-label={`Add the year of ${pet.name}'s birthday`}
+                      >
+                        Add the year
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </CalendarImportDialog>
       )}
     </div>
   );

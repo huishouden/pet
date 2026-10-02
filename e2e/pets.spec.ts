@@ -56,3 +56,16 @@ test('a record can be added and edited', async ({ page }) => {
   await dialog.getByRole('button', { name: 'Save' }).click();
   await expect(records).toContainText('Dental check');
 });
+
+test('a target weight shows the gap, the direction and a line on the chart', async ({ page }) => {
+  const weight = page.getByRole('region', { name: "Biscuit's weight" });
+  await expect(weight).toContainText('2.1 lb to lose · target 24.0 lb (Vet\'s goal) · Moving away from the target');
+  await expect(weight.getByTestId('weight-target-line')).toBeAttached();
+  await expect(page.getByRole('region', { name: "Biscuit's profile" })).toContainText('Target 24.0 lb: 2.1 lb to lose');
+
+  await page.getByRole('button', { name: 'Edit Biscuit' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Edit Biscuit' });
+  await dialog.getByLabel('Target weight in lb (optional)').fill('26');
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await expect(weight).toContainText('On target');
+});

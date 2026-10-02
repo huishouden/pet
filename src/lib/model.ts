@@ -22,6 +22,10 @@ export interface PetData {
   birthDate?: string;
   /** The unit this pet is weighed in. */
   weightUnit: WeightUnit;
+  /** The weight to aim for (the vet's goal), in `weightUnit`. */
+  targetWeight?: number;
+  /** Where the target comes from: "Vet's goal". */
+  targetNote?: string;
   /** Care notes shown on the pet's card: diet, allergies, temperament. */
   notes?: string;
   createdAt: number;
@@ -181,7 +185,7 @@ export interface MedDose extends MedDoseData {
 
 /** The only keys each collection's documents may carry; the rules list the same. */
 export const FIELDS = {
-  petProfiles: ['name', 'species', 'breed', 'birthDate', 'weightUnit', 'notes', 'createdAt', 'updatedAt', 'by'],
+  petProfiles: ['name', 'species', 'breed', 'birthDate', 'weightUnit', 'targetWeight', 'targetNote', 'notes', 'createdAt', 'updatedAt', 'by'],
   petReminders: ['petId', 'kind', 'title', 'every', 'unit', 'due', 'lastDoneAt', 'notes', 'createdAt', 'updatedAt', 'by'],
   petDoses: ['petId', 'reminderId', 'title', 'at', 'by', 'createdAt'],
   petAppointments: ['petIds', 'kind', 'title', 'at', 'location', 'notes', 'contactId', 'calendarEventId', 'calendarLink', 'createdAt', 'by'],
@@ -208,6 +212,8 @@ export const LIMITS = {
   recordText: 2000,
   maxPetsPerAppointment: 10,
   maxWeight: 2000,
+  maxTargetWeight: 1000,
+  targetNote: 200,
   mealName: 40,
   food: 80,
   portion: 40,

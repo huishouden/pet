@@ -52,3 +52,32 @@ export const calendarEvents: CalendarMatch[] = [
 export function mockCalendar(events: CalendarMatch[]) {
   (window as unknown as { __mockCalendarEvents: CalendarMatch[] }).__mockCalendarEvents = events;
 }
+
+const day = (y: number, month: number, d: number) => new Date(y, month - 1, d).getTime();
+
+/** Invented birthdays: Pip's is a yearly series begun on the day itself; Mochi's says nothing of the year. */
+export const birthdayEvents: CalendarMatch[] = [
+  {
+    id: 'evt-pip-bday_20310620',
+    recurringEventId: 'evt-pip-bday',
+    title: "Pip's birthday",
+    start: day(2031, 6, 20),
+    allDay: true,
+    location: '',
+    description: '',
+    link: 'https://calendar.example.com/event?eid=evt-pip-bday',
+    calendarName: 'Family',
+    calendarId: 'family@example.com',
+    seriesStart: day(2029, 6, 20),
+  },
+  {
+    id: 'evt-mochi-bday',
+    title: 'Mochi bday',
+    start: day(2031, 8, 2),
+    allDay: true,
+    location: '',
+    description: '',
+    link: 'https://calendar.example.com/event?eid=evt-mochi-bday',
+    calendarName: 'Alex',
+  },
+];

@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { cancelReminders, replaceReminders, type ReminderInput } from '@huishouden/pwa-kit/reminders';
-import { courseRef, courseReminders, mealReminders, mealsRef } from '../lib/notify';
+import { birthdayRef, birthdayReminders, courseRef, courseReminders, mealReminders, mealsRef } from '../lib/notify';
 import { toYmd } from '@huishouden/pwa-kit/time';
 import type { PetHouseholdData } from '../lib/demo';
 import { db } from './firebase';
 
 /**
  * Keeps the household's reminders for Pet in step with its data: each course's remaining doses
- * and each pet's untaken meal cut-offs. Runs when the app opens, after changes settle, and when the
+ * each pet's untaken meal cut-offs, and each pet's next birthday. Runs when the app opens, after changes settle, and when the
  * day turns. Only refs whose reminders changed since the last write are rewritten, and refs whose
  * course or pet disappeared are cancelled.
  */
@@ -24,6 +24,7 @@ export function useReminderSync(householdId: string, me: string, data: PetHouseh
       const wanted = new Map<string, ReminderInput[]>();
       for (const c of data.courses) wanted.set(courseRef(c.id), courseReminders(c, data.pets.find((p) => p.id === c.petId), data.medDoses, now));
       for (const p of data.pets) wanted.set(mealsRef(p.id), mealReminders(p, data.meals, data.feedings, now));
+      for (const p of data.pets) if (p.birthDate) wanted.set(birthdayRef(p.id), birthdayReminders(p, now));
       const jobs: Promise<unknown>[] = [];
       for (const [ref, list] of wanted) {
         const signature = JSON.stringify(list.map((r) => [r.id, r.at, r.title, r.body]));
