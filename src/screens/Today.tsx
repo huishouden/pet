@@ -2,7 +2,7 @@ import { CalendarPlus, Check, ChevronRight, MapPin, PawPrint, Plus } from 'lucid
 import type { Course, Meal, Pet, Reminder } from '../lib/model';
 import { byUrgency, describeRecurrence, dueState, headline, needsAttention } from '../lib/schedule';
 import { petNames } from '../lib/pets';
-import { formatDayLong, formatTime, relativeDay } from '@huishouden/pwa-kit/time';
+import { formatDayLong, formatTime, relativeDay, type Ymd } from '@huishouden/pwa-kit/time';
 import { formatWhenGiven } from '../lib/format';
 import { useClock } from '@huishouden/pwa-kit/react/clock';
 import type { PetStore } from '../data/types';
@@ -19,8 +19,8 @@ export function Today({ store, pets, open, onGive, onToggleMeal, onToggleDose }:
   pets: Pet[];
   open: Open;
   onGive: (r: Reminder) => void;
-  onToggleMeal: (pet: Pet, meal: Meal) => void;
-  onToggleDose: (pet: Pet, course: Course, slot: number) => void;
+  onToggleMeal: (pet: Pet, meal: Meal, day: number) => void;
+  onToggleDose: (pet: Pet, course: Course, slot: number, day: Ymd) => void;
 }) {
   const { now } = useClock();
   const { reminders, appointments } = store.data;
@@ -55,6 +55,7 @@ export function Today({ store, pets, open, onGive, onToggleMeal, onToggleDose }:
         onToggleMeal={onToggleMeal}
         onToggleDose={onToggleDose}
         onAddMeal={(petId) => open.meal(null, petId)}
+        onDoseLog={open.doseLog}
       />
     <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_400px]">
       <section className={`${cardClass} flex min-h-0 flex-col px-6 py-5`} aria-label="Needs attention">

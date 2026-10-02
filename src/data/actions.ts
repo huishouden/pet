@@ -139,7 +139,9 @@ export function createActions(b: Backend): PetActions {
     saveCourse: (id, input) => {
       const existing = find('courses', id);
       const now = b.now();
-      put('courses', id ?? b.newId('courses'), courseDoc(input, existing?.by ?? b.me, existing?.createdAt ?? now, existing ? now : undefined));
+      const courseId = id ?? b.newId('courses');
+      put('courses', courseId, courseDoc(input, existing?.by ?? b.me, existing?.createdAt ?? now, existing ? now : undefined));
+      return courseId;
     },
     deleteCourse: (c) => del('courses', c.id),
     restoreCourse: (c) => put('courses', c.id, withoutId(c)),
@@ -148,6 +150,7 @@ export function createActions(b: Backend): PetActions {
       put('medDoses', d.id, withoutId(d));
       return d;
     },
+    moveMedDose: (d, at) => put('medDoses', d.id, medDoseDoc({ ...d, at }, d.by, d.createdAt)),
     deleteMedDoses: (list) => b.write(list.map((d) => ({ key: 'medDoses', id: d.id, data: null }))),
     restoreMedDoses: (list) => b.write(list.map((d) => ({ key: 'medDoses', id: d.id, data: withoutId(d) }))),
     saveContact: (id, input) => b.contacts.save(id, input),

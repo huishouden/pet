@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import fixture from './__fixtures__/feeding.json';
-import { dailyCounts, defaultMeals, fedTodayFor, formatAgo, formatDuration, isMealTime, lastFed, mealAt, recentFeedings, todaysMeals } from './feeding';
+import { dailyCounts, defaultMeals, fedTodayFor, formatAgo, formatDuration, isMealTime, lastFed, mealAt, mealsOn, recentFeedings, todaysMeals } from './feeding';
 import { HOUR, MINUTE } from '@huishouden/pwa-kit/time';
 
 const now = new Date(fixture.now).getTime();
@@ -30,6 +30,18 @@ describe('today’s board', () => {
   test('un-ticking removes every feed for that meal today, nothing else', () => {
     expect(fedTodayFor(feedings, 'p1-am', now).map((f) => f.id)).toEqual(['f1', 'f2']);
     expect(fedTodayFor(feedings, 'p1-pm', now)).toEqual([]);
+  });
+
+  test("yesterday's board: every unfed meal is late, and a feed logged at the meal's time ticks it", () => {
+    const tomorrow = new Date('2031-05-15T08:00:00').getTime();
+    const yesterday = now; // the 14th, seen from the 15th
+    const before = mealsOn(meals, feedings, 'p1', yesterday, tomorrow);
+    expect(before.map((x) => x.status.state)).toEqual(['fed', 'late']);
+    const backfill = { id: 'b1', petId: 'p1', mealId: 'p1-pm', at: mealAt('19:00', yesterday), by: 'sam@example.com' };
+    expect(backfill.at).toBe(new Date('2031-05-14T19:00:00').getTime());
+    expect(mealsOn(meals, [...feedings, backfill], 'p1', yesterday, tomorrow)[1].status).toMatchObject({ state: 'fed', feeding: { id: 'b1' } });
+    expect(fedTodayFor([...feedings, backfill], 'p1-pm', yesterday).map((f) => f.id)).toEqual(['b1']);
+    expect(todaysMeals(meals, [...feedings, backfill], 'p1', tomorrow).map((x) => x.status.state)).toEqual(['due', 'due']);
   });
 
   test('every pet starts with AM by 9:00 and PM by 19:00', () => {

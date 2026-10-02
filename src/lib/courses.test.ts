@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { courseDay, courseState, courseText, daysUntil, defaultTimes, givenTodayFor, lastDay, progress, slotMealName, timesText, todaysDoses } from './courses';
+import { courseDay, courseHistory, courseState, courseText, daysUntil, defaultTimes, dosesOn, givenOnFor, givenTodayFor, lastDay, progress, slotAt, slotMealName, timesText, todaysDoses } from './courses';
 import { mealAt } from './feeding';
 
 const now = new Date('2031-05-14T10:30:00').getTime();
@@ -59,7 +59,50 @@ describe('today’s doses', () => {
   });
 
   test('doses given over the course', () => {
-    expect(progress(course, doses)).toEqual({ given: 4, total: 14 });
+    expect(progress(course, doses)).toEqual({ given: 4, total: 14, daysComplete: 1, days: 7 });
+  });
+});
+
+describe('earlier days of a course', () => {
+  test('day by day from the start through today, each complete when every dose was given', () => {
+    const h = courseHistory(course, doses, now);
+    expect(h.map((d) => [d.day, d.n, d.complete])).toEqual([
+      ['2031-05-12', 1, true],
+      ['2031-05-13', 2, false],
+      ['2031-05-14', 3, false],
+    ]);
+    expect(h[1].doses.map((d) => d.status.state)).toEqual(['given', 'missed']);
+    expect(h[1].doses[1].status.at).toBe(at('2031-05-13T19:00:00'));
+    expect(h[2].doses.map((d) => d.status.state)).toEqual(['given', 'due']);
+  });
+
+  test('a finished course stops at its last day; one not started has none', () => {
+    expect(courseHistory(course, doses, at('2031-06-01T08:00:00'))).toHaveLength(7);
+    expect(courseHistory({ ...course, startDate: '2031-05-20' }, doses, now)).toEqual([]);
+  });
+
+  test('a course added today that started yesterday: yesterday is all missed, ticking it in fills the day', () => {
+    const k = { ...course, startDate: '2031-05-13', days: 3 };
+    expect(progress(k, [])).toEqual({ given: 0, total: 6, daysComplete: 0, days: 3 });
+    // Back-filled at the slots' own times on the 13th.
+    const backfill = k.times.map((t, slot) => ({ id: `b${slot}`, courseId: 'k1', slot, at: slotAt(t, '2031-05-13'), by: 'sam@example.com' }));
+    expect(backfill.map((d) => d.at)).toEqual([at('2031-05-13T09:00:00'), at('2031-05-13T19:00:00')]);
+    expect(dosesOn(k, backfill, '2031-05-13', now).map((d) => d.status.state)).toEqual(['given', 'given']);
+    expect(progress(k, backfill)).toEqual({ given: 2, total: 6, daysComplete: 1, days: 3 });
+    expect(courseHistory(k, backfill, now).map((d) => d.complete)).toEqual([true, false]);
+  });
+
+  test('doses outside the course days or times do not count', () => {
+    const stray = [
+      { id: 's1', courseId: 'k1', slot: 0, at: at('2031-05-11T09:00:00'), by: 'x' },
+      { id: 's2', courseId: 'k1', slot: 4, at: at('2031-05-12T09:00:00'), by: 'x' },
+    ];
+    expect(progress(course, stray).given).toBe(0);
+    expect(dosesOn(course, doses, '2031-05-11', now)).toEqual([]);
+  });
+
+  test('un-ticking a slot on an earlier day removes only that day', () => {
+    expect(givenOnFor(doses, 'k1', 0, '2031-05-13').map((d) => d.id)).toEqual(['d3']);
   });
 });
 

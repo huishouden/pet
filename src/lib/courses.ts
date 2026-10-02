@@ -1,9 +1,9 @@
 // Short medicine courses ("1 tablet twice daily for 7 days with food"): which day of the course it is,
-// today's doses as given / not yet / missed, and default dose times from the pet's meals. Pure.
+// each day's doses as given / not yet / missed, and default dose times from the pet's meals. Pure.
 
-import { doseSlots, doseState, type MedCourse } from '@huishouden/pwa-kit/dose';
-import { isMealTime } from './feeding';
-import { addDays, daysBetween, parseYmd, startOfDay, toYmd } from '@huishouden/pwa-kit/time';
+import type { MedCourse } from '@huishouden/pwa-kit/dose';
+import { isMealTime, mealAt } from './feeding';
+import { addDays, daysBetween, parseYmd, toYmd, ymdToTime, type Ymd } from '@huishouden/pwa-kit/time';
 
 /**
  * What "Scan the label" hands over: the kit's `MedCourse` (read on the device and parsed by
@@ -63,34 +63,78 @@ export function courseText(c: Pick<CourseLike, 'startDate' | 'days'>, now: numbe
 
 export type DoseStatus<D> = { state: 'given'; dose: D; at: number } | { state: 'due'; at: number } | { state: 'missed'; at: number };
 
+/** The moment of a dose time ('HH:MM') on a day. */
+export function slotAt(time: string, day: Ymd): number {
+  return mealAt(time, ymdToTime(day));
+}
+
 /**
- * Today's doses of an active course, one per time; empty when the course isn't running today. The
- * slots are the kit's (`doseSlots`); a dose is due until its time and missed after it.
+ * One day's doses of a course, one per time; empty on a day outside the course. A dose given that
+ * day (the latest, if several) is given; one not given is due until its time and missed after it.
  */
-export function todaysDoses<C extends CourseLike, D extends DoseLike>(c: C, doses: D[], now: number): { slot: number; time: string; status: DoseStatus<D> }[] {
-  if (courseState(c, now) !== 'active') return [];
-  const today = startOfDay(now);
-  const mine = doses.filter((d) => d.courseId === c.id && startOfDay(d.at) === today);
-  const slots = doseSlots({ startDate: toYmd(today), days: 1, times: c.times }, today, addDays(today, 1) - 1);
+export function dosesOn<C extends CourseLike, D extends DoseLike>(c: C, doses: D[], day: Ymd, now: number): { slot: number; time: string; status: DoseStatus<D> }[] {
+  const n = courseDay(c, ymdToTime(day));
+  if (n < 1 || n > c.days) return [];
+  const mine = doses.filter((d) => d.courseId === c.id && toYmd(d.at) === day);
   return c.times.map((time, slot) => {
     const dose = mine.filter((d) => d.slot === slot).sort((a, b) => b.at - a.at)[0];
     if (dose) return { slot, time, status: { state: 'given', dose, at: dose.at } };
-    const due = slots.find((s) => s.time === time)!;
-    const state = doseState(due, [], now, { earlyMinutes: Number.POSITIVE_INFINITY, graceMinutes: 0 });
-    return { slot, time, status: { state: state === 'missed' ? 'missed' : 'due', at: due.at } };
+    const at = slotAt(time, day);
+    return { slot, time, status: { state: now > at ? 'missed' : 'due', at } };
   });
 }
 
-/** Today's logged doses for one slot: what un-ticking it removes. */
-export function givenTodayFor<D extends DoseLike>(doses: D[], courseId: string, slot: number, now: number): D[] {
-  const today = startOfDay(now);
-  return doses.filter((d) => d.courseId === courseId && d.slot === slot && startOfDay(d.at) === today);
+/** Today's doses of a running course (see `dosesOn`). */
+export function todaysDoses<C extends CourseLike, D extends DoseLike>(c: C, doses: D[], now: number): { slot: number; time: string; status: DoseStatus<D> }[] {
+  return dosesOn(c, doses, toYmd(now), now);
 }
 
-/** Doses given over the whole course and how many it has in all: "9 of 14 doses". */
-export function progress(c: CourseLike, doses: DoseLike[]): { given: number; total: number } {
-  const slots = new Set(doses.filter((d) => d.courseId === c.id).map((d) => `${toYmd(d.at)}#${d.slot}`));
-  return { given: slots.size, total: c.days * c.times.length };
+/** One slot's logged doses on a day: what un-ticking it removes. */
+export function givenOnFor<D extends DoseLike>(doses: D[], courseId: string, slot: number, day: Ymd): D[] {
+  return doses.filter((d) => d.courseId === courseId && d.slot === slot && toYmd(d.at) === day);
+}
+
+/** Today's logged doses for one slot. */
+export function givenTodayFor<D extends DoseLike>(doses: D[], courseId: string, slot: number, now: number): D[] {
+  return givenOnFor(doses, courseId, slot, toYmd(now));
+}
+
+/**
+ * The course day by day, from its first day through today (or its last day, once finished): each
+ * day's number, its doses, and whether every dose that day was given. Empty before it starts.
+ */
+export function courseHistory<C extends CourseLike, D extends DoseLike>(c: C, doses: D[], now: number): { day: Ymd; n: number; doses: ReturnType<typeof dosesOn<C, D>>; complete: boolean }[] {
+  const start = parseYmd(c.startDate);
+  if (start === null) return [];
+  const through = Math.min(courseDay(c, now), c.days);
+  return Array.from({ length: Math.max(0, through) }, (_, i) => {
+    const day = toYmd(addDays(start, i));
+    const list = dosesOn(c, doses, day, now);
+    return { day, n: i + 1, doses: list, complete: list.every((d) => d.status.state === 'given') };
+  });
+}
+
+/**
+ * Doses given over the whole course, out of how many it has, and the days on which every dose was
+ * given: "9 of 14 doses · 4 of 7 days complete". Only doses on the course's days and times count.
+ */
+export function progress(c: CourseLike, doses: DoseLike[]): { given: number; total: number; daysComplete: number; days: number } {
+  const start = parseYmd(c.startDate);
+  const perDay = new Map<string, Set<number>>();
+  for (const d of doses) {
+    if (d.courseId !== c.id || d.slot < 0 || d.slot >= c.times.length || start === null) continue;
+    const n = daysBetween(start, d.at) + 1;
+    if (n < 1 || n > c.days) continue;
+    const day = toYmd(d.at);
+    perDay.set(day, (perDay.get(day) ?? new Set()).add(d.slot));
+  }
+  let given = 0;
+  let daysComplete = 0;
+  for (const slots of perDay.values()) {
+    given += slots.size;
+    if (slots.size === c.times.length) daysComplete++;
+  }
+  return { given, total: c.days * c.times.length, daysComplete, days: c.days };
 }
 
 /**

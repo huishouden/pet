@@ -66,11 +66,14 @@ export interface PetActions {
   /** Un-ticks a meal (all of today's feeds for it) or deletes one feed; Undo is restoreFeedings. */
   deleteFeedings(list: Feeding[]): void;
   restoreFeedings(list: Feeding[]): void;
-  saveCourse(id: string | null, input: CourseInput): void;
+  /** Returns the course's id. */
+  saveCourse(id: string | null, input: CourseInput): string;
   deleteCourse(c: Course): void;
   restoreCourse(c: Course): void;
-  /** Ticks one dose of a course as given now; Undo is deleteMedDoses. */
+  /** Ticks one dose of a course as given at `at` (now, or its time on an earlier day); Undo is deleteMedDoses. */
   giveMedDose(c: Course, slot: number, at: number): MedDose;
+  /** Changes when a dose was given; who gave it stays. */
+  moveMedDose(d: MedDose, at: number): void;
   deleteMedDoses(list: MedDose[]): void;
   restoreMedDoses(list: MedDose[]): void;
   saveContact(id: string | null, input: ContactInput): void;

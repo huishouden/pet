@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import type { Appointment, Course, Feeding, Meal, Pet, PetRecord, Reminder } from './lib/model';
-import { fedTodayFor, mealsOf } from './lib/feeding';
-import { givenTodayFor } from './lib/courses';
+import { fedTodayFor, mealAt, mealsOf } from './lib/feeding';
+import { givenOnFor, slotAt } from './lib/courses';
 import { sortPets } from './lib/pets';
 import { isRecurring, markGiven } from './lib/schedule';
-import { formatDayShort, formatTime, parseYmd } from '@huishouden/pwa-kit/time';
+import { addDays, formatDayShort, formatTime, longDate, parseYmd, shortDate, startOfDay, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
 import { useClock } from '@huishouden/pwa-kit/react/clock';
 import type { PetStore } from './data/types';
 import { calendarAvailable } from '@huishouden/pwa-kit/react/calendar';
@@ -23,6 +23,8 @@ import { APP, ROLES } from './lib/contacts';
 import { MealDialog } from './components/MealDialog';
 import { FeedingDialog } from './components/FeedingDialog';
 import { CourseDialog } from './components/CourseDialog';
+import { DoseLogDialog } from './components/DoseLogDialog';
+import { ghostButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 import { Today } from './screens/Today';
 import { Care } from './screens/Care';
 import { Appointments } from './screens/Appointments';
@@ -67,6 +69,8 @@ export interface Open {
   meal: (meal: Meal | null, petId: string) => void;
   feeding: (feeding: Feeding | null, petId: string) => void;
   course: (course: Course | null, petId: string) => void;
+  /** A course's doses day by day, to tick earlier days. */
+  doseLog: (course: Course) => void;
   /** Shows one pet on the Pets tab. */
   showPet: (petId: string) => void;
 }
@@ -85,6 +89,9 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   const [meal, setMeal] = useState<{ meal: Meal | null; petId: string } | null>(null);
   const [feeding, setFeeding] = useState<{ feeding: Feeding | null; petId: string } | null>(null);
   const [course, setCourse] = useState<{ course: Course | null; petId: string } | null>(null);
+  const [doseLog, setDoseLog] = useState<string | null>(null);
+  // A course saved with a start date in the past: offer to mark the doses already given.
+  const [backfill, setBackfill] = useState<string | null>(null);
   const pets = useMemo(() => sortPets(store.data.pets), [store.data.pets]);
   const calendar = calendarAvailable(user);
   const { actions } = store;
@@ -112,6 +119,10 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
     meal: (m, petId) => setMeal({ meal: m, petId }),
     feeding: (f, petId) => setFeeding({ feeding: f, petId }),
     course: (c, petId) => setCourse({ course: c, petId }),
+    doseLog: (c) => {
+      setBackfill(null);
+      setDoseLog(c.id);
+    },
     showPet: (petId) => {
       setShownPet(petId);
       chooseTab('pets');
@@ -126,29 +137,45 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
     notify(`${r.title} given${pet ? ` to ${pet.name}` : ''}.${after}`, () => actions.undoDose(dose, r));
   };
 
+  // "yesterday", or "on May 12" for an earlier day; nothing for today.
+  const onDay = (day: Ymd) => {
+    const today = toYmd(now);
+    if (day === today) return '';
+    return day === toYmd(addDays(startOfDay(now), -1)) ? ' yesterday' : ` on ${shortDate(day, today)}`;
+  };
+
   // The board: a tap ticks a meal or a dose (now, by me); a tap on a ticked one un-ticks it. Both undo.
-  const toggleMeal = (pet: Pet, m: Meal) => {
+  // On an earlier day the tick is logged at the meal's or dose's own time that day.
+  const toggleMeal = (pet: Pet, m: Meal, day: number = now) => {
     const at = read();
-    const done = fedTodayFor(store.data.feedings, m.id, at);
+    const past = startOfDay(day) < startOfDay(at);
+    const done = fedTodayFor(store.data.feedings, m.id, past ? day : at);
+    const when = onDay(toYmd(day));
     if (done.length) {
       actions.deleteFeedings(done);
-      notify(`${pet.name} ${m.name}: not fed`, () => actions.restoreFeedings(done));
+      notify(`${pet.name} ${m.name}${when}: not fed`, () => actions.restoreFeedings(done));
     } else {
-      const f = actions.logFeeding({ petId: pet.id, mealId: m.id, at, portion: m.portion });
-      notify(`${pet.name} ${m.name}: fed at ${formatTime(f.at)}`, () => actions.deleteFeedings([f]));
+      const f = actions.logFeeding({ petId: pet.id, mealId: m.id, at: past ? mealAt(m.time, day) : at, portion: m.portion });
+      notify(`${pet.name} ${m.name}${when}: fed at ${formatTime(f.at)}`, () => actions.deleteFeedings([f]));
     }
   };
-  const toggleDose = (pet: Pet, c: Course, slot: number) => {
+  const toggleDose = (pet: Pet | undefined, c: Course, slot: number, day?: Ymd) => {
     const at = read();
-    const done = givenTodayFor(store.data.medDoses, c.id, slot, at);
+    const d = day ?? toYmd(at);
+    const past = d < toYmd(at);
+    const done = givenOnFor(store.data.medDoses, c.id, slot, d);
+    const who = pet ? `${pet.name} ${c.name}` : c.name;
     if (done.length) {
       actions.deleteMedDoses(done);
-      notify(`${pet.name} ${c.name}: not given`, () => actions.restoreMedDoses(done));
+      notify(`${who}${onDay(d)}: not given`, () => actions.restoreMedDoses(done));
     } else {
-      const d = actions.giveMedDose(c, slot, at);
-      notify(`${pet.name} ${c.name}: given at ${formatTime(d.at)}`, () => actions.deleteMedDoses([d]));
+      const given = actions.giveMedDose(c, slot, past ? slotAt(c.times[slot], d) : at);
+      notify(`${who}${onDay(d)}: given at ${formatTime(given.at)}`, () => actions.deleteMedDoses([given]));
     }
   };
+
+  const backfillCourse = backfill ? store.data.courses.find((c) => c.id === backfill) : undefined;
+  const logCourse = doseLog ? store.data.courses.find((c) => c.id === doseLog) : undefined;
 
   let content: ReactNode;
   if (!store.ready) content = <p className="p-2 text-lg text-stone-600">Loading the pets</p>;
@@ -156,13 +183,26 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   else if (tab === 'appointments') content = <Appointments store={store} pets={pets} open={open} calendarAvailable={calendar} notify={notify} />;
   else if (tab === 'pets') content = <Pets store={store} pets={pets} open={open} shown={shownPet} onShow={setShownPet} onGive={give} notify={notify} />;
   else if (tab === 'contacts') content = <Contacts store={store} open={open} notify={notify} />;
-  else content = <Today store={store} pets={pets} open={open} onGive={give} onToggleMeal={toggleMeal} onToggleDose={toggleDose} />;
+  else content = <Today store={store} pets={pets} open={open} onGive={give} onToggleMeal={toggleMeal} onToggleDose={(pet, c, slot, day) => toggleDose(pet, c, slot, day)} />;
 
   return (
     <div className="flex min-h-dvh flex-col bg-cream font-sans text-stone-800 antialiased lg:h-dvh lg:overflow-hidden">
       <Header tabs={TABS} tab={tab} onTab={(id) => chooseTab(id as TabId)} user={user} onSignIn={onSignIn} onSignOut={onSignOut} signingIn={signingIn} />
       <main className="mx-auto flex w-full max-w-[1200px] min-h-0 flex-1 flex-col gap-4 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-6">
         {banner}
+        {backfillCourse && (
+          <div role="status" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-stone-200 bg-white px-5 py-3 shadow-sm">
+            <p className="min-w-0 flex-1 text-base text-stone-800">
+              Started on {longDate(backfillCourse.startDate, toYmd(now))}. Mark the doses already given?
+            </p>
+            <button type="button" className={secondaryButton} onClick={() => open.doseLog(backfillCourse)}>
+              Mark doses
+            </button>
+            <button type="button" className={ghostButton} onClick={() => setBackfill(null)}>
+              Not now
+            </button>
+          </div>
+        )}
         <div className="min-h-0 flex-1">{content}</div>
       </main>
 
@@ -352,8 +392,10 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           now={now}
           onClose={() => setCourse(null)}
           onSave={(input) => {
-            actions.saveCourse(course.course?.id ?? null, input);
+            const id = actions.saveCourse(course.course?.id ?? null, input);
             if (!course.course) notify(`Added ${input.name.trim()}`);
+            const startChanged = !course.course || course.course.startDate !== input.startDate;
+            if (startChanged && input.startDate < toYmd(read())) setBackfill(id);
           }}
           onDelete={
             course.course
@@ -366,7 +408,26 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           }
         />
       )}
-      <Toast toast={toast} onDone={clearToast} />
+      {logCourse && (
+        <DoseLogDialog
+          course={logCourse}
+          pet={pets.find((p) => p.id === logCourse.petId)}
+          meals={store.data.meals}
+          medDoses={store.data.medDoses}
+          me={store.me}
+          now={now}
+          onToggle={(slot, day) => toggleDose(pets.find((p) => p.id === logCourse.petId), logCourse, slot, day)}
+          onMove={(d, at) => {
+            actions.moveMedDose(d, at);
+            notify(`${logCourse.name}${onDay(toYmd(at))}: given at ${formatTime(at)}`, () => actions.moveMedDose(d, d.at));
+          }}
+          onClose={() => setDoseLog(null)}
+        />
+      )}
+      {/* Above dialogs, so Undo works from the dose log too. */}
+      <div className="relative z-[60]">
+        <Toast toast={toast} onDone={clearToast} />
+      </div>
     </div>
   );
 }
