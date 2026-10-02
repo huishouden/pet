@@ -35,8 +35,8 @@ export function Appointments({ store, pets, open, calendarAvailable, notify }: {
   const contacts = store.data.contacts;
   const upcoming = shown.filter((a) => a.at >= now - 3_600_000).sort((a, b) => a.at - b.at);
   const past = shown.filter((a) => a.at < now - 3_600_000).sort((a, b) => b.at - a.at);
-  // Pets without a birthday are looked for too; their birthday events are offered, not imported as visits.
-  const unborn = pets.filter((p) => !p.birthDate);
+  // Pets without a birthday (or with only an age) are looked for too; their birthday events are offered, not imported as visits.
+  const unborn = pets.filter((p) => !p.birthDate || p.birthDateApprox);
   const runScan = () => void scan.run([...PET_CALENDAR_QUERIES, ...unborn.flatMap((p) => birthdayQueries(p.name))], { limit: 25, seriesStart: true });
   const found = scan.state.status === 'done' ? scan.state.matches : [];
   const birthdays = unborn.flatMap((pet) => birthdayMatches(found, pet.name, now).slice(0, 1).map((b) => ({ pet, ...b })));
@@ -131,7 +131,7 @@ export function Appointments({ store, pets, open, calendarAvailable, notify }: {
                         className={secondaryButton}
                         onClick={() => {
                           const before = pet;
-                          store.actions.savePet(pet.id, { ...petInputOf(pet), birthDate: guess.date });
+                          store.actions.savePet(pet.id, { ...petInputOf(pet), birthDate: guess.date, birthDateApprox: undefined });
                           notify(`Saved ${pet.name}'s birthday`, () => store.actions.savePet(before.id, petInputOf(before)));
                         }}
                         aria-label={`Set ${pet.name}'s birthday`}

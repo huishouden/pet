@@ -25,10 +25,10 @@ export function birthdayMatches(matches: CalendarMatch[], name: string, now: num
     .map((match) => ({ match, guess: birthdayFromMatch(match, now) }));
 }
 
-/** "Yearly since 2027", "Says Miso turns 2", "In the title", or why the year is missing. */
+/** The event's title, and what the calendar says about the year. */
 export function guessSource(b: BirthdayMatch): string {
-  if (b.guess.from === 'series') return `${b.match.title}, yearly since ${b.guess.year}`;
-  if (b.guess.from === 'age' || b.guess.from === 'year') return `${b.match.title}`;
+  if (b.guess.from === 'age' || b.guess.from === 'year') return b.match.title;
+  if (b.guess.suggestedYear !== undefined) return `${b.match.title}; yearly in your calendar since ${b.guess.suggestedYear}`;
   return `${b.match.title}; the calendar doesn't say the year`;
 }
 

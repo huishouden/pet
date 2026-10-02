@@ -61,8 +61,8 @@ export function mealReminders(pet: Pick<Pet, 'id' | 'name'>, meals: Meal[], feed
   return out;
 }
 
-/** The pet's next birthday, at 9:00 on the day; none without a birth date. */
-export function birthdayReminders(pet: Pick<Pet, 'id' | 'name' | 'birthDate'>, now: number): ReminderInput[] {
+/** The pet's next birthday, at 9:00 on the day; none without a birth date or when it is approximate. */
+export function birthdayReminders(pet: Pick<Pet, 'id' | 'name' | 'birthDate' | 'birthDateApprox'>, now: number): ReminderInput[] {
   const r = birthdayReminder(pet, now, { app: APP, url: petUrl(pet.id), ref: birthdayRef(pet.id) });
   return r ? [r] : [];
 }

@@ -56,4 +56,5 @@ test('a pet with a birthday gets one notification for the next one, linked to it
   expect(r).toMatchObject({ app: 'pet', ref: 'pet:birthday:p1', title: "Biscuit's birthday", body: 'Biscuit turns 5 today.', at: new Date(2032, 2, 8, 9).getTime() });
   expect(r.url).toContain('pet=p1');
   expect(birthdayReminders({ id: 'p2', name: 'Pip' }, now)).toEqual([]);
+  expect(birthdayReminders({ id: 'p3', name: 'Rex', birthDate: '2025-03-08', birthDateApprox: true }, now)).toEqual([]);
 });
