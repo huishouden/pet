@@ -2,11 +2,11 @@ import { Pencil, Pill, Plus } from 'lucide-react';
 import type { Course, Feeding, Meal, MedDose, Pet } from '../lib/model';
 import { dailyCounts, mealsOf, recentFeedings } from '../lib/feeding';
 import { courseState, courseText, lastDay, progress, timesText } from '../lib/courses';
-import { personInitial, personName } from '../lib/people';
-import { parseYmd, relativeDay, toYmd } from '../lib/time';
-import { formatClock, formatDateShort, formatDayShort, formatTime } from '../lib/format';
+import { personInitial, personName } from '@huishouden/pwa-kit/people';
+import { formatDayShort, formatTime, parseYmd, relativeDay, toYmd } from '@huishouden/pwa-kit/time';
+import { formatClock, formatDateShort } from '../lib/format';
 import type { Open } from '../PetApp';
-import { cardClass, ghostButton, iconButton, overline } from './ui';
+import { cardClass, ghostButton, iconButton, overline } from '@huishouden/pwa-kit/react/ui';
 
 const DAYS = 14;
 

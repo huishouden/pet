@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import type { Pet, PetRecord } from '../lib/model';
 import { LIMITS } from '../lib/model';
-import { isYmd, toYmd } from '../lib/time';
+import { isYmd, toYmd } from '@huishouden/pwa-kit/time';
 import type { RecordInput } from '../lib/build';
-import { Dialog, Field, ghostButton, inputClass, primaryButton } from './ui';
+import { Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
 /** A dated record or note for one pet: a diagnosis, a diet change, where a certificate is kept. */
 export function RecordDialog({ record, petId, pets, now, onSave, onDelete, onClose }: {

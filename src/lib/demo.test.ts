@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { DEMO_NOW, demoData } from './demo';
 import { dueState, needsAttention, headline } from './schedule';
 import { trend } from './weight';
-import { isYmd } from './time';
+import { isYmd } from '@huishouden/pwa-kit/time';
 
 test('the sample day is in 2031 and the care list leads with an overdue flea treatment', () => {
   expect(new Date(DEMO_NOW).getFullYear()).toBe(2031);

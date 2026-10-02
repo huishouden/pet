@@ -1,6 +1,6 @@
 // Weight log maths: units, the latest weight, the trend, and the points of the small chart. Pure.
 
-import { DAY, calendarDaysBetween } from './time';
+import { DAY, daysBetween } from '@huishouden/pwa-kit/time';
 
 export type WeightUnit = 'kg' | 'lb';
 export const WEIGHT_UNITS: readonly WeightUnit[] = ['kg', 'lb'];
@@ -67,7 +67,7 @@ export function trend(entries: Entry[], unit: WeightUnit, windowDays = 180): Tre
   const first = inWindow[0];
   if (!first) return null;
   const change = Math.round((last.shown - first.shown) * 10) / 10;
-  const days = calendarDaysBetween(first.at, last.at);
+  const days = daysBetween(first.at, last.at);
   if (Math.abs(change) < Math.max(0.1, last.shown * 0.01)) return { direction: 'steady', change: 0, days, text: `Steady over ${span(days)}` };
   const direction = change > 0 ? 'up' : 'down';
   return { direction, change, days, text: `${direction === 'up' ? 'Up' : 'Down'} ${formatWeight(Math.abs(change), unit)} in ${span(days)}` };

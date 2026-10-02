@@ -1,7 +1,7 @@
 // Feeding: today's meals per pet as fed / due / not fed yet, time since the last feed, and the daily
 // count for the history. Pure: every function takes `now`.
 
-import { MINUTE, addDays, startOfDay, toYmd } from './time';
+import { MINUTE, addDays, startOfDay, toYmd } from '@huishouden/pwa-kit/time';
 
 export interface MealLike {
   id: string;

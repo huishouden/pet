@@ -1,10 +1,11 @@
 // Recurring care: when the next dose is due, how urgent it is, and how to say so from across a room.
 // Pure: dates are local calendar days ('YYYY-MM-DD'), and every function takes `now`.
 
-import { addDays, calendarDaysBetween, parseYmd, startOfDay, toYmd } from './time';
+import { daysBetween, parseYmd, startOfDay, toYmd } from '@huishouden/pwa-kit/time';
 
-export type Unit = 'day' | 'week' | 'month' | 'year';
-export const UNITS: readonly Unit[] = ['day', 'week', 'month', 'year'];
+import { addInterval, type Unit } from '@huishouden/pwa-kit/schedule';
+
+export { addInterval, UNITS, type Unit } from '@huishouden/pwa-kit/schedule';
 
 export interface Recurrence {
   every: number;
@@ -20,24 +21,6 @@ export interface Scheduled {
 }
 
 export const isRecurring = (s: { every?: number; unit?: Unit }): s is Recurrence => !!s.unit && typeof s.every === 'number' && s.every >= 1;
-
-/**
- * The day `every` `unit`s after `ymd`. Months and years clamp to the month's last day, so 31 January
- * plus one month is the last day of February.
- */
-export function addInterval(ymd: string, every: number, unit: Unit): string {
-  const start = parseYmd(ymd);
-  if (start === null) throw new Error(`Not a date: ${ymd}`);
-  if (unit === 'day') return toYmd(addDays(start, every));
-  if (unit === 'week') return toYmd(addDays(start, every * 7));
-  const d = new Date(start);
-  const months = unit === 'month' ? every : every * 12;
-  const target = d.getMonth() + months;
-  const year = d.getFullYear() + Math.floor(target / 12);
-  const month = ((target % 12) + 12) % 12;
-  const lastDay = new Date(year, month + 1, 0).getDate();
-  return toYmd(new Date(year, month, Math.min(d.getDate(), lastDay)).getTime());
-}
 
 /**
  * Fields to write when a dose is given at `at`: the next due date counts from the day it was given
@@ -64,7 +47,7 @@ export function leadDays(s: { every?: number; unit?: Unit }): number {
 export function daysUntil(due: string, now: number): number {
   const t = parseYmd(due);
   if (t === null) return 0;
-  return calendarDaysBetween(now, t);
+  return daysBetween(now, t);
 }
 
 export function dueState(s: Scheduled, now: number): DueState {

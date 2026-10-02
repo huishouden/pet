@@ -15,7 +15,7 @@ import {
   type Scheduled,
   type Unit,
 } from './schedule';
-import { parseYmd } from './time';
+import { parseYmd } from '@huishouden/pwa-kit/time';
 
 const now = new Date(fixture.now).getTime();
 type Case = (typeof fixture.states)[number];

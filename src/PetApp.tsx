@@ -6,19 +6,19 @@ import { fedTodayFor, mealsOf } from './lib/feeding';
 import { givenTodayFor } from './lib/courses';
 import { sortPets } from './lib/pets';
 import { isRecurring, markGiven } from './lib/schedule';
-import { parseYmd } from './lib/time';
-import { formatDayShort, formatTime } from './lib/format';
-import { useClock } from './clock';
+import { formatDayShort, formatTime, parseYmd } from '@huishouden/pwa-kit/time';
+import { useClock } from '@huishouden/pwa-kit/react/clock';
 import type { PetStore } from './data/types';
-import { calendarAvailable } from './data/calendar';
+import { calendarAvailable } from '@huishouden/pwa-kit/react/calendar';
 import { Header, type Tab } from './components/Header';
-import { Toast, type ToastState } from './components/ui';
+import { Toast, type ToastState } from '@huishouden/pwa-kit/react/ui';
 import { PetDialog } from './components/PetDialog';
 import { ReminderDialog } from './components/ReminderDialog';
 import { AppointmentDialog } from './components/AppointmentDialog';
 import { WeightDialog } from './components/WeightDialog';
 import { RecordDialog } from './components/RecordDialog';
-import { ContactDialog } from './components/ContactDialog';
+import { ContactDialog } from '@huishouden/pwa-kit/react/contacts';
+import { APP, ROLES } from './lib/contacts';
 import { MealDialog } from './components/MealDialog';
 import { FeedingDialog } from './components/FeedingDialog';
 import { CourseDialog } from './components/CourseDialog';
@@ -273,7 +273,11 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
       {contact && (
         <ContactDialog
           contact={contact.contact}
+          app={APP}
+          roles={ROLES}
           role={contact.role}
+          searchPlaceholder="Clinic or business, and town"
+          namePlaceholder="Example Vet Clinic"
           onClose={() => setContact(null)}
           onSave={(input) => {
             actions.saveContact(contact.contact?.id ?? null, input);

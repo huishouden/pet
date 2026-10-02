@@ -3,10 +3,11 @@ import { Check, Pill, Plus } from 'lucide-react';
 import type { Course, Feeding, Meal, MedDose, Pet } from '../lib/model';
 import { formatAgo, lastFed, mealsOf, todaysMeals } from '../lib/feeding';
 import { courseText, slotMealName, todaysDoses } from '../lib/courses';
-import { personName } from '../lib/people';
-import { formatClock, formatDayLong, formatTime } from '../lib/format';
+import { personName } from '@huishouden/pwa-kit/people';
+import { formatDayLong, formatTime } from '@huishouden/pwa-kit/time';
+import { formatClock } from '../lib/format';
 import { PetAvatar } from './PetAvatar';
-import { ghostButton, overline } from './ui';
+import { ghostButton, overline } from '@huishouden/pwa-kit/react/ui';
 
 /**
  * The paper board, for every pet at once: one row per pet, one big toggle per meal and per dose of a

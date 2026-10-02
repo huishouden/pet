@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { cancelReminders, replaceReminders, type ReminderInput } from '@huishouden/pwa-kit/reminders';
 import { courseRef, courseReminders, mealReminders, mealsRef } from '../lib/notify';
-import { toYmd } from '../lib/time';
+import { toYmd } from '@huishouden/pwa-kit/time';
 import type { PetHouseholdData } from '../lib/demo';
 import { db } from './firebase';
 
