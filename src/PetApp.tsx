@@ -24,6 +24,7 @@ import { MealDialog } from './components/MealDialog';
 import { FeedingDialog } from './components/FeedingDialog';
 import { CourseDialog } from './components/CourseDialog';
 import { DoseLogDialog } from './components/DoseLogDialog';
+import { PetPhotos } from './components/PetAvatar';
 import { ghostButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 import { Today } from './screens/Today';
 import { Care } from './screens/Care';
@@ -93,6 +94,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   // A course saved with a start date in the past: offer to mark the doses already given.
   const [backfill, setBackfill] = useState<string | null>(null);
   const pets = useMemo(() => sortPets(store.data.pets), [store.data.pets]);
+  const photos = useMemo(() => new Map(store.data.photos.map((p) => [p.id, p.data])), [store.data.photos]);
   const calendar = calendarAvailable(user);
   const { actions } = store;
 
@@ -186,6 +188,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   else content = <Today store={store} pets={pets} open={open} onGive={give} onToggleMeal={toggleMeal} onToggleDose={(pet, c, slot, day) => toggleDose(pet, c, slot, day)} />;
 
   return (
+    <PetPhotos.Provider value={photos}>
     <div className="flex min-h-dvh flex-col bg-cream font-sans text-stone-800 antialiased lg:h-dvh lg:overflow-hidden">
       <Header tabs={TABS} tab={tab} onTab={(id) => chooseTab(id as TabId)} user={user} onSignIn={onSignIn} onSignOut={onSignOut} signingIn={signingIn} />
       <main className="mx-auto flex w-full max-w-[1200px] min-h-0 flex-1 flex-col gap-4 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-6">
@@ -209,12 +212,18 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
       {petDialog && (
         <PetDialog
           pet={petDialog.pet}
+          pets={pets}
           now={now}
           calendarAvailable={calendar}
           birthday={petDialog.birthday}
           onClose={() => setPetDialog(null)}
-          onSave={(input) => {
+          onSave={(input, photo) => {
             const id = actions.savePet(petDialog.pet?.id ?? null, input);
+            if (photo !== undefined) {
+              const name = input.name.trim();
+              const before = photo ? actions.savePetPhoto(id, photo) : actions.removePetPhoto(id);
+              if (petDialog.pet) notify(photo ? `Saved ${name}'s photo` : `Removed ${name}'s photo`, () => actions.restorePetPhoto(id, before));
+            }
             if (!petDialog.pet) {
               notify(`Added ${input.name.trim()}`);
               open.showPet(id);
@@ -424,11 +433,9 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           onClose={() => setDoseLog(null)}
         />
       )}
-      {/* Above dialogs, so Undo works from the dose log too. */}
-      <div className="relative z-[60]">
-        <Toast toast={toast} onDone={clearToast} />
-      </div>
+      <Toast toast={toast} onDone={clearToast} />
     </div>
+    </PetPhotos.Provider>
   );
 }
 

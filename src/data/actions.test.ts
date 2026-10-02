@@ -65,15 +65,51 @@ describe('removing a pet', () => {
       expect(bundle[key].length).toBeGreaterThan(0);
       expect(h.data[key].some((x) => x.petId === miso.id)).toBe(false);
     }
+    expect(bundle.photo?.id).toBe(miso.id);
+    expect(h.data.photos.some((p) => p.id === miso.id)).toBe(false);
     const shared = h.data.appointments.find((a) => a.title === 'Boarding drop-off')!;
     expect(shared.petIds).toEqual(['demo-pet-biscuit']);
     expect(h.data.appointments.some((a) => a.title === 'Dental cleaning')).toBe(false);
 
     h.actions.restorePet(bundle);
     const sortById = (l: { id: string }[]) => [...l].sort((a, b) => a.id.localeCompare(b.id));
-    for (const key of ['pets', 'reminders', 'doses', 'weights', 'records', 'meals', 'feedings', 'appointments'] as const)
+    for (const key of ['pets', 'reminders', 'doses', 'weights', 'records', 'meals', 'feedings', 'appointments', 'photos'] as const)
       expect(sortById(h.data[key] as { id: string }[])).toEqual(sortById(original[key] as { id: string }[]));
     expectRuleKeys(h.writes);
+  });
+});
+
+describe("a pet's photo", () => {
+  const webp = 'data:image/webp;base64,UklGRg==';
+  test('is its own document keyed by the pet, replaced and removed with Undo', () => {
+    const h = harness(emptyData());
+    const petId = h.actions.savePet(null, { name: 'Pip', species: 'dog', weightUnit: 'kg' });
+    expect(h.actions.savePetPhoto(petId, webp)).toBeUndefined();
+    expect(h.data.photos).toEqual([{ id: petId, data: webp, updatedAt: DEMO_NOW, by: 'sam@example.com' }]);
+    const before = h.actions.savePetPhoto(petId, 'data:image/jpeg;base64,/9j/');
+    expect(before?.data).toBe(webp);
+    h.actions.restorePetPhoto(petId, before);
+    expect(h.data.photos[0].data).toBe(webp);
+    const removed = h.actions.removePetPhoto(petId);
+    expect(h.data.photos).toEqual([]);
+    h.actions.restorePetPhoto(petId, removed);
+    expect(h.data.photos[0].data).toBe(webp);
+    expectRuleKeys(h.writes);
+  });
+
+  test('only a WebP or JPEG data URL is kept', () => {
+    const h = harness(emptyData());
+    expect(() => h.actions.savePetPhoto('p1', 'data:image/png;base64,iVBOR')).toThrow();
+    expect(() => h.actions.savePetPhoto('p1', `data:image/webp;base64,${'A'.repeat(100_000)}`)).toThrow();
+    expect(h.data.photos).toEqual([]);
+  });
+
+  test('the sample pets have invented illustrations, small enough for the rules', () => {
+    for (const p of demoData().photos) {
+      expect(p.data.startsWith('data:image/webp;base64,')).toBe(true);
+      expect(p.data.length).toBeLessThan(60_000);
+    }
+    expect(demoData().photos.map((p) => p.id).sort()).toEqual(['demo-pet-biscuit', 'demo-pet-miso']);
   });
 });
 

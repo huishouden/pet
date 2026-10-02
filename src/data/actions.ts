@@ -1,5 +1,5 @@
 import type { Contact, ContactInput } from '@huishouden/pwa-kit/contacts';
-import { appointmentDoc, courseDoc, doseDoc, feedingDoc, mealDoc, medDoseDoc, petDoc, recordDoc, reminderDoc, weightDoc } from '../lib/build';
+import { appointmentDoc, photoDoc, courseDoc, doseDoc, feedingDoc, mealDoc, medDoseDoc, petDoc, recordDoc, reminderDoc, weightDoc } from '../lib/build';
 import { markGiven } from '../lib/schedule';
 import { defaultMeals } from '../lib/feeding';
 import type { PetHouseholdData } from '../lib/demo';
@@ -63,8 +63,10 @@ export function createActions(b: Backend): PetActions {
         courses: mine(d.courses),
         medDoses: mine(d.medDoses),
         appointments: d.appointments.filter((a) => a.petIds.includes(pet.id)),
+        photo: d.photos.find((p) => p.id === pet.id),
       };
       const ops: Op[] = [{ key: 'pets', id: pet.id, data: null }];
+      if (bundle.photo) ops.push({ key: 'photos', id: pet.id, data: null });
       for (const key of ['reminders', 'doses', 'weights', 'records', 'meals', 'feedings', 'courses', 'medDoses'] as const) for (const x of bundle[key]) ops.push({ key, id: x.id, data: null });
       for (const a of bundle.appointments) {
         const others = a.petIds.filter((p) => p !== pet.id);
@@ -77,8 +79,20 @@ export function createActions(b: Backend): PetActions {
       const ops: Op[] = [{ key: 'pets', id: bundle.pet.id, data: withoutId(bundle.pet) }];
       for (const key of ['reminders', 'doses', 'weights', 'records', 'meals', 'feedings', 'courses', 'medDoses', 'appointments'] as const)
         for (const x of bundle[key]) ops.push({ key, id: x.id, data: withoutId(x) });
+      if (bundle.photo) ops.push({ key: 'photos', id: bundle.photo.id, data: withoutId(bundle.photo) });
       b.write(ops);
     },
+    savePetPhoto: (petId, dataUrl) => {
+      const before = b.read().photos.find((p) => p.id === petId);
+      put('photos', petId, photoDoc(dataUrl, b.me, b.now()));
+      return before;
+    },
+    removePetPhoto: (petId) => {
+      const before = b.read().photos.find((p) => p.id === petId);
+      if (before) del('photos', petId);
+      return before;
+    },
+    restorePetPhoto: (petId, before) => (before ? put('photos', petId, withoutId(before)) : del('photos', petId)),
     saveReminder: (id, input) => {
       const existing = find('reminders', id);
       const now = b.now();

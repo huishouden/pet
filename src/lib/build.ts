@@ -2,7 +2,8 @@
 // live store and the sample-data store, so both write the same shapes.
 
 import type { AppointmentData, AppointmentKind, CourseData, DoseData, FeedingData, MealData, MedDoseData, PetData, RecordData, ReminderData, ReminderKind, Species, WeightData } from './model';
-import { LIMITS } from './model';
+import { LIMITS, type PetPhotoData } from './model';
+import { isPhotoDataUrl } from '@huishouden/pwa-kit/photo';
 import { isRecurring, type Unit } from './schedule';
 import { isYmd } from '@huishouden/pwa-kit/time';
 import { isMealTime } from './feeding';
@@ -209,4 +210,10 @@ export function courseDoc(c: CourseInput, by: string, createdAt: number, updated
 
 export function medDoseDoc(d: { petId: string; courseId: string; slot: number; at: number }, by: string, createdAt: number): MedDoseData {
   return { petId: d.petId, courseId: d.courseId, slot: Math.round(d.slot), at: Math.round(d.at), by, createdAt: Math.round(createdAt) };
+}
+
+/** A pet's photo document; throws for anything but a WebP or JPEG data URL within the limit. */
+export function photoDoc(dataUrl: string, by: string, updatedAt: number): PetPhotoData {
+  if (!isPhotoDataUrl(dataUrl) || dataUrl.length > LIMITS.photo) throw new Error('Not a photo Pet can keep');
+  return { data: dataUrl, updatedAt: Math.round(updatedAt), by };
 }

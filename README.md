@@ -48,6 +48,7 @@ accept nothing else.
 | `petFeedings` | petId, mealId, at, portion, note, by, createdAt, updatedAt |
 | `petMedCourses` | petId, name, dose, timesPerDay, times, startDate, days, withFood, notes, createdAt, updatedAt, by |
 | `petMedDoses` | petId, courseId, slot, at, by, createdAt |
+| `petPhotos` | data, updatedAt, by (id = the pet's id; `data` a WebP or JPEG data URL under 60 000 characters, from `@huishouden/pwa-kit/photo`, kept apart from the profile so reading the pets stays light) |
 | `petReminders` | petId, kind, title, every, unit, due, lastDoneAt, notes, createdAt, updatedAt, by |
 | `petDoses` | petId, reminderId, title, at, by, createdAt |
 | `petAppointments` | petIds, kind, title, at, location, notes, contactId, calendarEventId, calendarLink, createdAt, by |
