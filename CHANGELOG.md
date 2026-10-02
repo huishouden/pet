@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/huishouden/pet/compare/v1.0.0...v1.0.1) (2026-10-02)
+
+
+### Bug Fixes
+
+* Google API tokens from Google Identity Services, not Firebase sign-in (kit v0.23.0) ([#4](https://github.com/huishouden/pet/issues/4)) ([72ae09b](https://github.com/huishouden/pet/commit/72ae09be1dce535d8557b5002e6f235813f5b4fb))
+
 ## 1.0.0 (2026-10-02)
 
 
