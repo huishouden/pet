@@ -189,6 +189,20 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
     notify(`${r.title} given${pet ? ` to ${pet.name}` : ''}.${after}`, () => actions.undoDose(dose, r));
   };
 
+  // Dismiss stops a reminder coming due anywhere (Today, the agenda, the to-do list); it stays in the
+  // care lists as Dismissed with Restore. Helpers and kids dismiss only what they added, as the rules.
+  const dismiss = (r: Reminder) => {
+    if (!perms.mayChange(r)) return notify(refusal('edit-others'));
+    actions.dismissReminder(r);
+    notify(`Dismissed ${r.title}`, () => actions.restoreReminder(r));
+  };
+  const undismiss = (r: Reminder) => {
+    if (!perms.mayChange(r)) return notify(refusal('edit-others'));
+    actions.undismissReminder(r);
+    notify(`Restored ${r.title}`, () => actions.restoreReminder(r));
+  };
+  const reminderActions = { onGive: give, onRestore: (r: Reminder) => (perms.mayChange(r) ? () => undismiss(r) : undefined) };
+
   // "yesterday", or "on May 12" for an earlier day; nothing for today.
   const onDay = (day: Ymd) => {
     const today = toYmd(now);
@@ -222,11 +236,21 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
     if (done.some((x) => !perms.mayChange(x))) return notify(refusal('edit-others'));
     if (done.length) {
       actions.deleteMedDoses(done);
-      notify(`${who}${onDay(d)}: not given`, () => actions.restoreMedDoses(done));
+      notify(`${who}${onDay(d)}: ${done.every((x) => x.skipped) ? 'not skipped' : 'not given'}`, () => actions.restoreMedDoses(done));
     } else {
       const given = actions.giveMedDose(c, slot, past ? slotAt(c.times[slot], d) : at);
       notify(`${who}${onDay(d)}: given at ${formatTime(given.at)}`, () => actions.deleteMedDoses([given]));
     }
+  };
+
+  // Skip: the dose is handled without being given (the vet said to leave it out), so it stops being due.
+  const skipDose = (pet: Pet | undefined, c: Course, slot: number, day: Ymd) => {
+    const at = read();
+    if (!perms.mayGiveCourse(c)) return notify(perms.courseRefusal(c));
+    if (givenOnFor(store.data.medDoses, c.id, slot, day).length) return;
+    const who = pet ? `${pet.name} ${c.name}` : c.name;
+    const skipped = actions.skipMedDose(c, slot, day < toYmd(at) ? slotAt(c.times[slot], day) : at);
+    notify(`${who}${onDay(day)}: skipped`, () => actions.deleteMedDoses([skipped]));
   };
 
   const backfillCourse = backfill ? store.data.courses.find((c) => c.id === backfill) : undefined;
@@ -234,9 +258,9 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
 
   let content: ReactNode;
   if (!store.ready) content = <p className="p-2 text-lg text-stone-600">Loading the pets</p>;
-  else if (tab === 'care') content = <Care store={store} pets={pets} open={open} onGive={give} notify={notify} deviceSettings={deviceSettings} />;
+  else if (tab === 'care') content = <Care store={store} pets={pets} open={open} {...reminderActions} notify={notify} deviceSettings={deviceSettings} />;
   else if (tab === 'appointments') content = <Appointments store={store} pets={pets} open={open} calendarAvailable={calendar} notify={notify} onImport={importEvents} />;
-  else if (tab === 'pets') content = <Pets store={store} pets={pets} open={open} shown={shownPet} onShow={setShownPet} onGive={give} notify={notify} />;
+  else if (tab === 'pets') content = <Pets store={store} pets={pets} open={open} shown={shownPet} onShow={setShownPet} {...reminderActions} notify={notify} />;
   else if (tab === 'contacts') content = <Contacts store={store} open={open} notify={notify} />;
   else
     content = (
@@ -318,6 +342,8 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
             actions.saveReminder(reminder.reminder?.id ?? null, input);
             if (!reminder.reminder) notify(`Added ${input.title.trim()}`);
           }}
+          onDismiss={reminder.reminder ? () => dismiss(reminder.reminder!) : undefined}
+          onRestore={reminder.reminder ? () => undismiss(reminder.reminder!) : undefined}
           onDelete={
             reminder.reminder
               ? () => {
@@ -497,6 +523,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           me={store.me}
           now={now}
           onToggle={(slot, day) => toggleDose(pets.find((p) => p.id === logCourse.petId), logCourse, slot, day)}
+          onSkip={perms.mayGiveCourse(logCourse) ? (slot, day) => skipDose(pets.find((p) => p.id === logCourse.petId), logCourse, slot, day) : undefined}
           onMove={(d, at) => {
             actions.moveMedDose(d, at);
             notify(`${logCourse.name}${onDay(toYmd(at))}: given at ${formatTime(at)}`, () => actions.moveMedDose(d, d.at));

@@ -98,6 +98,7 @@ export function FeedingBoard({ pets, meals, feedings, courses, medDoses, me, now
                   })}
                   {doses.map(({ course, slot, time, status }) => {
                     const given = status.state === 'given';
+                    const skipped = status.state === 'skipped';
                     const missed = status.state === 'missed';
                     const slotName = slotMealName(time, petMeals) ?? formatClock(time);
                     const title = course.times.length > 1 ? `${course.name} ${slotName}` : course.name;
@@ -110,11 +111,13 @@ export function FeedingBoard({ pets, meals, feedings, courses, medDoses, me, now
                         icon={<Pill size={20} className="shrink-0" aria-hidden="true" />}
                         compact
                         title={title}
-                        detail={given ? `${formatTime(status.at)} · ${who(status.dose.by)}` : missed ? 'Missed' : courseText(course, now)}
+                        detail={given ? `${formatTime(status.at)} · ${who(status.dose.by)}` : skipped ? `Skipped · ${who(status.dose.by)}` : missed ? 'Missed' : courseText(course, now)}
                         label={
                           given
                             ? `${pet.name} ${course.name} ${slotName}${yesterday ? ' yesterday' : ''}: given at ${formatTime(status.at)} by ${who(status.dose.by)}. Tap to undo.`
-                            : yesterday
+                            : skipped
+                              ? `${pet.name} ${course.name} ${slotName}${yesterday ? ' yesterday' : ''}: skipped by ${who(status.dose.by)}. Tap to undo.`
+                              : yesterday
                               ? `${pet.name} ${course.name} ${slotName} yesterday: missed. Tap if given.`
                               : `${pet.name} ${course.name} ${slotName}: ${missed ? 'missed' : 'not yet'}, ${courseText(course, now)}. Tap when given.`
                         }

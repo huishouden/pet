@@ -9,7 +9,7 @@ import { addDays, parseYmd, toYmd } from '@huishouden/pwa-kit/time';
 import type { Appointment, Course, Feeding, Meal, MedDose, Pet, Reminder } from './model';
 import type { PetHouseholdData } from './demo';
 import { nextBirthday } from './birthday';
-import { dosesOn, lastDay, slotAt, timesText } from './courses';
+import { dosesOn, isHandled, lastDay, slotAt, timesText } from './courses';
 import { fedTodayFor, mealAt, mealsOf } from './feeding';
 import { describeRecurrence, dueState } from './schedule';
 import { appUrl } from '@huishouden/pwa-kit/site';
@@ -70,10 +70,10 @@ export function appointmentAgenda(a: Appointment, pets: Pick<Pet, 'id' | 'name'>
   );
 }
 
-/** A care reminder's next due day only, overdue once that day has passed. A given one-off has none. */
+/** A care reminder's next due day only, overdue once that day has passed. A given one-off and a dismissed reminder have none. */
 export function reminderAgenda(r: Reminder, pets: Pick<Pet, 'id' | 'name'>[], now: number, origin = APP_ORIGIN): AgendaEntry[] {
   const state = dueState(r, now);
-  if (state === 'done' || parseYmd(r.due) === null || !r.title.trim()) return [];
+  if (state === 'done' || state === 'dismissed' || parseYmd(r.due) === null || !r.title.trim()) return [];
   const who = nameOf(pets, r.petId);
   return inWindow(
     [
@@ -142,7 +142,7 @@ export function doseAgenda(c: Course, medDoses: MedDose[], pets: Pick<Pet, 'id' 
           ...(dose ? { detail: dose } : {}),
           url: tabUrl('today', undefined, origin),
           ...(who ? { who } : {}),
-          status: status.state === 'given' ? ('done' as const) : ('upcoming' as const),
+          status: isHandled(status) ? ('done' as const) : ('upcoming' as const),
         },
       ],
     })),

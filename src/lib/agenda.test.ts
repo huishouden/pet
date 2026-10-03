@@ -140,6 +140,10 @@ describe('care reminders', () => {
     expect(reminderAgenda(reminder({ due: day(1, 2) }), pets, NOW, ORIGIN)[0].status).toBe('overdue');
   });
 
+  test('a dismissed reminder is left out', () => {
+    expect(reminderAgenda(reminder({ due: day(5, 13), dismissedAt: NOW - 1000 }), pets, NOW, ORIGIN)).toEqual([]);
+  });
+
   test('a reminder for a pet no longer in the household keeps its own title, without a who', () => {
     const item = reminderAgenda(reminder({ petId: 'gone' }), pets, NOW, ORIGIN)[0];
     expect(item.title).toBe('Flea and tick');

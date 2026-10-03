@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { BellOff, RotateCcw, Trash2 } from 'lucide-react';
 import type { Dose, Pet, Reminder, ReminderKind } from '../lib/model';
 import { LIMITS, REMINDER_KINDS } from '../lib/model';
 import { KIND_LABELS, presetsFor, type Preset } from '../lib/care';
@@ -9,9 +9,9 @@ import { formatDateShort } from '../lib/format';
 import { personName } from '@huishouden/pwa-kit/people';
 import type { ReminderInput } from '../lib/build';
 import { PetAvatar } from './PetAvatar';
-import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
+import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 
-export function ReminderDialog({ reminder, petId: initialPet, pets, doses, members: _members, me, now, onSave, onDelete, onClose }: {
+export function ReminderDialog({ reminder, petId: initialPet, pets, doses, members: _members, me, now, onSave, onDismiss, onRestore, onDelete, onClose }: {
   reminder: Reminder | null;
   petId?: string;
   pets: Pet[];
@@ -20,6 +20,10 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
   me: string;
   now: number;
   onSave: (input: ReminderInput) => void;
+  /** Stops it coming due; it stays in the care list as Dismissed. */
+  onDismiss?: () => void;
+  /** Brings a dismissed one back. */
+  onRestore?: () => void;
   onDelete?: () => void;
   onClose: () => void;
 }) {
@@ -56,6 +60,7 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
       // A one-off made recurring again starts fresh; edits otherwise keep when it was last given.
       lastDoneAt: reminder?.lastDoneAt,
       notes,
+      dismissedAt: reminder?.dismissedAt,
     });
     onClose();
   };
@@ -182,6 +187,38 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
               ))}
             </ul>
           </section>
+        )}
+        {reminder && reminder.dismissedAt === undefined && onDismiss && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-stone-200 pt-3">
+            <button
+              type="button"
+              className={secondaryButton}
+              onClick={() => {
+                onDismiss();
+                onClose();
+              }}
+            >
+              <BellOff size={18} /> Dismiss
+            </button>
+            <p className="min-w-0 flex-1 text-sm text-stone-600">Stops it coming due. It stays in the care list, to restore.</p>
+          </div>
+        )}
+        {reminder && reminder.dismissedAt !== undefined && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-stone-200 pt-3">
+            <p className="min-w-0 flex-1 text-base text-stone-700">Dismissed {formatDateShort(reminder.dismissedAt)}. It doesn't come due.</p>
+            {onRestore && (
+              <button
+                type="button"
+                className={secondaryButton}
+                onClick={() => {
+                  onRestore();
+                  onClose();
+                }}
+              >
+                <RotateCcw size={18} /> Restore
+              </button>
+            )}
+          </div>
         )}
         <button type="submit" hidden />
       </form>

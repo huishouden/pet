@@ -128,3 +128,21 @@ describe('ordering and groups', () => {
     for (const s of groups[1].items) expect(parseYmd(s.due)).not.toBeNull();
   });
 });
+
+describe('dismissed', () => {
+  const overdue = { title: 'Flea and tick', due: '2031-05-01', every: 1, unit: 'month' as Unit };
+  const dismissed = { ...overdue, dismissedAt: now - 1000 };
+
+  test('never due: its own state and words, not in attention, last in order, in its own group', () => {
+    expect(dueState(dismissed, now)).toBe('dismissed');
+    expect(dueText(dismissed, now)).toBe('Dismissed');
+    expect(headline(dismissed, now)).toBe('Flea and tick dismissed');
+    expect(needsAttention([dismissed, overdue], now)).toEqual([overdue]);
+    expect(byUrgency([dismissed, overdue], now)).toEqual([overdue, dismissed]);
+    expect(groupByDue([dismissed, overdue], now).map((g) => [g.label, g.items.length])).toEqual([
+      ['Overdue', 1],
+      ['Dismissed', 1],
+    ]);
+  });
+});
+

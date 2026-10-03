@@ -12,9 +12,10 @@ import { Tile } from './FeedingBoard';
 /**
  * A medicine course day by day, from its first day through today: each dose as a toggle like the
  * board's. Earlier days can be ticked (logged at the dose's time that day) and a given dose's time
- * changed; doses not given on earlier days say "Missed".
+ * changed; doses not given on earlier days say "Missed". A dose can be skipped instead (handled,
+ * not given: "Skipped"); a tap on a skipped one undoes the skip.
  */
-export function DoseLogDialog({ course, pet, meals, medDoses, me, now, onToggle, onMove, onClose }: {
+export function DoseLogDialog({ course, pet, meals, medDoses, me, now, onToggle, onSkip, onMove, onClose }: {
   course: Course;
   pet: Pet | undefined;
   meals: Meal[];
@@ -22,6 +23,8 @@ export function DoseLogDialog({ course, pet, meals, medDoses, me, now, onToggle,
   me: string;
   now: number;
   onToggle: (slot: number, day: Ymd) => void;
+  /** Marks a dose skipped; absent for those who may not give this course. */
+  onSkip?: (slot: number, day: Ymd) => void;
   onMove: (dose: MedDose, at: number) => void;
   onClose: () => void;
 }) {
@@ -63,6 +66,7 @@ export function DoseLogDialog({ course, pet, meals, medDoses, me, now, onToggle,
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {doses.map(({ slot, time, status }) => {
                   const given = status.state === 'given';
+                  const skipped = status.state === 'skipped';
                   const missed = status.state === 'missed';
                   const slotName = slotMealName(time, petMeals) ?? formatClock(time);
                   const title = course.times.length > 1 ? `${course.name} ${slotName}` : course.name;
@@ -75,17 +79,32 @@ export function DoseLogDialog({ course, pet, meals, medDoses, me, now, onToggle,
                         compact
                         icon={<Pill size={20} className="shrink-0" aria-hidden="true" />}
                         title={course.times.length > 1 ? slotName : 'Dose'}
-                        detail={given ? `${formatTime(status.at)} · ${who(status.dose.by)}` : missed ? 'Missed' : `by ${formatTime(status.at)}`}
+                        detail={given ? `${formatTime(status.at)} · ${who(status.dose.by)}` : skipped ? `Skipped · ${who(status.dose.by)}` : missed ? 'Missed' : `by ${formatTime(status.at)}`}
                         label={
                           given
                             ? `${name} ${title} ${when}: given at ${formatTime(status.at)} by ${who(status.dose.by)}. Tap to undo.`
-                            : `${name} ${title} ${when}: ${missed ? 'missed' : 'not yet'}. Tap if given.`
+                            : skipped
+                              ? `${name} ${title} ${when}: skipped by ${who(status.dose.by)}. Tap to undo.`
+                              : `${name} ${title} ${when}: ${missed ? 'missed' : 'not yet'}. Tap if given.`
                         }
                         onClick={() => {
                           setEditing(null);
                           onToggle(slot, day);
                         }}
                       />
+                      {onSkip && (status.state === 'due' || missed) && (
+                        <button
+                          type="button"
+                          className={`${ghostButton} mt-1 min-h-9 px-2 py-1 text-sm`}
+                          onClick={() => {
+                            setEditing(null);
+                            onSkip(slot, day);
+                          }}
+                          aria-label={`Skip ${title} ${when}`}
+                        >
+                          Skip
+                        </button>
+                      )}
                       {given && editing?.dose.id !== status.dose.id && (
                         <button
                           type="button"

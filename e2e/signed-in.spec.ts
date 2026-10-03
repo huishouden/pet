@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { signInTestUser } from '@huishouden/pwa-kit/e2e';
+import { runPortalTodo, signInTestUser } from '@huishouden/pwa-kit/e2e';
 import { seedTestHousehold } from '@huishouden/pwa-kit/staging';
 
 // Signed in as an invented test user on the staging site (pwa-kit STANDARD.md "Staging"): the real
@@ -110,3 +110,39 @@ test('a helper is refused a course only approved helpers give, and logs a feed',
   await page.waitForTimeout(3000);
   await expect(page.getByText(/only admins and members can do that/)).toHaveCount(0);
 });
+
+test('care due today, done from the portal’s To-do list, moves on to its next due day in Pet', async ({ page }) => {
+  test.setTimeout(120_000);
+  const title = `To-do check ${Date.now()}`;
+  await signInTestUser(page, { email: 'test-a@example.com' });
+  await openBoard(page);
+
+  // A weekly "Other" reminder for the test pet, due today (the dialog's default).
+  await page.getByRole('button', { name: 'Pets', exact: true }).click();
+  await page.getByRole('button', { name: PET }).first().click();
+  await page.getByRole('region', { name: `${PET}'s care` }).getByRole('button', { name: 'Add reminder' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New reminder' });
+  await dialog.getByLabel('What').fill(title);
+  await dialog.getByLabel('Kind').selectOption('other');
+  await dialog.getByLabel('Every how many').fill('1');
+  await dialog.getByLabel('Unit').selectOption('week');
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText(`Added ${title}`)).toBeVisible();
+
+  try {
+    // Pet publishes it within seconds; the portal's Done gives it as Pet's own Done would.
+    await runPortalTodo(page, title, { action: 'done' });
+    await page.goto('./?tab=care');
+    const row = page.getByRole('listitem').filter({ hasText: title });
+    await expect(row).toContainText('Due in 7 days', { timeout: 20_000 });
+    await expect(row).toContainText('last given today');
+  } finally {
+    await page.goto('./?tab=care');
+    const edit = page.getByRole('button', { name: `Edit ${title} for ${PET}` });
+    await expect(edit.first()).toBeVisible({ timeout: 20_000 });
+    await edit.first().click();
+    await page.getByRole('dialog', { name: 'Edit reminder' }).getByRole('button', { name: 'Delete' }).click();
+    await expect(page.getByText(`Deleted ${title}`)).toBeVisible();
+  }
+});
+

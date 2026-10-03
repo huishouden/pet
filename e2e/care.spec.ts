@@ -48,3 +48,40 @@ test('the dose history shows who gave it', async ({ page }) => {
   await expect(given.getByRole('listitem')).toHaveCount(3);
   await expect(given.getByRole('listitem').first()).toContainText('by Alex');
 });
+
+test('a dismissed reminder stops being due, shows as Dismissed in Care, and Restore brings it back', async ({ page }) => {
+  await page.goto('./?tab=care');
+  // The sample's brushing was dismissed already.
+  const dismissed = page.getByRole('region', { name: 'Dismissed' });
+  await expect(dismissed.getByRole('listitem').filter({ hasText: 'Brush teeth' })).toContainText('Dismissed');
+
+  await page.getByRole('button', { name: 'Edit Flea and tick for Biscuit' }).click();
+  await page.getByRole('dialog', { name: 'Edit reminder' }).getByRole('button', { name: 'Dismiss' }).click();
+  await expect(page.getByText('Dismissed Flea and tick')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Overdue' }).getByText('Flea and tick')).toHaveCount(0);
+  await expect(dismissed.getByRole('listitem').filter({ hasText: 'Flea and tick' })).toContainText('Dismissed');
+
+  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Needs doing' }).getByText('Flea and tick for Biscuit')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Care', exact: true }).click();
+  await dismissed.getByRole('button', { name: 'Restore Flea and tick for Biscuit' }).click();
+  await expect(page.getByRole('region', { name: 'Overdue' })).toContainText('Flea and tick');
+});
+
+test('a skipped dose is handled, not given, and a tap undoes the skip', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('region', { name: 'Needs doing' }).getByRole('button', { name: /^Antibiotic for Biscuit, .*Open$/ }).click();
+  const log = page.getByRole('dialog', { name: 'Antibiotic: doses by day' });
+  await log.getByRole('button', { name: 'Skip Antibiotic AM today' }).click();
+  await expect(page.getByText('Biscuit Antibiotic: skipped')).toBeVisible();
+  const am = log.getByRole('button', { name: /^Biscuit Antibiotic AM today: skipped by You/ });
+  await expect(am).toBeVisible();
+  await expect(log).toContainText('4 of 14 doses given');
+  await am.click();
+  await expect(page.getByText('Biscuit Antibiotic: not skipped')).toBeVisible();
+  await expect(log.getByRole('button', { name: /^Biscuit Antibiotic AM today: (not yet|missed)/ })).toBeVisible();
+  await log.getByRole('button', { name: 'Skip Antibiotic AM today' }).click();
+  await log.getByRole('button', { name: 'Done' }).click();
+  await expect(page.getByRole('region', { name: 'Needs doing' }).getByRole('button', { name: /^Antibiotic for Biscuit, .*Open$/ })).toHaveCount(0);
+});

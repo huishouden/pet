@@ -100,6 +100,11 @@ export function createActions(b: Backend): PetActions {
       ]);
       return dose;
     },
+    dismissReminder: (r) => {
+      const now = b.now();
+      put('reminders', r.id, reminderDoc({ ...r, dismissedAt: now }, r.by, r.createdAt, now));
+    },
+    undismissReminder: (r) => put('reminders', r.id, reminderDoc({ ...r, dismissedAt: undefined }, r.by, r.createdAt, b.now())),
     undoDose: (dose, before) =>
       b.write([
         { col: 'doses', id: dose.id, data: null },
@@ -156,6 +161,12 @@ export function createActions(b: Backend): PetActions {
     giveMedDose: (c, slot, at) => {
       track('give medicine');
       const d = { id: b.newId('medDoses'), ...medDoseDoc({ petId: c.petId, courseId: c.id, slot, at }, b.me, b.now()) };
+      put('medDoses', d.id, withoutId(d));
+      return d;
+    },
+    skipMedDose: (c, slot, at) => {
+      track('skip medicine');
+      const d = { id: b.newId('medDoses'), ...medDoseDoc({ petId: c.petId, courseId: c.id, slot, at, skipped: true }, b.me, b.now()) };
       put('medDoses', d.id, withoutId(d));
       return d;
     },

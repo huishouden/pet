@@ -19,13 +19,15 @@ import { ReminderRow } from './Care';
 import { cardClass, ghostButton, iconButton, overline, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
 /** One pet at a time: profile and care notes, its reminders, the weight log and its records. */
-export function Pets({ store, pets, open, shown, onShow, onGive, notify }: {
+export function Pets({ store, pets, open, shown, onShow, onGive, onRestore, notify }: {
   store: PetStore;
   pets: Pet[];
   open: Open;
   shown: string | null;
   onShow: (id: string) => void;
   onGive: (r: Reminder) => void;
+  /** Restore for a dismissed reminder, when this person may (left out otherwise). */
+  onRestore: (r: Reminder) => (() => void) | undefined;
   notify: (message: string, undo?: () => void) => void;
 }) {
   const { now } = useClock();
@@ -45,19 +47,21 @@ export function Pets({ store, pets, open, shown, onShow, onGive, notify }: {
       {!pet ? (
         <p className={`${cardClass} p-6 text-lg text-stone-600`}>No pets yet. Add one to start their reminders, weight log and records.</p>
       ) : (
-        <PetDetail key={pet.id} pet={pet} pets={pets} store={store} open={open} now={now} onGive={onGive} notify={notify} />
+        <PetDetail key={pet.id} pet={pet} pets={pets} store={store} open={open} now={now} onGive={onGive} onRestore={onRestore} notify={notify} />
       )}
     </div>
   );
 }
 
-function PetDetail({ pet, pets, store, open, now, onGive, notify }: {
+function PetDetail({ pet, pets, store, open, now, onGive, onRestore, notify }: {
   pet: Pet;
   pets: Pet[];
   store: PetStore;
   open: Open;
   now: number;
   onGive: (r: Reminder) => void;
+  /** Restore for a dismissed reminder, when this person may (left out otherwise). */
+  onRestore: (r: Reminder) => (() => void) | undefined;
   notify: (message: string, undo?: () => void) => void;
 }) {
   const reminders = byUrgency(
@@ -151,7 +155,7 @@ function PetDetail({ pet, pets, store, open, now, onGive, notify }: {
           ) : (
             <ul>
               {reminders.map((r) => (
-                <ReminderRow key={r.id} r={r} pets={pets} now={now} onGive={() => onGive(r)} onEdit={() => open.reminder(r)} compact />
+                <ReminderRow key={r.id} r={r} pets={pets} now={now} onGive={() => onGive(r)} onRestore={onRestore(r)} onEdit={() => open.reminder(r)} compact />
               ))}
             </ul>
           )}

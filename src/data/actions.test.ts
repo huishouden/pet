@@ -54,6 +54,40 @@ describe('giving a dose', () => {
   });
 });
 
+describe('dismissing a reminder', () => {
+  test('marks it dismissed, keeps everything else and is kept by edits and doses; Restore clears it; Undo puts it back', () => {
+    const h = harness();
+    const before = h.data.reminders.find((r) => r.id === 'demo-rem-1')!;
+    h.actions.dismissReminder(before);
+    const dismissed = h.data.reminders.find((r) => r.id === before.id)!;
+    expect(dismissed).toEqual({ ...before, dismissedAt: DEMO_NOW, updatedAt: DEMO_NOW });
+
+    h.actions.saveReminder(before.id, { ...dismissed, title: 'Flea and tick chew' });
+    expect(h.data.reminders.find((r) => r.id === before.id)!.dismissedAt).toBe(DEMO_NOW);
+
+    h.actions.undismissReminder(h.data.reminders.find((r) => r.id === before.id)!);
+    const restored = h.data.reminders.find((r) => r.id === before.id)!;
+    expect(restored).not.toHaveProperty('dismissedAt');
+    expect(restored.due).toBe(before.due);
+
+    h.actions.restoreReminder(before);
+    expect(h.data.reminders.find((r) => r.id === before.id)).toEqual(before);
+    expectRuleKeys(h.writes);
+  });
+});
+
+describe('skipping a dose', () => {
+  test('logs it skipped by the member; Undo deletes it', () => {
+    const h = harness();
+    const course = h.data.courses.find((c) => c.id === 'demo-course-1')!;
+    const d = h.actions.skipMedDose(course, 0, DEMO_NOW);
+    expect(h.data.medDoses.find((x) => x.id === d.id)).toMatchObject({ courseId: course.id, slot: 0, at: DEMO_NOW, skipped: true, by: 'sam@example.com' });
+    h.actions.deleteMedDoses([d]);
+    expect(h.data.medDoses.some((x) => x.id === d.id)).toBe(false);
+    expectRuleKeys(h.writes);
+  });
+});
+
 describe('removing a pet', () => {
   test('takes its reminders, doses, weights and records, leaves shared appointments to the other pet, and Undo restores all', () => {
     const h = harness();
