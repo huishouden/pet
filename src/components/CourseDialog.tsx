@@ -1,27 +1,16 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { GiversField, type GiversValue } from '@huishouden/pwa-kit/react/roles';
-import { parseDirections, readLabel, toMedCourse } from '@huishouden/pwa-kit/dose';
-import { ScanText, Trash2 } from 'lucide-react';
+import { toMedCourse, type ParsedCourse } from '@huishouden/pwa-kit/dose';
+import { LabelScan, type LabelFill } from '@huishouden/pwa-kit/react/dose';
+import { Trash2 } from 'lucide-react';
 import type { Course, Meal, Pet } from '../lib/model';
 import { LIMITS } from '../lib/model';
 import { MAX_COURSE_DAYS, MAX_TIMES_PER_DAY, daysUntil, defaultTimes, lastDay, type CourseDraft } from '../lib/courses';
 import { mealsOf } from '../lib/feeding';
 import { isYmd, toYmd, isHhmm } from '@huishouden/pwa-kit/time';
 import type { CourseInput } from '../lib/build';
-import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
+import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
-declare global {
-  interface Window {
-    /** Browser tests set this to stand in for the label photo's text (OCR needs a real photo). */
-    __mockLabelText?: string;
-  }
-}
-
-type Scan =
-  | { status: 'idle' }
-  | { status: 'reading'; progress: number }
-  | { status: 'done'; unparsed: string[]; assumptions: string[]; empty: boolean }
-  | { status: 'error' };
 
 /** A short medicine course: what, how much, how often, from when and for how long. */
 export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (e) => e, onSave, onDelete, onClose }: {
@@ -51,26 +40,22 @@ export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (
   const valid = !!pet && name.trim().length > 0 && isYmd(startDate) && times.length > 0 && times.every(isHhmm) && !!total && total >= 1 && total <= MAX_COURSE_DAYS;
 
   const setCount = (n: number) => setTimes(defaultTimes(n, mealTimes));
-  const photo = useRef<HTMLInputElement>(null);
-  const [scan, setScan] = useState<Scan>({ status: 'idle' });
-
-  // "Scan the label": the photo is read on this device and never stored or uploaded.
-  const readPhoto = async (file: File) => {
-    setScan({ status: 'reading', progress: 0 });
-    try {
-      const text = window.__mockLabelText ?? (await readLabel(file, { onProgress: (progress) => setScan({ status: 'reading', progress }) }));
-      const parsed = parseDirections(text);
-      const am = mealsOf(meals, pet?.id ?? '').find((m) => m.name === 'AM')?.time;
-      const pm = mealsOf(meals, pet?.id ?? '').find((m) => m.name === 'PM')?.time;
-      const draft = toMedCourse(parsed, { startDate: toYmd(now), defaultTimes: { ...(am ? { morning: am } : {}), ...(pm ? { evening: pm } : {}) } });
-      const empty = !draft.name && !draft.dose && draft.times.length === 0;
-      if (!empty) fill(draft);
-      setScan({ status: 'done', unparsed: parsed.unparsed, assumptions: parsed.assumptions, empty });
-    } catch {
-      setScan({ status: 'error' });
-    } finally {
-      if (photo.current) photo.current.value = '';
-    }
+  // "Scan the label" (the kit's LabelScan): the photo is read on this device and never stored or
+  // uploaded; the course is filled from it and the card says field by field what was filled.
+  const readLabelInto = (parsed: ParsedCourse): LabelFill[] => {
+    const am = mealsOf(meals, pet?.id ?? '').find((m) => m.name === 'AM')?.time;
+    const pm = mealsOf(meals, pet?.id ?? '').find((m) => m.name === 'PM')?.time;
+    const draft = toMedCourse(parsed, { startDate: toYmd(now), defaultTimes: { ...(am ? { morning: am } : {}), ...(pm ? { evening: pm } : {}) } });
+    if (!draft.name && !draft.dose && draft.times.length === 0) return [];
+    fill(draft);
+    return [
+      { label: 'Medicine', value: draft.name },
+      { label: 'Dose', value: draft.dose },
+      { label: 'Times', value: draft.times.join(', ') },
+      { label: 'Days', value: draft.days ? String(draft.days) : '' },
+      { label: 'Food', value: draft.withFood === true ? 'With food' : '' },
+      { label: 'Notes', value: draft.notes },
+    ];
   };
 
   const fill = (d: CourseDraft) => {
@@ -127,56 +112,7 @@ export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (
           save();
         }}
       >
-        <div className="space-y-2 rounded-2xl border border-stone-200 p-4">
-          <input
-            ref={photo}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            aria-label="Label photo"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void readPhoto(file);
-            }}
-          />
-          <button type="button" className={secondaryButton} disabled={scan.status === 'reading'} onClick={() => photo.current?.click()}>
-            <ScanText size={18} /> {scan.status === 'reading' ? `Reading the label ${Math.round(scan.progress * 100)}%` : 'Scan the label'}
-          </button>
-          {scan.status === 'idle' && <p className="text-sm text-stone-600">Take a photo of the pharmacy or vet label. It is read on this device and not kept.</p>}
-          {scan.status === 'error' && (
-            <p role="alert" className="text-base text-red-700">
-              Couldn't read that photo. Try again in good light with the label flat, or fill it in below.
-            </p>
-          )}
-          {scan.status === 'done' && scan.empty && (
-            <p role="status" className="text-base text-stone-700">
-              No directions found on that photo. Try again closer, or fill it in below.
-            </p>
-          )}
-          {scan.status === 'done' && !scan.empty && (
-            <div role="status" className="space-y-1 text-base text-stone-700">
-              <p className="font-medium text-forest-700">Filled in from the label. Check each field before saving.</p>
-              {scan.assumptions.length > 0 && (
-                <ul aria-label="Assumptions" className="list-disc pl-5 text-stone-700">
-                  {scan.assumptions.map((a) => (
-                    <li key={a}>{a}</li>
-                  ))}
-                </ul>
-              )}
-              {scan.unparsed.length > 0 && (
-                <details className="text-sm text-stone-600">
-                  <summary className="cursor-pointer select-none py-1">Show the label text that wasn't used</summary>
-                  <ul aria-label="Not understood" className="mt-1 list-disc pl-5">
-                    {scan.unparsed.map((u) => (
-                      <li key={u}>{u}</li>
-                    ))}
-                  </ul>
-                </details>
-              )}
-            </div>
-          )}
-        </div>
+        <LabelScan onRead={readLabelInto} intro="Take a photo of the pharmacy or vet label. It is read on this device and not kept." />
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Medicine">
             <input className={inputClass} value={name} maxLength={LIMITS.courseName} onChange={(e) => setName(e.target.value)} placeholder="Antibiotic" autoComplete="off" />
