@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1](https://github.com/huishouden/pet/compare/v1.7.0...v1.7.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* **agenda:** publish tomorrow's meals as well as today's ([#31](https://github.com/huishouden/pet/issues/31)) ([68d6d98](https://github.com/huishouden/pet/commit/68d6d983cc8c437c8a3c37027ef24382e5ef005c))
+
 ## [1.7.0](https://github.com/huishouden/pet/compare/v1.6.0...v1.7.0) (2026-10-03)
 
 
