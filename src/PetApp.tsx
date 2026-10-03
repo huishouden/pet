@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { User } from 'firebase/auth';
-import type { Contact } from '@huishouden/pwa-kit/contacts';
+import { clearSharedContact, readSharedContact, type Contact, type ParsedContact } from '@huishouden/pwa-kit/contacts';
 import type { Appointment, Course, Feeding, Meal, Pet, PetRecord, Reminder } from './lib/model';
 import { fedTodayFor, mealAt, mealsOf } from './lib/feeding';
 import { givenOnFor, slotAt } from './lib/courses';
@@ -95,7 +95,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   const [appointment, setAppointment] = useState<{ appointment: Appointment | null; petId?: string } | null>(null);
   const [weightFor, setWeightFor] = useState<string | null>(null);
   const [record, setRecord] = useState<{ record: PetRecord | null; petId: string } | null>(null);
-  const [contact, setContact] = useState<{ contact: Contact | null; role?: string; prefill?: ParsedPlace } | null>(() =>
+  const [contact, setContact] = useState<{ contact: Contact | null; role?: string; prefill?: ParsedPlace; shared?: ParsedContact[] } | null>(() =>
     shared ? { contact: null, prefill: shared.place } : null,
   );
   const [shownPet, setShownPet] = useState<string | null>(() => new URLSearchParams(location.search).get('pet'));
@@ -131,6 +131,16 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
 
   useEffect(() => {
     document.title = 'Huishouden Pet';
+  }, []);
+
+  // Opened from the Share menu with a contact card (Contacts → Share → Pet): a new contact, filled in.
+  useEffect(() => {
+    void readSharedContact().then((cards) => {
+      if (!cards) return;
+      clearSharedContact();
+      chooseTab('contacts');
+      setContact({ contact: null, shared: cards });
+    });
   }, []);
 
   useEffect(() => {
@@ -383,6 +393,8 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           roles={ROLES}
           role={contact.role}
           prefill={contact.prefill}
+          sharedContacts={contact.shared}
+          auth={auth}
           searchPlaceholder="Clinic or business, and town"
           namePlaceholder="Example Vet Clinic"
           canMarkPrivate={perms.seesPrivate}

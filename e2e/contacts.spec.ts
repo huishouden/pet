@@ -82,10 +82,15 @@ test('a place shared from Google Maps opens a new contact, prefilled', async ({ 
 test('the installed app is offered in the Share menu', async ({ request }) => {
   const manifest = await (await request.get('/manifest.webmanifest')).json();
   expect(manifest.share_target).toEqual({
-    action: '/',
-    method: 'GET',
-    enctype: 'application/x-www-form-urlencoded',
-    params: { title: 'share_title', text: 'share_text', url: 'share_url' },
+    action: 'share-target',
+    method: 'POST',
+    enctype: 'multipart/form-data',
+    params: {
+      title: 'share_title',
+      text: 'share_text',
+      url: 'share_url',
+      files: [{ name: 'contact', accept: ['text/vcard', 'text/x-vcard', 'text/directory', '.vcf', '.vcard'] }],
+    },
   });
 });
 

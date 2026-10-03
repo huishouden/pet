@@ -1,0 +1,11 @@
+{
+  "results": [
+    {
+      "person": {
+        "resourceName": "otherContacts/c2001",
+        "names": [{ "metadata": { "primary": true }, "displayName": "Casey Sample" }],
+        "emailAddresses": [{ "metadata": { "primary": true }, "value": "casey.sample@example.com" }]
+      }
+    }
+  ]
+}
