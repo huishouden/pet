@@ -6,8 +6,7 @@ import { LIMITS, type PetPhotoData } from './model';
 import { giversFields } from '@huishouden/pwa-kit/roles';
 import { isPhotoDataUrl } from '@huishouden/pwa-kit/photo';
 import { isRecurring, type Unit } from './schedule';
-import { isYmd } from '@huishouden/pwa-kit/time';
-import { isMealTime } from './feeding';
+import { isYmd, isHhmm } from '@huishouden/pwa-kit/time';
 import { MAX_COURSE_DAYS, MAX_TIMES_PER_DAY, type CourseDraft } from './courses';
 import type { WeightUnit } from './weight';
 
@@ -156,7 +155,7 @@ export interface MealInput {
 }
 
 export function mealDoc(m: MealInput, by: string, createdAt: number, updatedAt?: number): MealData {
-  if (!isMealTime(m.time)) throw new Error(`Not a meal time: ${m.time}`);
+  if (!isHhmm(m.time)) throw new Error(`Not a meal time: ${m.time}`);
   return defined({
     petId: m.petId,
     name: m.name.trim().slice(0, LIMITS.mealName),
@@ -201,7 +200,7 @@ export type CourseInput = Omit<CourseDraft, 'days' | 'withFood' | 'notes'> & {
 };
 
 export function courseDoc(c: CourseInput, by: string, createdAt: number, updatedAt?: number): CourseData {
-  const times = [...new Set(c.times.filter(isMealTime))].sort().slice(0, MAX_TIMES_PER_DAY);
+  const times = [...new Set(c.times.filter(isHhmm))].sort().slice(0, MAX_TIMES_PER_DAY);
   if (times.length === 0) throw new Error('A course needs at least one dose time');
   if (!isYmd(c.startDate)) throw new Error(`Not a date: ${c.startDate}`);
   return defined({

@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Check, Pill } from 'lucide-react';
 import type { Course, Meal, MedDose, Pet } from '../lib/model';
 import { courseHistory, courseText, progress, slotAt, slotMealName } from '../lib/courses';
-import { isMealTime, mealsOf, toMealTime } from '../lib/feeding';
+import { mealsOf } from '../lib/feeding';
 import { formatClock } from '../lib/format';
 import { personName } from '@huishouden/pwa-kit/people';
-import { formatTime, longDate, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
+import { formatTime, longDate, toYmd, type Ymd, isHhmm, toHhmm } from '@huishouden/pwa-kit/time';
 import { Dialog, ghostButton, inputClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 import { Tile } from './FeedingBoard';
 
@@ -90,7 +90,7 @@ export function DoseLogDialog({ course, pet, meals, medDoses, me, now, onToggle,
                         <button
                           type="button"
                           className={`${ghostButton} mt-1 min-h-9 px-2 py-1 text-sm`}
-                          onClick={() => setEditing({ dose: status.dose, time: toMealTime(status.at) })}
+                          onClick={() => setEditing({ dose: status.dose, time: toHhmm(status.at) })}
                           aria-label={`Change the time of ${title} ${when}`}
                         >
                           Change time
@@ -101,7 +101,7 @@ export function DoseLogDialog({ course, pet, meals, medDoses, me, now, onToggle,
                           className="mt-2 flex items-center gap-2"
                           onSubmit={(e) => {
                             e.preventDefault();
-                            const at = isMealTime(editing.time) ? slotAt(editing.time, day) : null;
+                            const at = isHhmm(editing.time) ? slotAt(editing.time, day) : null;
                             if (at !== null && at <= now) onMove(editing.dose, at);
                             setEditing(null);
                           }}

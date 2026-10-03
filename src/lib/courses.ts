@@ -2,8 +2,8 @@
 // each day's doses as given / not yet / missed, and default dose times from the pet's meals. Pure.
 
 import type { MedCourse } from '@huishouden/pwa-kit/dose';
-import { isMealTime, mealAt } from './feeding';
-import { addDays, daysBetween, parseYmd, toYmd, ymdToTime, type Ymd } from '@huishouden/pwa-kit/time';
+import { mealAt } from './feeding';
+import { addDays, daysBetween, parseYmd, toYmd, ymdToTime, type Ymd, isHhmm } from '@huishouden/pwa-kit/time';
 
 /**
  * What "Scan the label" hands over: the kit's `MedCourse` (read on the device and parsed by
@@ -143,7 +143,7 @@ export function progress(c: CourseLike, doses: DoseLike[]): { given: number; tot
  */
 export function defaultTimes(timesPerDay: number, mealTimes: string[]): string[] {
   const n = Math.min(Math.max(1, Math.round(timesPerDay)), MAX_TIMES_PER_DAY);
-  const meals = mealTimes.filter(isMealTime).sort();
+  const meals = mealTimes.filter(isHhmm).sort();
   if (n === meals.length || (n === 1 && meals.length > 0)) return meals.slice(0, n);
   if (n === 1) return ['08:00'];
   const step = (12 * 60) / (n - 1);

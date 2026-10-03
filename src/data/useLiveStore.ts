@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, doc, onSnapshot, query, where, type Query } from 'firebase/firestore';
-import { writeBatch } from '@huishouden/pwa-kit/firestore';
-import { addContact, markUnflaggedOpen, removeContactFromApp, restoreContact, updateContact, watchContacts } from '@huishouden/pwa-kit/contacts';
+import { commitOps } from '@huishouden/pwa-kit/firestore';
+import { householdContacts, markUnflaggedOpen, watchContacts } from '@huishouden/pwa-kit/contacts';
 import { can, householdRole, isRestricted, type Role } from '@huishouden/pwa-kit/roles';
 import { readError } from '@huishouden/pwa-kit/feedback';
 import { APP } from '../lib/contacts';
@@ -85,21 +85,8 @@ export function useLiveStore(householdId: string, me: string, household: { membe
       now: () => Date.now(),
       read: () => dataRef.current,
       newId: (key) => doc(collection(db, base, COLLECTIONS[key])).id,
-      write: (ops) => {
-        const batch = writeBatch(db);
-        for (const op of ops) {
-          const ref = doc(db, base, COLLECTIONS[op.key], op.id);
-          if (op.data) batch.set(ref, op.data);
-          else batch.delete(ref);
-        }
-        report(batch.commit());
-      },
-      contacts: {
-        save: (id, input) => report(id ? updateContact(db, householdId, id, input, me) : addContact(db, householdId, input, me)),
-        // A contact other apps also show stays for them; Pet only stops showing it.
-        remove: (c) => report(removeContactFromApp(db, householdId, c, APP, me)),
-        restore: (c) => report(restoreContact(db, householdId, c)),
-      },
+      write: (ops) => report(commitOps(db, base, ops, (key) => COLLECTIONS[key])),
+      contacts: householdContacts(db, householdId, APP, me, report),
     };
     return createActions(backend);
   }, [base, householdId, me]);

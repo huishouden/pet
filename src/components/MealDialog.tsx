@@ -1,8 +1,8 @@
+import { isHhmm } from '@huishouden/pwa-kit/time';
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import type { Meal, Pet } from '../lib/model';
 import { LIMITS } from '../lib/model';
-import { isMealTime } from '../lib/feeding';
 import type { MealInput } from '../lib/build';
 import { Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
@@ -19,7 +19,7 @@ export function MealDialog({ meal, pet, onSave, onDelete, onClose }: {
   const [food, setFood] = useState(meal?.food ?? '');
   const [portion, setPortion] = useState(meal?.portion ?? '');
   const [note, setNote] = useState(meal?.note ?? '');
-  const valid = !!pet && name.trim().length > 0 && isMealTime(time);
+  const valid = !!pet && name.trim().length > 0 && isHhmm(time);
 
   const save = () => {
     if (!valid || !pet) return;

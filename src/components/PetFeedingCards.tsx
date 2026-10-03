@@ -1,6 +1,7 @@
 import { History, Pencil, Pill, Plus } from 'lucide-react';
 import type { Course, Feeding, Meal, MedDose, Pet } from '../lib/model';
-import { dailyCounts, mealsOf, recentFeedings } from '../lib/feeding';
+import { mealsOf } from '../lib/feeding';
+import { dailyCounts, recent as recentEntries } from '@huishouden/pwa-kit/log';
 import { courseState, courseText, lastDay, progress, timesText } from '../lib/courses';
 import { personInitial, personName } from '@huishouden/pwa-kit/people';
 import { formatDayShort, formatTime, parseYmd, relativeDay, toYmd } from '@huishouden/pwa-kit/time';
@@ -14,8 +15,9 @@ const DAYS = 14;
 /** The pet's meals (the board's toggles) and the last two weeks of feeds, one row per day. */
 export function FeedingCard({ pet, meals, feedings, me, now, open }: { pet: Pet; meals: Meal[]; feedings: Feeding[]; me: string; now: number; open: Open }) {
   const mine = mealsOf(meals, pet.id);
-  const recent = recentFeedings(feedings, pet.id, now, DAYS);
-  const days = dailyCounts(feedings, pet.id, now, DAYS).reverse();
+  const ofPet = (f: Feeding) => f.petId === pet.id;
+  const recent = recentEntries(feedings, now, DAYS, ofPet);
+  const days = dailyCounts(feedings, now, DAYS, ofPet).reverse();
   const extrasOn = (day: string) => recent.filter((f) => !mine.some((m) => m.id === f.mealId) && toYmd(f.at) === day);
 
   return (

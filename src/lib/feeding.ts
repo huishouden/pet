@@ -1,7 +1,8 @@
-// Feeding: today's meals per pet as fed / due / not fed yet, time since the last feed, and the daily
-// count for the history. Pure: every function takes `now`.
+// Feeding: today's meals per pet as fed / due / not fed yet. Time since the last feed and the daily
+// counts come from @huishouden/pwa-kit/log. Pure: every function takes `now`.
 
-import { MINUTE, addDays, startOfDay, toYmd } from '@huishouden/pwa-kit/time';
+import { onDay } from '@huishouden/pwa-kit/log';
+import { atTime, isHhmm, startOfDay, toYmd } from '@huishouden/pwa-kit/time';
 
 export interface MealLike {
   id: string;
@@ -19,17 +20,8 @@ export interface FeedingLike {
   by: string;
 }
 
-const TIME = /^([01]\d|2[0-3]):([0-5]\d)$/;
-
-export const isMealTime = (s: unknown): s is string => typeof s === 'string' && TIME.test(s);
-
-/** Today's (the day of `now`) moment for a meal time. */
-export function mealAt(time: string, now: number): number {
-  const m = TIME.exec(time);
-  const d = new Date(startOfDay(now));
-  if (m) d.setHours(Number(m[1]), Number(m[2]), 0, 0);
-  return d.getTime();
-}
+/** Today's (the day of `now`) moment for a meal time; midnight for one that isn't a time. */
+export const mealAt = (time: string, now: number): number => (isHhmm(time) ? atTime(toYmd(now), time) : startOfDay(now));
 
 export type MealStatus<F> = { state: 'fed'; feeding: F; at: number } | { state: 'due'; at: number } | { state: 'late'; at: number };
 
@@ -58,51 +50,6 @@ export function mealsOn<M extends MealLike, F extends FeedingLike>(meals: M[], f
   });
 }
 
-/** The pet's most recent feeding up to now, any meal or none. */
-export function lastFed<F extends FeedingLike>(feedings: F[], petId: string, now: number): F | null {
-  return feedings.filter((f) => f.petId === petId && f.at <= now).reduce<F | null>((best, f) => (!best || f.at > best.at ? f : best), null);
-}
-
-/** "35m", "1h", "2h 10m", "1d 3h". Rounds down to the minute. */
-export function formatDuration(ms: number): string {
-  const totalMin = Math.max(0, Math.floor(ms / MINUTE));
-  const d = Math.floor(totalMin / (24 * 60));
-  const h = Math.floor((totalMin % (24 * 60)) / 60);
-  const m = totalMin % 60;
-  if (d > 0) return h ? `${d}d ${h}h` : `${d}d`;
-  if (h > 0) return m ? `${h}h ${m}m` : `${h}h`;
-  return `${m}m`;
-}
-
-/** "just now" under a minute, otherwise "2h 10m ago". */
-export function formatAgo(at: number, now: number): string {
-  if (now - at < MINUTE) return 'just now';
-  return `${formatDuration(now - at)} ago`;
-}
-
-/** Feedings per calendar day for the last `days` days including today, oldest first. */
-export function dailyCounts(feedings: FeedingLike[], petId: string, now: number, days = 14): { day: string; count: number }[] {
-  const first = addDays(now, -(days - 1));
-  const counts = new Map<string, number>();
-  for (const f of feedings) if (f.petId === petId && f.at >= first && f.at < addDays(now, 1)) counts.set(toYmd(f.at), (counts.get(toYmd(f.at)) ?? 0) + 1);
-  return Array.from({ length: days }, (_, i) => {
-    const day = toYmd(addDays(first, i));
-    return { day, count: counts.get(day) ?? 0 };
-  });
-}
-
-/** The pet's feedings in the last `days` days, newest first. */
-export function recentFeedings<F extends FeedingLike>(feedings: F[], petId: string, now: number, days = 14): F[] {
-  const since = addDays(now, -(days - 1));
-  return feedings.filter((f) => f.petId === petId && f.at >= since).sort((a, b) => b.at - a.at);
-}
-
-/** 'HH:MM' for a moment, for the meal-time input. */
-export const toMealTime = (t: number) => {
-  const d = new Date(t);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-};
-
 /**
  * The board every pet starts with, like the paper one: AM and PM, each with the time after which it
  * shows "Not fed yet". Stable ids per pet, so two devices adding the same pet can't double them.
@@ -115,7 +62,4 @@ export function defaultMeals(petId: string): (MealLike & { time: string })[] {
 }
 
 /** One meal's feeds on the day of `day` (today's, by default): what un-ticking it removes. */
-export function fedTodayFor<F extends FeedingLike>(feedings: F[], mealId: string, day: number): F[] {
-  const start = startOfDay(day);
-  return feedings.filter((f) => f.mealId === mealId && startOfDay(f.at) === start);
-}
+export const fedTodayFor = <F extends FeedingLike>(feedings: F[], mealId: string, day: number): F[] => onDay(feedings, day, (f) => f.mealId === mealId);
