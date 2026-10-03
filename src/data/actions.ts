@@ -1,4 +1,5 @@
-import type { Contact, ContactInput } from '@huishouden/pwa-kit/contacts';
+import type { ContactWrites } from '@huishouden/pwa-kit/contacts';
+import { applyOps as applyKitOps, withoutId, type Backend as KitBackend, type Op as KitOp } from '@huishouden/pwa-kit/store';
 import { appointmentDoc, photoDoc, courseDoc, doseDoc, feedingDoc, mealDoc, medDoseDoc, petDoc, recordDoc, reminderDoc, weightDoc } from '../lib/build';
 import { markGiven } from '../lib/schedule';
 import { defaultMeals } from '../lib/feeding';
@@ -7,36 +8,23 @@ import type { DataKey, PetActions, PetBundle } from './types';
 import { track } from '@huishouden/pwa-kit/observability';
 
 /** One document write: `data` null deletes. */
-export interface Op {
-  key: DataKey;
-  id: string;
-  data: object | null;
-}
+export type Op = KitOp<DataKey>;
 
 /**
  * Where the actions write: Firestore for a household, memory for the sample. The actions themselves
  * are the same for both, so the sample behaves exactly like the real app.
  */
-export interface Backend {
+export interface Backend extends KitBackend<DataKey> {
   me: string;
   now(): number;
   /** The data as last seen (for edits that keep the original author and creation time). */
   read(): PetHouseholdData;
-  newId(key: DataKey): string;
-  /** Applies the writes together (one batch). */
-  write(ops: Op[]): void;
-  contacts: {
-    save(id: string | null, input: ContactInput): void;
-    remove(c: Contact): void;
-    restore(c: Contact): void;
-  };
+  contacts: ContactWrites;
 }
 
-const withoutId = <T extends { id: string }>({ id: _id, ...rest }: T) => rest;
-
 export function createActions(b: Backend): PetActions {
-  const put = (key: DataKey, id: string, data: object) => b.write([{ key, id, data }]);
-  const del = (key: DataKey, id: string) => b.write([{ key, id, data: null }]);
+  const put = (key: DataKey, id: string, data: object) => b.write([{ col: key, id, data }]);
+  const del = (key: DataKey, id: string) => b.write([{ col: key, id, data: null }]);
   const find = <K extends DataKey>(key: K, id: string | null) => (id ? (b.read()[key] as { id: string; by: string; createdAt: number }[]).find((x) => x.id === id) : undefined);
 
   return {
@@ -44,9 +32,9 @@ export function createActions(b: Backend): PetActions {
       const existing = find('pets', id);
       const petId = id ?? b.newId('pets');
       const now = b.now();
-      const ops: Op[] = [{ key: 'pets', id: petId, data: petDoc(input, existing?.by ?? b.me, existing?.createdAt ?? now, existing ? now : undefined) }];
+      const ops: Op[] = [{ col: 'pets', id: petId, data: petDoc(input, existing?.by ?? b.me, existing?.createdAt ?? now, existing ? now : undefined) }];
       // Every new pet starts with the AM and PM board the household already keeps on paper.
-      if (!existing) for (const m of defaultMeals(petId)) ops.push({ key: 'meals', id: m.id, data: mealDoc(m, b.me, now) });
+      if (!existing) for (const m of defaultMeals(petId)) ops.push({ col: 'meals', id: m.id, data: mealDoc(m, b.me, now) });
       b.write(ops);
       return petId;
     },
@@ -66,21 +54,21 @@ export function createActions(b: Backend): PetActions {
         appointments: d.appointments.filter((a) => a.petIds.includes(pet.id)),
         photo: d.photos.find((p) => p.id === pet.id),
       };
-      const ops: Op[] = [{ key: 'pets', id: pet.id, data: null }];
-      if (bundle.photo) ops.push({ key: 'photos', id: pet.id, data: null });
-      for (const key of ['reminders', 'doses', 'weights', 'records', 'meals', 'feedings', 'courses', 'medDoses'] as const) for (const x of bundle[key]) ops.push({ key, id: x.id, data: null });
+      const ops: Op[] = [{ col: 'pets', id: pet.id, data: null }];
+      if (bundle.photo) ops.push({ col: 'photos', id: pet.id, data: null });
+      for (const key of ['reminders', 'doses', 'weights', 'records', 'meals', 'feedings', 'courses', 'medDoses'] as const) for (const x of bundle[key]) ops.push({ col: key, id: x.id, data: null });
       for (const a of bundle.appointments) {
         const others = a.petIds.filter((p) => p !== pet.id);
-        ops.push({ key: 'appointments', id: a.id, data: others.length ? { ...withoutId(a), petIds: others } : null });
+        ops.push({ col: 'appointments', id: a.id, data: others.length ? { ...withoutId(a), petIds: others } : null });
       }
       b.write(ops);
       return bundle;
     },
     restorePet: (bundle) => {
-      const ops: Op[] = [{ key: 'pets', id: bundle.pet.id, data: withoutId(bundle.pet) }];
+      const ops: Op[] = [{ col: 'pets', id: bundle.pet.id, data: withoutId(bundle.pet) }];
       for (const key of ['reminders', 'doses', 'weights', 'records', 'meals', 'feedings', 'courses', 'medDoses', 'appointments'] as const)
-        for (const x of bundle[key]) ops.push({ key, id: x.id, data: withoutId(x) });
-      if (bundle.photo) ops.push({ key: 'photos', id: bundle.photo.id, data: withoutId(bundle.photo) });
+        for (const x of bundle[key]) ops.push({ col: key, id: x.id, data: withoutId(x) });
+      if (bundle.photo) ops.push({ col: 'photos', id: bundle.photo.id, data: withoutId(bundle.photo) });
       b.write(ops);
     },
     savePetPhoto: (petId, dataUrl) => {
@@ -107,15 +95,15 @@ export function createActions(b: Backend): PetActions {
       const next = markGiven(r, at);
       const dose = { id: b.newId('doses'), ...doseDoc({ petId: r.petId, reminderId: r.id, title: r.title, at }, b.me, now) };
       b.write([
-        { key: 'doses', id: dose.id, data: withoutId(dose) },
-        { key: 'reminders', id: r.id, data: reminderDoc({ ...r, ...next }, r.by, r.createdAt, now) },
+        { col: 'doses', id: dose.id, data: withoutId(dose) },
+        { col: 'reminders', id: r.id, data: reminderDoc({ ...r, ...next }, r.by, r.createdAt, now) },
       ]);
       return dose;
     },
     undoDose: (dose, before) =>
       b.write([
-        { key: 'doses', id: dose.id, data: null },
-        { key: 'reminders', id: before.id, data: withoutId(before) },
+        { col: 'doses', id: dose.id, data: null },
+        { col: 'reminders', id: before.id, data: withoutId(before) },
       ]),
     saveAppointment: (id, input) => {
       track('save appointment');
@@ -153,8 +141,8 @@ export function createActions(b: Backend): PetActions {
       return f;
     },
     updateFeeding: (f, input) => put('feedings', f.id, feedingDoc(input, f.by, f.createdAt, b.now())),
-    deleteFeedings: (list) => b.write(list.map((f) => ({ key: 'feedings', id: f.id, data: null }))),
-    restoreFeedings: (list) => b.write(list.map((f) => ({ key: 'feedings', id: f.id, data: withoutId(f) }))),
+    deleteFeedings: (list) => b.write(list.map((f) => ({ col: 'feedings', id: f.id, data: null }))),
+    restoreFeedings: (list) => b.write(list.map((f) => ({ col: 'feedings', id: f.id, data: withoutId(f) }))),
     saveCourse: (id, input) => {
       track('save medicine course');
       const existing = find('courses', id);
@@ -172,8 +160,8 @@ export function createActions(b: Backend): PetActions {
       return d;
     },
     moveMedDose: (d, at) => put('medDoses', d.id, medDoseDoc({ ...d, at }, d.by, d.createdAt)),
-    deleteMedDoses: (list) => b.write(list.map((d) => ({ key: 'medDoses', id: d.id, data: null }))),
-    restoreMedDoses: (list) => b.write(list.map((d) => ({ key: 'medDoses', id: d.id, data: withoutId(d) }))),
+    deleteMedDoses: (list) => b.write(list.map((d) => ({ col: 'medDoses', id: d.id, data: null }))),
+    restoreMedDoses: (list) => b.write(list.map((d) => ({ col: 'medDoses', id: d.id, data: withoutId(d) }))),
     saveContact: (id, input) => b.contacts.save(id, input),
     deleteContact: (c) => b.contacts.remove(c),
     restoreContact: (c) => b.contacts.restore(c),
@@ -181,11 +169,4 @@ export function createActions(b: Backend): PetActions {
 }
 
 /** Applies writes to in-memory data: the sample store, and the unit tests of the actions. */
-export function applyOps(data: PetHouseholdData, ops: Op[]): PetHouseholdData {
-  const next = { ...data };
-  for (const { key, id, data: doc } of ops) {
-    const list = (next[key] as { id: string }[]).filter((x) => x.id !== id);
-    next[key] = (doc ? [...list, { id, ...doc }] : list) as never;
-  }
-  return next;
-}
+export const applyOps = (data: PetHouseholdData, ops: Op[]): PetHouseholdData => applyKitOps(data, ops);

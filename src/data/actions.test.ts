@@ -27,7 +27,7 @@ function harness(initial: PetHouseholdData = demoData()) {
 function expectRuleKeys(writes: Op[][]) {
   for (const op of writes.flat()) {
     if (!op.data) continue;
-    const allowed = FIELDS[COLLECTIONS[op.key as DataKey]] as readonly string[];
+    const allowed = FIELDS[COLLECTIONS[op.col]] as readonly string[];
     for (const k of Object.keys(op.data)) expect(allowed).toContain(k);
     for (const v of Object.values(op.data)) expect(v).not.toBeUndefined();
   }
@@ -169,6 +169,6 @@ describe('saving', () => {
 test('every sample document already has only rule keys', () => {
   const d = demoData();
   const ops: Op[][] = [];
-  for (const key of Object.keys(COLLECTIONS) as DataKey[]) ops.push((d[key] as { id: string }[]).map(({ id, ...data }) => ({ key, id, data })));
+  for (const key of Object.keys(COLLECTIONS) as DataKey[]) ops.push((d[key] as { id: string }[]).map(({ id, ...data }) => ({ col: key, id, data })));
   expectRuleKeys(ops);
 });

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import fixture from './__fixtures__/weights.json';
-import { chart, convert, formatWeight, latest, parseWeight, series, targetProgress, trend, type WeightUnit } from './weight';
+import { convert, formatWeight, latest, parseWeight, series, targetProgress, trend, type WeightUnit } from './weight';
 
 const load = (rows: { at: string; value: number; unit: string }[]) => rows.map((r) => ({ at: new Date(r.at).getTime(), value: r.value, unit: r.unit as WeightUnit }));
 const dog = load(fixture.dog);
@@ -60,24 +60,6 @@ describe('the log', () => {
   });
 });
 
-describe('chart', () => {
-  test('points span the width, heavier is higher', () => {
-    const g = chart(dog, 'lb', 300, 120, 10)!;
-    expect(g.points).toHaveLength(4);
-    expect(g.points[0].x).toBe(10);
-    expect(g.points.at(-1)!.x).toBe(290);
-    expect(g.points.at(-1)!.y).toBeLessThan(g.points[0].y);
-    expect(g.min).toBeLessThan(24.2);
-    expect(g.max).toBeGreaterThan(26.1);
-    expect(g.path.startsWith('M10 ')).toBe(true);
-  });
-
-  test('a single weighing sits in the middle; none draws nothing', () => {
-    expect(chart(dog.slice(0, 1), 'lb', 300, 120)!.points[0].x).toBe(150);
-    expect(chart([], 'lb', 300, 120)).toBeNull();
-  });
-});
-
 describe('target weight', () => {
   const day = (m: number, d: number) => new Date(2031, m - 1, d, 8).getTime();
   const gaining = [
@@ -103,11 +85,4 @@ describe('target weight', () => {
     expect(targetProgress([], 'lb', 24)).toBeNull();
   });
 
-  test('the chart’s range includes the target and places its line', () => {
-    const g = chart(gaining, 'lb', 100, 50, 0, 30)!;
-    expect(g.max).toBeGreaterThanOrEqual(30);
-    expect(g.targetY).toBeGreaterThanOrEqual(0);
-    expect(g.targetY).toBeLessThan(g.points[1].y);
-    expect(chart(gaining, 'lb', 100, 50)!.targetY).toBeUndefined();
-  });
 });

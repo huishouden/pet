@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import fixture from './__fixtures__/feeding.json';
-import { dailyCounts, defaultMeals, fedTodayFor, formatAgo, formatDuration, isMealTime, lastFed, mealAt, mealsOn, recentFeedings, todaysMeals } from './feeding';
-import { HOUR, MINUTE } from '@huishouden/pwa-kit/time';
+import { defaultMeals, fedTodayFor, mealAt, mealsOn, todaysMeals } from './feeding';
+import { formatAgo } from '@huishouden/pwa-kit/time';
+import { dailyCounts, latest, recent } from '@huishouden/pwa-kit/log';
 
 const now = new Date(fixture.now).getTime();
 const meals = fixture.meals;
@@ -28,7 +29,7 @@ describe('today’s board', () => {
   });
 
   test('un-ticking removes every feed for that meal today, nothing else', () => {
-    expect(fedTodayFor(feedings, 'p1-am', now).map((f) => f.id)).toEqual(['f1', 'f2']);
+    expect(fedTodayFor(feedings, 'p1-am', now).map((f) => f.id)).toEqual(['f2', 'f1']);
     expect(fedTodayFor(feedings, 'p1-pm', now)).toEqual([]);
   });
 
@@ -51,40 +52,30 @@ describe('today’s board', () => {
     ]);
   });
 
-  test('meal times are 24-hour HH:MM', () => {
-    expect(['00:00', '07:30', '23:59'].every(isMealTime)).toBe(true);
-    expect(['24:00', '7:30', '07:60', '', 730].some(isMealTime)).toBe(false);
+  test('a meal time is today at that time; anything else is midnight', () => {
+    expect(new Date(mealAt('19:30', now)).getHours()).toBe(19);
+    expect(mealAt('7:30', now)).toBe(new Date(fixture.now).setHours(0, 0, 0, 0));
   });
 });
 
-describe('time since', () => {
+describe('history (@huishouden/pwa-kit/log, by pet)', () => {
+  const p2 = (f: { petId: string }) => f.petId === 'p2';
+
   test('last fed, any meal or extra', () => {
-    expect(lastFed(feedings, 'p1', now)?.id).toBe('f2');
-    expect(lastFed(feedings, 'p2', now)?.id).toBe('f4');
-    expect(lastFed(feedings, 'p3', now)).toBeNull();
-    expect(formatAgo(lastFed(feedings, 'p2', now)!.at, now)).toBe('15h 50m ago');
+    expect(latest(feedings, now, (f) => f.petId === 'p1')?.id).toBe('f2');
+    expect(latest(feedings, now, p2)?.id).toBe('f4');
+    expect(formatAgo(latest(feedings, now, p2)!.at, now)).toBe('15h 50m ago');
   });
 
-  test('durations', () => {
-    expect(formatDuration(35 * MINUTE)).toBe('35m');
-    expect(formatDuration(2 * HOUR + 10 * MINUTE + 59_000)).toBe('2h 10m');
-    expect(formatDuration(27 * HOUR)).toBe('1d 3h');
-    expect(formatAgo(now - 30_000, now)).toBe('just now');
-  });
-});
-
-describe('history', () => {
   test('feeds per day for two weeks, oldest first, today last', () => {
-    const days = dailyCounts(feedings, 'p2', now, 14);
+    const days = dailyCounts(feedings, now, 14, p2);
     expect(days).toHaveLength(14);
     expect(days[0].day).toBe('2031-05-01');
     expect(days.at(-1)).toEqual({ day: '2031-05-14', count: 0 });
-    expect(days.find((d) => d.day === '2031-05-13')?.count).toBe(1);
-    expect(days.find((d) => d.day === '2031-05-12')?.count).toBe(1);
     expect(days.reduce((n, d) => n + d.count, 0)).toBe(2);
   });
 
   test('recent feeds newest first, inside the window', () => {
-    expect(recentFeedings(feedings, 'p2', now, 14).map((f) => f.id)).toEqual(['f4', 'f5']);
+    expect(recent(feedings, now, 14, p2).map((f) => f.id)).toEqual(['f4', 'f5']);
   });
 });

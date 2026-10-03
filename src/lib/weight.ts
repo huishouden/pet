@@ -1,4 +1,4 @@
-// Weight log maths: units, the latest weight, the trend, and the points of the small chart. Pure.
+// Weight log maths: units, the latest weight and the trend. The chart is the kit's QuantityChart. Pure.
 
 import { DAY, daysBetween } from '@huishouden/pwa-kit/time';
 
@@ -72,40 +72,6 @@ export function trend(entries: Entry[], unit: WeightUnit, windowDays = 180): Tre
   const direction = change > 0 ? 'up' : 'down';
   return { direction, change, days, text: `${direction === 'up' ? 'Up' : 'Down'} ${formatWeight(Math.abs(change), unit)} in ${span(days)}` };
 }
-
-export interface ChartGeometry {
-  points: { x: number; y: number; at: number; value: number }[];
-  /** Rounded bounds of the y axis, in `unit`. */
-  min: number;
-  max: number;
-  path: string;
-  /** The y of the target line, when there is a target. */
-  targetY?: number;
-}
-
-/**
- * Points of a line chart `width` × `height` (inside `pad`), x by time and y by weight, with the y range
- * padded so a steady weight doesn't look like a cliff.
- */
-export function chart(entries: Entry[], unit: WeightUnit, width: number, height: number, pad = 8, target?: number): ChartGeometry | null {
-  const s = series(entries, unit);
-  if (s.length === 0) return null;
-  const values = [...s.map((e) => e.shown), ...(target ? [target] : [])];
-  const lo = Math.min(...values);
-  const hi = Math.max(...values);
-  const margin = Math.max((hi - lo) * 0.25, hi * 0.03, 0.5);
-  const min = Math.floor((lo - margin) * 2) / 2;
-  const max = Math.ceil((hi + margin) * 2) / 2;
-  const t0 = s[0].at;
-  const t1 = s.at(-1)!.at;
-  const x = (t: number) => (t1 === t0 ? width / 2 : pad + ((t - t0) / (t1 - t0)) * (width - 2 * pad));
-  const y = (v: number) => pad + (1 - (v - min) / (max - min)) * (height - 2 * pad);
-  const points = s.map((e) => ({ x: round(x(e.at)), y: round(y(e.shown)), at: e.at, value: e.shown }));
-  const path = points.map((p, i) => `${i ? 'L' : 'M'}${p.x} ${p.y}`).join(' ');
-  return { points, min, max, path, ...(target ? { targetY: round(y(target)) } : {}) };
-}
-
-const round = (n: number) => Math.round(n * 10) / 10;
 
 export interface TargetProgress {
   /** Latest weight minus the target, in the pet's unit. */

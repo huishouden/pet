@@ -5,8 +5,8 @@ import { ScanText, Trash2 } from 'lucide-react';
 import type { Course, Meal, Pet } from '../lib/model';
 import { LIMITS } from '../lib/model';
 import { MAX_COURSE_DAYS, MAX_TIMES_PER_DAY, daysUntil, defaultTimes, lastDay, type CourseDraft } from '../lib/courses';
-import { isMealTime, mealsOf } from '../lib/feeding';
-import { isYmd, toYmd } from '@huishouden/pwa-kit/time';
+import { mealsOf } from '../lib/feeding';
+import { isYmd, toYmd, isHhmm } from '@huishouden/pwa-kit/time';
 import type { CourseInput } from '../lib/build';
 import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 
@@ -48,7 +48,7 @@ export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (
   const [notes, setNotes] = useState(course?.notes ?? '');
   const [givers, setGivers] = useState<GiversValue>({ givers: course?.givers ?? 'all', approvedHelpers: course?.approvedHelpers ?? [] });
   const total = length === 'days' ? Math.round(Number(days)) : daysUntil(startDate, until);
-  const valid = !!pet && name.trim().length > 0 && isYmd(startDate) && times.length > 0 && times.every(isMealTime) && !!total && total >= 1 && total <= MAX_COURSE_DAYS;
+  const valid = !!pet && name.trim().length > 0 && isYmd(startDate) && times.length > 0 && times.every(isHhmm) && !!total && total >= 1 && total <= MAX_COURSE_DAYS;
 
   const setCount = (n: number) => setTimes(defaultTimes(n, mealTimes));
   const photo = useRef<HTMLInputElement>(null);
