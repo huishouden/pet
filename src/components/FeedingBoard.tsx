@@ -39,11 +39,11 @@ export function FeedingBoard({ pets, meals, feedings, courses, medDoses, me, now
   // One column count for the whole board, so AM sits above AM like on the paper one.
   const columns = Math.max(1, ...pets.map(tilesOf));
   return (
-    <section className="rounded-2xl border border-stone-200 bg-white px-5 py-4 shadow-sm sm:px-6" aria-label="Feeding">
+    <section className="rounded-2xl border border-line bg-surface px-5 py-4 shadow-sm sm:px-6" aria-label="Feeding">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <h2 className={overline}>Feeding and medicine</h2>
         <div className="flex items-center gap-3">
-          {yesterday && <p className="hidden text-base text-stone-600 sm:block">{formatDayLong(day)}</p>}
+          {yesterday && <p className="hidden text-base text-muted sm:block">{formatDayLong(day)}</p>}
           <div className="flex gap-1.5" role="group" aria-label="Day shown">
             <Chip active={!yesterday} onClick={() => setYesterday(false)}>
               Today
@@ -54,7 +54,7 @@ export function FeedingBoard({ pets, meals, feedings, courses, medDoses, me, now
           </div>
         </div>
       </div>
-      {yesterday && <p className="mt-1 text-base text-stone-600">Ticking a meal or dose here logs it at its time yesterday.</p>}
+      {yesterday && <p className="mt-1 text-base text-muted">Ticking a meal or dose here logs it at its time yesterday.</p>}
       <ul>
         {pets.map((pet) => {
           const today = mealsOn(meals, feedings, pet.id, day, now);
@@ -63,10 +63,10 @@ export function FeedingBoard({ pets, meals, feedings, courses, medDoses, me, now
           const doses = running.flatMap((c) => dosesOf(c).map((d) => ({ course: c, ...d })));
           const tiles = today.length + doses.length;
           return (
-            <li key={pet.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-stone-200 py-2.5 last:border-b-0 sm:flex-nowrap">
+            <li key={pet.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line py-2.5 last:border-b-0 sm:flex-nowrap">
               <div className="flex min-w-0 basis-full items-center gap-2.5 sm:w-28 sm:shrink-0 sm:basis-auto">
                 <PetAvatar pet={pet} pets={pets} size={36} />
-                <p className="truncate text-lg font-semibold text-stone-800">{pet.name}</p>
+                <p className="truncate text-lg font-semibold text-ink">{pet.name}</p>
               </div>
               {tiles === 0 ? (
                 <button type="button" className={ghostButton} onClick={() => onAddMeal(pet.id)}>
@@ -156,21 +156,21 @@ export function Tile({ done, late, title, detail, label, icon, compact, small, o
       onClick={onClick}
       className={`flex w-full min-w-0 flex-col justify-center text-left ${small ? 'min-h-14 rounded-xl px-3 py-1.5' : 'min-h-20 rounded-2xl px-4 py-2'} transition-colors duration-150 ${
         done
-          ? 'bg-forest-700 text-white hover:bg-forest-600'
+          ? 'bg-primary text-on-primary hover:bg-primary-hover'
           : late
-            ? 'border-2 border-terracotta bg-terracotta-light text-terracotta-dark hover:bg-white'
-            : 'border border-stone-200 bg-white text-stone-800 hover:border-forest-400'
+            ? 'border-2 border-terracotta bg-attention-tint text-attention hover:bg-surface'
+            : 'border border-line bg-surface text-ink hover:border-forest-400'
       }`}
     >
       <span className={`flex min-w-0 items-center gap-2 leading-tight font-semibold ${small ? 'text-base sm:text-lg' : compact ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl'}`}>
         {done ? (
           <Check size={24} className="shrink-0" aria-hidden="true" />
         ) : (
-          icon ?? <span className={`h-5 w-5 shrink-0 rounded-md border-2 ${late ? 'border-terracotta-dark' : 'border-stone-400'}`} aria-hidden="true" />
+          icon ?? <span className={`h-5 w-5 shrink-0 rounded-md border-2 ${late ? 'border-terracotta-dark dark:border-terracotta-light' : 'border-stone-400'}`} aria-hidden="true" />
         )}
         <span className="truncate">{title}</span>
       </span>
-      <span className={`mt-0.5 truncate ${small ? 'text-sm sm:text-base' : 'text-base sm:text-lg'} ${done ? 'text-forest-100' : late ? 'font-semibold' : 'text-stone-600'}`}>{detail}</span>
+      <span className={`mt-0.5 truncate ${small ? 'text-sm sm:text-base' : 'text-base sm:text-lg'} ${done ? 'text-forest-100 dark:text-forest-900' : late ? 'font-semibold' : 'text-muted'}`}>{detail}</span>
     </button>
   );
 }

@@ -87,7 +87,7 @@ export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (
           {onDelete && (
             <button
               type="button"
-              className="mr-auto inline-flex min-h-11 items-center gap-2 rounded-xl px-3 font-medium text-red-700 hover:bg-stone-100"
+              className="mr-auto inline-flex min-h-11 items-center gap-2 rounded-xl px-3 font-medium text-error hover:bg-sunken"
               onClick={() => {
                 onDelete();
                 onClose();
@@ -122,7 +122,7 @@ export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (
           </Field>
         </div>
         <fieldset>
-          <legend className="mb-1.5 block text-sm font-medium text-stone-700">How often</legend>
+          <legend className="mb-1.5 block text-sm font-medium text-ink-soft">How often</legend>
           <div className="flex flex-wrap gap-2">
             {[1, 2, 3].map((n) => (
               <Chip key={n} active={times.length === n} onClick={() => setCount(n)}>
@@ -147,14 +147,14 @@ export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (
               </button>
             )}
           </div>
-          <p className="mt-1.5 text-sm text-stone-600">After each time, a dose nobody has ticked shows as missed. Twice a day starts at the pet's AM and PM meals.</p>
+          <p className="mt-1.5 text-sm text-muted">After each time, a dose nobody has ticked shows as missed. Twice a day starts at the pet's AM and PM meals.</p>
         </fieldset>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="First day">
             <input className={inputClass} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </Field>
           <fieldset>
-            <legend className="mb-1.5 block text-sm font-medium text-stone-700">For</legend>
+            <legend className="mb-1.5 block text-sm font-medium text-ink-soft">For</legend>
             <div className="flex items-center gap-2">
               {length === 'days' ? (
                 <>
@@ -165,7 +165,7 @@ export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (
                     onChange={(e) => setDays(e.target.value.replace(/\D/g, '').slice(0, 3))}
                     aria-label="Number of days"
                   />
-                  <span className="text-base text-stone-700">days</span>
+                  <span className="text-base text-ink-soft">days</span>
                   <button type="button" className={`${ghostButton} whitespace-nowrap`} onClick={() => setLength('until')}>
                     Until a date
                   </button>
@@ -181,8 +181,8 @@ export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (
             </div>
           </fieldset>
         </div>
-        <label className="flex min-h-11 items-center gap-3 text-base text-stone-800">
-          <input type="checkbox" className="h-5 w-5 accent-forest-700" checked={withFood} onChange={(e) => setWithFood(e.target.checked)} />
+        <label className="flex min-h-11 items-center gap-3 text-base text-ink">
+          <input type="checkbox" className="h-5 w-5 accent-forest-700 dark:accent-forest-400" checked={withFood} onChange={(e) => setWithFood(e.target.checked)} />
           Give with food
         </label>
         <Field label="Notes (optional)">

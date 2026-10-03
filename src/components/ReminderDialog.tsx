@@ -74,7 +74,7 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
           {onDelete && (
             <button
               type="button"
-              className="mr-auto inline-flex min-h-11 items-center gap-2 rounded-xl px-3 font-medium text-red-700 hover:bg-stone-100"
+              className="mr-auto inline-flex min-h-11 items-center gap-2 rounded-xl px-3 font-medium text-error hover:bg-sunken"
               onClick={() => {
                 onDelete();
                 onClose();
@@ -101,7 +101,7 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
       >
         {pets.length > 1 && (
           <fieldset>
-            <legend className="mb-1.5 block text-sm font-medium text-stone-700">For</legend>
+            <legend className="mb-1.5 block text-sm font-medium text-ink-soft">For</legend>
             <div className="flex flex-wrap gap-2">
               {pets.map((p) => (
                 <Chip key={p.id} active={petId === p.id} onClick={() => setPetId(p.id)}>
@@ -113,7 +113,7 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
         )}
         {!reminder && (
           <fieldset>
-            <legend className="mb-1.5 block text-sm font-medium text-stone-700">Start from</legend>
+            <legend className="mb-1.5 block text-sm font-medium text-ink-soft">Start from</legend>
             <div className="flex flex-wrap gap-2">
               {presetsFor(pet?.species).map((p) => (
                 <Chip key={p.title} active={title === p.title} onClick={() => usePreset(p)}>
@@ -121,7 +121,7 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
                 </Chip>
               ))}
             </div>
-            <p className="mt-1.5 text-sm text-stone-600">Common schedules. Follow your vet's advice and change anything below.</p>
+            <p className="mt-1.5 text-sm text-muted">Common schedules. Follow your vet's advice and change anything below.</p>
           </fieldset>
         )}
         <Field label="What">
@@ -137,7 +137,7 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
           </select>
         </Field>
         <fieldset>
-          <legend className="mb-1.5 block text-sm font-medium text-stone-700">Repeats</legend>
+          <legend className="mb-1.5 block text-sm font-medium text-ink-soft">Repeats</legend>
           <div className="flex flex-wrap items-center gap-2">
             <Chip active={!repeats} onClick={() => setRepeats(false)}>
               Once
@@ -147,7 +147,7 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
             </Chip>
             {repeats && (
               <span className="flex items-center gap-2">
-                <span className="text-base text-stone-700">every</span>
+                <span className="text-base text-ink-soft">every</span>
                 <input
                   className={`${inputClass} max-w-20 text-center tabular-nums`}
                   inputMode="numeric"
@@ -165,7 +165,7 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
               </span>
             )}
           </div>
-          {repeats && <p className="mt-1.5 text-sm text-stone-600">The next one is due {describeRecurrence({ every: everyN || 1, unit }).toLowerCase()} after each dose, counted from the day it is given.</p>}
+          {repeats && <p className="mt-1.5 text-sm text-muted">The next one is due {describeRecurrence({ every: everyN || 1, unit }).toLowerCase()} after each dose, counted from the day it is given.</p>}
         </fieldset>
         <Field label={repeats ? 'Next due' : 'Due'}>
           <input className={inputClass} type="date" value={due} onChange={(e) => setDue(e.target.value)} />
@@ -175,21 +175,21 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
         </Field>
         {history.length > 0 && (
           <section aria-label="Given">
-            <h3 className="mb-1 text-sm font-medium text-stone-700">Given</h3>
-            <ul className="rounded-xl border border-stone-200">
+            <h3 className="mb-1 text-sm font-medium text-ink-soft">Given</h3>
+            <ul className="rounded-xl border border-line">
               {history.map((d) => (
-                <li key={d.id} className="flex min-h-11 items-center justify-between gap-3 border-b border-stone-200 px-3 text-base last:border-b-0">
-                  <span className="text-stone-800">
+                <li key={d.id} className="flex min-h-11 items-center justify-between gap-3 border-b border-line px-3 text-base last:border-b-0">
+                  <span className="text-ink">
                     {formatDateShort(d.at)}, {formatTime(d.at)}
                   </span>
-                  <span className="text-stone-600">by {personName(d.by, { email: me })}</span>
+                  <span className="text-muted">by {personName(d.by, { email: me })}</span>
                 </li>
               ))}
             </ul>
           </section>
         )}
         {reminder && reminder.dismissedAt === undefined && onDismiss && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-stone-200 pt-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line pt-3">
             <button
               type="button"
               className={secondaryButton}
@@ -200,12 +200,12 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
             >
               <BellOff size={18} /> Dismiss
             </button>
-            <p className="min-w-0 flex-1 text-sm text-stone-600">Stops it coming due. It stays in the care list, to restore.</p>
+            <p className="min-w-0 flex-1 text-sm text-muted">Stops it coming due. It stays in the care list, to restore.</p>
           </div>
         )}
         {reminder && reminder.dismissedAt !== undefined && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-stone-200 pt-3">
-            <p className="min-w-0 flex-1 text-base text-stone-700">Dismissed {formatDateShort(reminder.dismissedAt)}. It doesn't come due.</p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line pt-3">
+            <p className="min-w-0 flex-1 text-base text-ink-soft">Dismissed {formatDateShort(reminder.dismissedAt)}. It doesn't come due.</p>
             {onRestore && (
               <button
                 type="button"

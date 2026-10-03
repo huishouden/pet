@@ -17,13 +17,13 @@ export function Contacts({ store, open, notify }: { store: PetStore; open: Open;
   return (
     <div className="space-y-6 lg:h-full lg:overflow-y-auto">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-2xl font-semibold text-stone-800">Contacts</h2>
+        <h2 className="text-2xl font-semibold text-ink">Contacts</h2>
         <button type="button" className={primaryButton} onClick={onAdd}>
           <UserPlus size={20} /> Add contact
         </button>
       </div>
       {groups.length === 0 && (
-        <p className={`${cardClass} p-6 text-lg text-stone-600`}>No contacts yet. Add the vet, the emergency vet and the groomer so their numbers are one tap away.</p>
+        <p className={`${cardClass} p-6 text-lg text-muted`}>No contacts yet. Add the vet, the emergency vet and the groomer so their numbers are one tap away.</p>
       )}
       <div className="grid items-start gap-6 md:grid-cols-2">
         {groups.flatMap((g) =>

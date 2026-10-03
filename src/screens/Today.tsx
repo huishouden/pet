@@ -34,9 +34,9 @@ export function Today({ store, pets, open, onGive, onToggleMeal, onToggleDose, a
   if (pets.length === 0)
     return (
       <section className={`${cardClass} mx-auto max-w-2xl p-8`} aria-label="Welcome">
-        <PawPrint size={32} className="text-forest-700" aria-hidden="true" />
-        <h2 className="mt-3 text-3xl font-semibold text-stone-800">Add your first pet</h2>
-        <p className="mt-2 text-lg text-stone-600">Then add their flea, heartworm and vaccine reminders, vet visits and weight. Everyone in the household sees the same.</p>
+        <PawPrint size={32} className="text-link" aria-hidden="true" />
+        <h2 className="mt-3 text-3xl font-semibold text-ink">Add your first pet</h2>
+        <p className="mt-2 text-lg text-muted">Then add their flea, heartworm and vaccine reminders, vet visits and weight. Everyone in the household sees the same.</p>
         <button type="button" className={`${primaryButton} mt-5`} onClick={() => open.pet(null)}>
           <Plus size={20} /> Add a pet
         </button>
@@ -72,7 +72,7 @@ export function Today({ store, pets, open, onGive, onToggleMeal, onToggleDose, a
         <section className={`${cardClass} px-5 py-4 sm:px-6`} aria-label="Later today">
           <h2 className={overline}>Later today</h2>
           {later.length === 0 ? (
-            <p className="mt-2 text-lg text-stone-600">Nothing else today.</p>
+            <p className="mt-2 text-lg text-muted">Nothing else today.</p>
           ) : (
             <ul className="mt-1">
               {later.map((l) => (
@@ -126,15 +126,15 @@ function LaterRow({ item, onOpen }: { item: LaterItem; onOpen?: () => void }) {
   const Icon = LATER_ICON[item.kind];
   const body = (
     <>
-      <span className="w-24 shrink-0 text-base font-medium text-stone-700 tabular-nums">{item.time}</span>
-      <Icon size={18} className="shrink-0 text-stone-500" aria-hidden="true" />
-      <span className="min-w-0 flex-1 text-lg text-stone-800">{item.title}</span>
+      <span className="w-24 shrink-0 text-base font-medium text-ink-soft tabular-nums">{item.time}</span>
+      <Icon size={18} className="shrink-0 text-muted" aria-hidden="true" />
+      <span className="min-w-0 flex-1 text-lg text-ink">{item.title}</span>
     </>
   );
   return (
-    <li className="border-b border-stone-200 last:border-b-0">
+    <li className="border-b border-line last:border-b-0">
       {onOpen ? (
-        <button type="button" onClick={onOpen} className="flex min-h-12 w-full items-center gap-3 py-2 text-left hover:bg-stone-50">
+        <button type="button" onClick={onOpen} className="flex min-h-12 w-full items-center gap-3 py-2 text-left hover:bg-sunken">
           {body}
         </button>
       ) : (
@@ -147,22 +147,22 @@ function LaterRow({ item, onOpen }: { item: LaterItem; onOpen?: () => void }) {
 function ComingRow({ item, pets, onOpen }: { item: ComingItem; pets: Pet[]; onOpen: () => void }) {
   const pet = pets.find((p) => p.id === item.petIds[0]);
   return (
-    <li className="border-b border-stone-200 last:border-b-0">
-      <button type="button" onClick={onOpen} className="flex min-h-12 w-full items-center gap-3 py-2 text-left hover:bg-stone-50">
+    <li className="border-b border-line last:border-b-0">
+      <button type="button" onClick={onOpen} className="flex min-h-12 w-full items-center gap-3 py-2 text-left hover:bg-sunken">
         {item.kind === 'birthday' ? (
-          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-forest-50 text-forest-700" aria-hidden="true">
+          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-tint text-link" aria-hidden="true">
             <Cake size={18} />
           </span>
         ) : item.kind === 'care' ? (
-          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-600" aria-hidden="true">
+          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sunken text-muted" aria-hidden="true">
             <Syringe size={16} />
           </span>
         ) : (
           <PetAvatar pet={pet} pets={pets} size={32} />
         )}
         <span className="min-w-0 flex-1">
-          <span className="block text-lg leading-snug text-stone-800">{item.title}</span>
-          <span className="block text-base text-stone-600">{item.detail}</span>
+          <span className="block text-lg leading-snug text-ink">{item.title}</span>
+          <span className="block text-base text-muted">{item.detail}</span>
         </span>
       </button>
     </li>
@@ -177,7 +177,7 @@ function PetsRow({ pets, onShow }: { pets: Pet[]; onShow: (id: string) => void }
       <ul className="mt-2 flex flex-wrap gap-2">
         {pets.map((p) => (
           <li key={p.id}>
-            <button type="button" onClick={() => onShow(p.id)} className="flex min-h-12 items-center gap-2.5 rounded-full border border-stone-200 bg-white py-1 pr-4 pl-1 text-lg font-medium text-stone-800 hover:border-forest-400" aria-label={`${p.name}'s page`}>
+            <button type="button" onClick={() => onShow(p.id)} className="flex min-h-12 items-center gap-2.5 rounded-full border border-line bg-surface py-1 pr-4 pl-1 text-lg font-medium text-ink hover:border-forest-400" aria-label={`${p.name}'s page`}>
               <PetAvatar pet={p} pets={pets} size={40} />
               {p.name}
             </button>

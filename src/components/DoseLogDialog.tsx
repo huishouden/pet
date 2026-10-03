@@ -46,19 +46,19 @@ export function DoseLogDialog({ course, pet, meals, medDoses, me, now, onToggle,
         </button>
       }
     >
-      <p className="text-base text-stone-700">
-        <span className="font-semibold text-forest-700">{courseText(course, now)}</span> · {p.given} of {p.total} doses given · {p.daysComplete} of {p.days} days complete
+      <p className="text-base text-ink-soft">
+        <span className="font-semibold text-link">{courseText(course, now)}</span> · {p.given} of {p.total} doses given · {p.daysComplete} of {p.days} days complete
       </p>
-      {history.length === 0 && <p className="mt-3 text-base text-stone-600">The course hasn't started yet.</p>}
+      {history.length === 0 && <p className="mt-3 text-base text-muted">The course hasn't started yet.</p>}
       <ol className="mt-3" aria-label="Days">
         {history.map(({ day, n, doses, complete }) => {
           const dayWords = day === today ? 'Today' : longDate(day, today);
           return (
-            <li key={day} className="border-b border-stone-200 py-3 last:border-b-0" aria-label={`Day ${n}, ${dayWords}`}>
-              <p className="flex items-center gap-2 text-base font-semibold text-stone-800">
+            <li key={day} className="border-b border-line py-3 last:border-b-0" aria-label={`Day ${n}, ${dayWords}`}>
+              <p className="flex items-center gap-2 text-base font-semibold text-ink">
                 Day {n} · {dayWords}
                 {complete && (
-                  <span className="flex items-center gap-1 text-sm font-medium text-forest-600">
+                  <span className="flex items-center gap-1 text-sm font-medium text-positive">
                     <Check size={16} aria-hidden="true" /> All given
                   </span>
                 )}

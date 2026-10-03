@@ -57,10 +57,10 @@ export function NotificationsCard({ householdId, user }: { householdId: string; 
     <section className={`${cardClass} p-6`} aria-label="Notifications on this device">
       <h3 className={overline}>Notifications on this device</h3>
       {!support.supported ? (
-        <p className="mt-2 text-base text-stone-600">{support.message}</p>
+        <p className="mt-2 text-base text-muted">{support.message}</p>
       ) : (
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <p className="min-w-0 flex-1 text-base text-stone-600">
+          <p className="min-w-0 flex-1 text-base text-muted">
             {state.status === 'on'
               ? 'On. This device tells you when a medicine dose is due and when a meal has not been ticked by its time.'
               : 'Get a notification here when a medicine dose is due or a meal has not been ticked by its time.'}
@@ -77,7 +77,7 @@ export function NotificationsCard({ householdId, user }: { householdId: string; 
         </div>
       )}
       {error && (
-        <p role="alert" className="mt-2 text-base text-red-700">
+        <p role="alert" className="mt-2 text-base text-error">
           {error}
         </p>
       )}

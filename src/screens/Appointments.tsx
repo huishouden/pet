@@ -49,7 +49,7 @@ export function Appointments({ store, pets, open, calendarAvailable, notify, onI
     <div className="mx-auto max-w-4xl space-y-5 lg:h-full lg:overflow-y-auto">
       <div>
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-          <h2 className="text-2xl font-semibold text-stone-800">Appointments</h2>
+          <h2 className="text-2xl font-semibold text-ink">Appointments</h2>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -75,7 +75,7 @@ export function Appointments({ store, pets, open, calendarAvailable, notify, onI
       {pets.length > 1 && <PetChips pets={pets} selected={petId} onSelect={setPetId} />}
 
       <section className={cardClass} aria-label="Upcoming appointments">
-        {upcoming.length === 0 && <p className="p-6 text-lg text-stone-600">No appointments coming up.</p>}
+        {upcoming.length === 0 && <p className="p-6 text-lg text-muted">No appointments coming up.</p>}
         <ul>
           {upcoming.map((a, i) => (
             <Row key={a.id} a={a} now={now} pets={pets} contacts={contacts} first={i === 0} onEdit={() => open.appointment(a)} />
@@ -114,16 +114,16 @@ export function Appointments({ store, pets, open, calendarAvailable, notify, onI
         >
           {birthdays.length > 0 && (
             <section className="mt-4" aria-label="Birthdays">
-              <h3 className="text-sm font-medium text-stone-700">Birthdays</h3>
-              <ul className="mt-1.5 divide-y divide-stone-200 rounded-2xl border border-stone-200">
+              <h3 className="text-sm font-medium text-ink-soft">Birthdays</h3>
+              <ul className="mt-1.5 divide-y divide-line rounded-2xl border border-line">
                 {birthdays.map(({ pet, match, guess }) => (
                   <li key={match.id} className="flex items-center gap-3 px-3 py-2">
-                    <Cake size={20} className="shrink-0 text-forest-700" aria-hidden="true" />
+                    <Cake size={20} className="shrink-0 text-link" aria-hidden="true" />
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-stone-800">
+                      <p className="font-medium text-ink">
                         {pet.name}: {guessWords(guess)}
                       </p>
-                      <p className="text-sm text-stone-600 [overflow-wrap:anywhere]">{guessSource({ match, guess })}</p>
+                      <p className="text-sm text-muted [overflow-wrap:anywhere]">{guessSource({ match, guess })}</p>
                     </div>
                     {guess.date ? (
                       <button
@@ -168,18 +168,18 @@ function Row({ a, now, pets, contacts, first, onEdit }: { a: Appointment; now: n
   const who = a.contactId ? contacts.find((c) => c.id === a.contactId) : undefined;
   const forPets = a.petIds.map((id) => pets.find((p) => p.id === id)).filter((p): p is Pet => !!p);
   return (
-    <li className="flex items-start gap-5 border-b border-stone-200 p-5 last:border-b-0">
-      <div className={`flex w-16 shrink-0 flex-col items-center rounded-xl py-2 ${first ? 'bg-forest-700 text-white' : 'bg-forest-50 text-forest-700'}`}>
+    <li className="flex items-start gap-5 border-b border-line p-5 last:border-b-0">
+      <div className={`flex w-16 shrink-0 flex-col items-center rounded-xl py-2 ${first ? 'bg-primary text-on-primary' : 'bg-tint text-link'}`}>
         <span className="text-sm font-medium">{monthShort(a.at)}</span>
         <span className="text-2xl font-semibold tabular-nums">{d.getDate()}</span>
       </div>
       <div className="min-w-0 flex-1">
-        <p className={`${first ? 'text-2xl' : 'text-xl'} font-semibold text-stone-800`}>{a.title}</p>
-        <p className="mt-0.5 text-base text-stone-700">
-          <span className="font-medium text-forest-700">{relativeDay(a.at, now)}</span> · {formatDayLong(a.at)}, {formatTime(a.at)} · {APPOINTMENT_LABELS[a.kind]}
+        <p className={`${first ? 'text-2xl' : 'text-xl'} font-semibold text-ink`}>{a.title}</p>
+        <p className="mt-0.5 text-base text-ink-soft">
+          <span className="font-medium text-link">{relativeDay(a.at, now)}</span> · {formatDayLong(a.at)}, {formatTime(a.at)} · {APPOINTMENT_LABELS[a.kind]}
         </p>
         {forPets.length > 0 && (
-          <p className="mt-1 flex items-center gap-2 text-base text-stone-700">
+          <p className="mt-1 flex items-center gap-2 text-base text-ink-soft">
             <span className="flex -space-x-1.5">
               {forPets.map((p) => (
                 <PetAvatar key={p.id} pet={p} pets={pets} size={24} />
@@ -189,7 +189,7 @@ function Row({ a, now, pets, contacts, first, onEdit }: { a: Appointment; now: n
           </p>
         )}
         {who && (
-          <div className="flex flex-wrap items-center gap-x-4 text-base text-stone-600">
+          <div className="flex flex-wrap items-center gap-x-4 text-base text-muted">
             <span className="flex items-center gap-1.5">
               <UserRound size={16} aria-hidden="true" /> {who.name}
             </span>
@@ -201,11 +201,11 @@ function Row({ a, now, pets, contacts, first, onEdit }: { a: Appointment; now: n
           </div>
         )}
         {a.location && (
-          <p className="mt-0.5 flex items-center gap-1.5 text-base text-stone-600">
+          <p className="mt-0.5 flex items-center gap-1.5 text-base text-muted">
             <MapPin size={16} aria-hidden="true" /> {a.location}
           </p>
         )}
-        {a.notes && <p className="mt-1 text-base whitespace-pre-line text-stone-600">{a.notes}</p>}
+        {a.notes && <p className="mt-1 text-base whitespace-pre-line text-muted">{a.notes}</p>}
         {a.calendarLink && (
           <a className={linkClass} href={a.calendarLink} target="_blank" rel="noopener noreferrer">
             <ExternalLink size={16} aria-hidden="true" /> Open in Calendar
