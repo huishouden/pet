@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.0](https://github.com/huishouden/pet/compare/v1.10.0...v1.11.0) (2026-10-03)
+
+
+### Features
+
+* publish due care and today's doses to the household to-do list ([#41](https://github.com/huishouden/pet/issues/41)) ([8b9d07a](https://github.com/huishouden/pet/commit/8b9d07abf50593e86966923757bf417dcc466af5))
+
 ## [1.10.0](https://github.com/huishouden/pet/compare/v1.9.1...v1.10.0) (2026-10-03)
 
 
