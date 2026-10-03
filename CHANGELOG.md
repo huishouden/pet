@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/huishouden/pet/compare/v1.6.0...v1.7.0) (2026-10-03)
+
+
+### Features
+
+* **security:** security headers; one-line Sample data banner on phones ([#28](https://github.com/huishouden/pet/issues/28)) ([3507b9a](https://github.com/huishouden/pet/commit/3507b9ae365f967e2ce4f21e7f8390c862b066c1))
+
 ## [1.6.0](https://github.com/huishouden/pet/compare/v1.5.1...v1.6.0) (2026-10-02)
 
 
