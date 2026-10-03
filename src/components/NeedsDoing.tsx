@@ -24,11 +24,11 @@ export function NeedsDoing({ needs, pets, allDone, onDo, onOpen }: {
   return (
     <section className={`${cardClass} px-4 py-4 sm:px-6 sm:py-5`} aria-label="Needs doing">
       <div className="flex items-baseline justify-between gap-4">
-        <h2 className="text-xl font-semibold text-stone-800 sm:text-2xl">Needs doing</h2>
-        {late > 0 && <p className="text-base font-medium text-terracotta-dark sm:text-lg">{late} past due</p>}
+        <h2 className="text-xl font-semibold text-ink sm:text-2xl">Needs doing</h2>
+        {late > 0 && <p className="text-base font-medium text-attention sm:text-lg">{late} past due</p>}
       </div>
       {needs.length === 0 ? (
-        <p className="mt-2 flex items-center gap-3 text-xl font-medium text-forest-700 sm:text-2xl" aria-live="polite">
+        <p className="mt-2 flex items-center gap-3 text-xl font-medium text-link sm:text-2xl" aria-live="polite">
           <Check size={28} className="shrink-0" aria-hidden="true" /> {allDone}
         </p>
       ) : (
@@ -45,17 +45,17 @@ export function NeedsDoing({ needs, pets, allDone, onDo, onOpen }: {
 function NeedRow({ need, pet, pets, onDo, onOpen }: { need: Need; pet: Pet | undefined; pets: Pet[]; onDo: () => void; onOpen: () => void }) {
   const Icon = need.kind === 'care' && need.reminder.kind === 'medication' ? Pill : KIND_ICON[need.kind];
   return (
-    <li className="flex items-center gap-3 border-b border-stone-200 py-3 last:border-b-0 sm:gap-4">
-      <span className={`h-12 w-1.5 shrink-0 rounded-full ${need.late ? 'bg-terracotta' : 'bg-forest-200'}`} aria-hidden="true" />
+    <li className="flex items-center gap-3 border-b border-line py-3 last:border-b-0 sm:gap-4">
+      <span className={`h-12 w-1.5 shrink-0 rounded-full ${need.late ? 'bg-attention-fill' : 'bg-forest-200 dark:bg-forest-600'}`} aria-hidden="true" />
       <span className="hidden sm:block">
         <PetAvatar pet={pet} pets={pets} size={44} />
       </span>
       <button type="button" onClick={onOpen} className="min-w-0 flex-1 rounded-xl text-left" aria-label={`${need.title}, ${need.when}. Open`}>
-        <span className={`flex items-center gap-2 text-xl leading-tight font-semibold sm:text-2xl ${need.late ? 'text-terracotta-dark' : 'text-stone-800'}`}>
+        <span className={`flex items-center gap-2 text-xl leading-tight font-semibold sm:text-2xl ${need.late ? 'text-attention' : 'text-ink'}`}>
           <Icon size={20} className="hidden shrink-0 sm:block" aria-hidden="true" />
           <span className="min-w-0 [overflow-wrap:anywhere]">{need.title}</span>
         </span>
-        <span className={`mt-0.5 block text-base sm:text-lg ${need.late ? 'font-medium text-terracotta-dark' : 'text-stone-600'}`}>
+        <span className={`mt-0.5 block text-base sm:text-lg ${need.late ? 'font-medium text-attention' : 'text-muted'}`}>
           {need.when.split(' · ').map((part, i) => (
             <Fragment key={i}>
               {i > 0 && ' · '}

@@ -29,19 +29,19 @@ export function Care({ store, pets, open, onGive, onRestore, deviceSettings }: {
   return (
     <div className="mx-auto max-w-4xl space-y-5 lg:h-full lg:overflow-y-auto">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        <h2 className="text-2xl font-semibold text-stone-800">Care</h2>
+        <h2 className="text-2xl font-semibold text-ink">Care</h2>
         <button type="button" className={primaryButton} onClick={() => open.reminder(null, petId ?? undefined)} disabled={pets.length === 0}>
           <Plus size={20} /> Add reminder
         </button>
       </div>
       {pets.length > 1 && <PetChips pets={pets} selected={petId} onSelect={setPetId} />}
-      {pets.length === 0 && <p className={`${cardClass} p-6 text-lg text-stone-600`}>Add a pet first, on the Pets tab.</p>}
+      {pets.length === 0 && <p className={`${cardClass} p-6 text-lg text-muted`}>Add a pet first, on the Pets tab.</p>}
       {pets.length > 0 && groups.length === 0 && (
-        <p className={`${cardClass} p-6 text-lg text-stone-600`}>No reminders yet. Add flea and tick, heartworm, vaccines or a medication, and Pet says when each is due.</p>
+        <p className={`${cardClass} p-6 text-lg text-muted`}>No reminders yet. Add flea and tick, heartworm, vaccines or a medication, and Pet says when each is due.</p>
       )}
       {groups.map((g) => (
         <section key={g.label} aria-label={g.label}>
-          <h3 className={`${overline} mb-2 ${g.label === 'Overdue' ? 'text-terracotta-dark' : ''}`}>
+          <h3 className={`${overline} mb-2 ${g.label === 'Overdue' ? 'text-attention!' : ''}`}>
             {g.label} ({g.items.length})
           </h3>
           <ul className={cardClass}>
@@ -71,7 +71,7 @@ export function ReminderRow({ r, pets, now, onGive, onRestore, onEdit, compact }
   const dismissed = state === 'dismissed';
   const urgent = state === 'overdue' || state === 'today';
   const due = parseYmd(r.due);
-  const dueColour = urgent ? 'text-terracotta-dark' : state === 'done' ? 'text-forest-700' : dismissed ? 'text-stone-600' : 'text-stone-700';
+  const dueColour = urgent ? 'text-attention' : state === 'done' ? 'text-link' : dismissed ? 'text-muted' : 'text-ink-soft';
   const meta = [
     compact ? null : pet?.name,
     describeRecurrence(r),
@@ -79,11 +79,11 @@ export function ReminderRow({ r, pets, now, onGive, onRestore, onEdit, compact }
     compact ? null : r.lastDoneAt ? `last given ${formatWhenGiven(r.lastDoneAt, now)}` : null,
   ].filter(Boolean);
   return (
-    <li className={`flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-stone-200 last:border-b-0 ${compact ? 'py-3' : 'px-4 py-4 sm:flex-nowrap sm:px-5'}`}>
+    <li className={`flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line last:border-b-0 ${compact ? 'py-3' : 'px-4 py-4 sm:flex-nowrap sm:px-5'}`}>
       {!compact && <PetAvatar pet={pet} pets={pets} size={40} />}
       <div className={`min-w-0 flex-1 ${compact ? '' : 'basis-[calc(100%-4rem)] sm:basis-auto'}`}>
-        <p className={`${compact ? 'text-lg' : 'text-xl'} font-semibold text-stone-800`}>{r.title}</p>
-        <p className="text-base text-stone-600">
+        <p className={`${compact ? 'text-lg' : 'text-xl'} font-semibold text-ink`}>{r.title}</p>
+        <p className="text-base text-muted">
           {compact && <span className={`font-semibold ${dueColour}`}>{dueText(r, now)} · </span>}
           {meta.join(' · ')}
         </p>

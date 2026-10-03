@@ -34,13 +34,13 @@ export function FeedingCard({ pet, meals, feedings, me, now, open }: { pet: Pet;
         </div>
       </div>
       {mine.length === 0 ? (
-        <p className="mt-2 text-base text-stone-600">No meals on {pet.name}'s board. Add one to tick it each day.</p>
+        <p className="mt-2 text-base text-muted">No meals on {pet.name}'s board. Add one to tick it each day.</p>
       ) : (
         <ul className="mt-1">
           {mine.map((m) => (
-            <li key={m.id} className="flex min-h-12 items-center gap-3 border-b border-stone-200 last:border-b-0">
-              <span className="w-16 shrink-0 text-lg font-semibold text-stone-800">{m.name}</span>
-              <span className="min-w-0 flex-1 text-base text-stone-600">
+            <li key={m.id} className="flex min-h-12 items-center gap-3 border-b border-line last:border-b-0">
+              <span className="w-16 shrink-0 text-lg font-semibold text-ink">{m.name}</span>
+              <span className="min-w-0 flex-1 text-base text-muted">
                 {[`Not fed yet after ${formatClock(m.time)}`, m.food, m.portion, m.note].filter(Boolean).join(' · ')}
               </span>
               <button type="button" className={iconButton} onClick={() => open.meal(m, pet.id)} aria-label={`Edit ${m.name}`}>
@@ -51,11 +51,11 @@ export function FeedingCard({ pet, meals, feedings, me, now, open }: { pet: Pet;
         </ul>
       )}
 
-      <h4 className="mt-5 mb-1 text-sm font-medium text-stone-700">Last {DAYS} days</h4>
+      <h4 className="mt-5 mb-1 text-sm font-medium text-ink-soft">Last {DAYS} days</h4>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-base" aria-label={`${pet.name}'s feeds, last ${DAYS} days`}>
           <thead>
-            <tr className="border-b border-stone-200 text-sm text-stone-600">
+            <tr className="border-b border-line text-sm text-muted">
               <th scope="col" className="py-2 pr-3 font-medium">
                 Day
               </th>
@@ -77,8 +77,8 @@ export function FeedingCard({ pet, meals, feedings, me, now, open }: { pet: Pet;
               const t = parseYmd(day)!;
               const extras = extrasOn(day);
               return (
-                <tr key={day} className="border-b border-stone-200 last:border-b-0">
-                  <th scope="row" className="py-1 pr-3 font-normal whitespace-nowrap text-stone-700">
+                <tr key={day} className="border-b border-line last:border-b-0">
+                  <th scope="row" className="py-1 pr-3 font-normal whitespace-nowrap text-ink-soft">
                     {Math.abs(t - now) < 2 * 86_400_000 ? relativeDay(t, now) : formatDayShort(t)}
                   </th>
                   {mine.map((m) => {
@@ -88,14 +88,14 @@ export function FeedingCard({ pet, meals, feedings, me, now, open }: { pet: Pet;
                         {f ? (
                           <button
                             type="button"
-                            className="-mx-1 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2 text-stone-800 tabular-nums hover:bg-stone-100"
+                            className="-mx-1 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2 text-ink tabular-nums hover:bg-sunken"
                             onClick={() => open.feeding(f, pet.id)}
                             aria-label={`${m.name} ${day}: fed at ${formatTime(f.at)} by ${personName(f.by, { email: me })}. Edit`}
                           >
-                            {formatTime(f.at)} <span className="text-sm text-stone-600">{personInitial(f.by, { email: me })}</span>
+                            {formatTime(f.at)} <span className="text-sm text-muted">{personInitial(f.by, { email: me })}</span>
                           </button>
                         ) : (
-                          <span className="px-1 text-stone-500">
+                          <span className="px-1 text-muted">
                             <span aria-hidden="true">–</span>
                             <span className="sr-only">not fed</span>
                           </span>
@@ -105,12 +105,12 @@ export function FeedingCard({ pet, meals, feedings, me, now, open }: { pet: Pet;
                   })}
                   <td className="px-1 py-0.5">
                     {extras.map((f) => (
-                      <button key={f.id} type="button" className="-mx-1 inline-flex min-h-11 items-center rounded-xl px-2 text-stone-800 tabular-nums hover:bg-stone-100" onClick={() => open.feeding(f, pet.id)} aria-label={`Extra feed at ${formatTime(f.at)}. Edit`}>
+                      <button key={f.id} type="button" className="-mx-1 inline-flex min-h-11 items-center rounded-xl px-2 text-ink tabular-nums hover:bg-sunken" onClick={() => open.feeding(f, pet.id)} aria-label={`Extra feed at ${formatTime(f.at)}. Edit`}>
                         {formatTime(f.at)}
                       </button>
                     ))}
                   </td>
-                  <td className="py-1 pl-2 text-right font-semibold text-stone-800 tabular-nums">{count}</td>
+                  <td className="py-1 pl-2 text-right font-semibold text-ink tabular-nums">{count}</td>
                 </tr>
               );
             })}
@@ -138,25 +138,25 @@ export function MedicineCard({ pet, courses, medDoses, now, open, perms }: { pet
           </button>
         )}
       </div>
-      {!manages && <p className="mt-1 text-sm text-stone-600">{COURSE_REFUSAL}</p>}
-      {mine.length === 0 && <p className="mt-2 text-base text-stone-600">A short course ("1 tablet twice a day for 7 days") puts each dose on the Today board until it ends.</p>}
+      {!manages && <p className="mt-1 text-sm text-muted">{COURSE_REFUSAL}</p>}
+      {mine.length === 0 && <p className="mt-2 text-base text-muted">A short course ("1 tablet twice a day for 7 days") puts each dose on the Today board until it ends.</p>}
       <ul>
         {current.map((c) => {
           const p = progress(c, medDoses);
           return (
-            <li key={c.id} className="flex items-start gap-3 border-b border-stone-200 py-3 last:border-b-0">
-              <Pill size={22} className="mt-1 shrink-0 text-forest-700" aria-hidden="true" />
+            <li key={c.id} className="flex items-start gap-3 border-b border-line py-3 last:border-b-0">
+              <Pill size={22} className="mt-1 shrink-0 text-link" aria-hidden="true" />
               <div className="min-w-0 flex-1">
-                <p className="text-lg font-semibold text-stone-800">
-                  {c.name} <span className="font-normal text-stone-600">· {c.dose}</span>
+                <p className="text-lg font-semibold text-ink">
+                  {c.name} <span className="font-normal text-muted">· {c.dose}</span>
                 </p>
-                <p className="text-base text-stone-700">
-                  <span className="font-semibold text-forest-700">{courseText(c, now)}</span> · {timesText(c.times.length)}
+                <p className="text-base text-ink-soft">
+                  <span className="font-semibold text-link">{courseText(c, now)}</span> · {timesText(c.times.length)}
                   {c.withFood ? ' with food' : ''} · {p.given} of {p.total} doses given · {p.daysComplete} of {p.days} days complete
                 </p>
-                <p className="text-base text-stone-600">Last dose {formatDateShort(parseYmd(lastDay(c))!)}</p>
-                {c.notes && <p className="text-base text-stone-600">{c.notes}</p>}
-                {perms && !perms.mayGiveCourse(c) && <p className="text-base font-medium text-terracotta-dark">{perms.courseRefusal(c)}</p>}
+                <p className="text-base text-muted">Last dose {formatDateShort(parseYmd(lastDay(c))!)}</p>
+                {c.notes && <p className="text-base text-muted">{c.notes}</p>}
+                {perms && !perms.mayGiveCourse(c) && <p className="text-base font-medium text-attention">{perms.courseRefusal(c)}</p>}
                 {courseState(c, now) === 'active' && (
                   <button type="button" className={`${ghostButton} -ml-2 mt-1`} onClick={() => open.doseLog(c)} aria-label={`Doses by day for ${c.name}`}>
                     <History size={18} /> Doses by day
@@ -172,9 +172,9 @@ export function MedicineCard({ pet, courses, medDoses, now, open, perms }: { pet
           );
         })}
         {finished.map((c) => (
-          <li key={c.id} className="flex min-h-12 items-center gap-3 border-b border-stone-200 last:border-b-0">
-            <span className="min-w-0 flex-1 text-base text-stone-600">
-              <span className="font-medium text-stone-800">{c.name}</span> · finished {formatDateShort(parseYmd(lastDay(c))!)} · {progress(c, medDoses).given} of {progress(c, medDoses).total} doses
+          <li key={c.id} className="flex min-h-12 items-center gap-3 border-b border-line last:border-b-0">
+            <span className="min-w-0 flex-1 text-base text-muted">
+              <span className="font-medium text-ink">{c.name}</span> · finished {formatDateShort(parseYmd(lastDay(c))!)} · {progress(c, medDoses).given} of {progress(c, medDoses).total} doses
             </span>
             <button type="button" className={iconButton} onClick={() => open.doseLog(c)} aria-label={`Doses by day for ${c.name}`}>
               <History size={18} />

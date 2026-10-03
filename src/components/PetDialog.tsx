@@ -128,7 +128,7 @@ export function PetDialog({ pet, pets, now, calendarAvailable, birthday, onSave,
           <input className={inputClass} value={name} maxLength={LIMITS.petName} onChange={(e) => setName(e.target.value)} autoComplete="off" />
         </Field>
         <fieldset>
-          <legend className="mb-1.5 block text-sm font-medium text-stone-700">Kind of animal</legend>
+          <legend className="mb-1.5 block text-sm font-medium text-ink-soft">Kind of animal</legend>
           <div className="flex flex-wrap gap-2">
             {SPECIES.map((s) => (
               <Chip key={s} active={species === s} onClick={() => setSpecies(s)}>
@@ -143,7 +143,7 @@ export function PetDialog({ pet, pets, now, calendarAvailable, birthday, onSave,
           </Field>
           {byAge ? (
             <fieldset>
-              <legend className="mb-1.5 block text-sm font-medium text-stone-700">Age (optional)</legend>
+              <legend className="mb-1.5 block text-sm font-medium text-ink-soft">Age (optional)</legend>
               <div className="grid grid-cols-2 gap-2">
                 <Field label="Years">
                   <input className={inputClass} inputMode="numeric" maxLength={2} value={years} onChange={(e) => typeAge(setYears)(e.target.value)} placeholder="6" autoComplete="off" />
@@ -170,12 +170,12 @@ export function PetDialog({ pet, pets, now, calendarAvailable, birthday, onSave,
           )}
         </div>
         {youngDays !== null && youngDays >= 0 && youngDays < 91 && (
-          <p role="status" className="text-base text-stone-600">
+          <p role="status" className="text-base text-muted">
             That makes {who} {youngDays < 7 ? `${youngDays} day${youngDays === 1 ? '' : 's'}` : `${Math.floor(youngDays / 7)} week${youngDays < 14 ? '' : 's'}`} old — is the year right?
           </p>
         )}
         {byAge && (
-          <p role="status" className="text-base text-stone-600">
+          <p role="status" className="text-base text-muted">
             {!ageValid
               ? `Years from 0 to ${MAX_AGE}, and months from 0 to 11.`
               : `${ageDate ? `Shows as "${age(ageDate, now, true)}". ` : ''}No birthday reminder, since the day isn't known.`}
@@ -184,7 +184,7 @@ export function PetDialog({ pet, pets, now, calendarAvailable, birthday, onSave,
         {!partial && (
           <button
             type="button"
-            className="text-base font-medium text-forest-700 underline-offset-2 hover:underline"
+            className="text-base font-medium text-link underline-offset-2 hover:underline"
             onClick={() => {
               setByAge((b) => !b);
               setPicked(false);
@@ -207,7 +207,7 @@ export function PetDialog({ pet, pets, now, calendarAvailable, birthday, onSave,
               <input className={inputClass} inputMode="numeric" maxLength={9} value={ageOrYear} onChange={(e) => setAgeOrYear(e.target.value)} placeholder="6 or 2019" autoComplete="off" />
             </Field>
             {ageOrYear.trim() && (
-              <p role="status" className="mt-1 text-base text-stone-700">
+              <p role="status" className="mt-1 text-base text-ink-soft">
                 {fromAgeOrYear ? bornWords(fromAgeOrYear, now) : 'An age like 6, or a year like 2019.'}
               </p>
             )}
@@ -215,7 +215,7 @@ export function PetDialog({ pet, pets, now, calendarAvailable, birthday, onSave,
         )}
         <BirthdayFind name={name} available={calendarAvailable} now={now} onPick={pickBirthday} />
         <fieldset>
-          <legend className="mb-1.5 block text-sm font-medium text-stone-700">Weigh in</legend>
+          <legend className="mb-1.5 block text-sm font-medium text-ink-soft">Weigh in</legend>
           <div className="flex gap-2">
             {WEIGHT_UNITS.map((u) => (
               <Chip key={u} active={weightUnit === u} onClick={() => setWeightUnit(u)}>
@@ -235,7 +235,7 @@ export function PetDialog({ pet, pets, now, calendarAvailable, birthday, onSave,
         <Field label="Care notes (optional)" hint="Diet, allergies, anything a sitter should know.">
           <textarea className={`${inputClass} min-h-24`} value={notes} maxLength={LIMITS.petNotes} onChange={(e) => setNotes(e.target.value)} />
         </Field>
-        {pet && onDelete && <p className="text-base text-stone-600">Removing {pet.name} also removes their reminders, meals and feeds, medicine, weights and records. You can undo it right after.</p>}
+        {pet && onDelete && <p className="text-base text-muted">Removing {pet.name} also removes their reminders, meals and feeds, medicine, weights and records. You can undo it right after.</p>}
         <button type="submit" hidden />
       </form>
     </Dialog>

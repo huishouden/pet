@@ -40,7 +40,7 @@ export function FeedingDialog({ feeding, pet, meals, me, now, onSave, onDelete, 
           {onDelete && (
             <button
               type="button"
-              className="mr-auto inline-flex min-h-11 items-center gap-2 rounded-xl px-3 font-medium text-red-700 hover:bg-stone-100"
+              className="mr-auto inline-flex min-h-11 items-center gap-2 rounded-xl px-3 font-medium text-error hover:bg-sunken"
               onClick={() => {
                 onDelete();
                 onClose();
@@ -65,9 +65,9 @@ export function FeedingDialog({ feeding, pet, meals, me, now, onSave, onDelete, 
           save();
         }}
       >
-        {feeding && <p className="text-base text-stone-600">Fed by {personName(feeding.by, { email: me })}.</p>}
+        {feeding && <p className="text-base text-muted">Fed by {personName(feeding.by, { email: me })}.</p>}
         <fieldset>
-          <legend className="mb-1.5 block text-sm font-medium text-stone-700">Meal</legend>
+          <legend className="mb-1.5 block text-sm font-medium text-ink-soft">Meal</legend>
           <div className="flex flex-wrap gap-2">
             {meals.map((m) => (
               <Chip key={m.id} active={mealId === m.id} onClick={() => setMealId(m.id)}>

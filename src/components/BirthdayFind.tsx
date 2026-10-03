@@ -44,7 +44,7 @@ export function BirthdayFind({ name, available, now, onPick }: { name: string; a
     <div className="space-y-2">
       <button
         type="button"
-        className={`${ghostButton} bg-forest-50 text-forest-700 hover:bg-forest-100 disabled:opacity-50`}
+        className={`${ghostButton} bg-tint hover:bg-tint-strong disabled:opacity-50`}
         disabled={!available || !n || search.state.status === 'searching'}
         onClick={() => void search.run(birthdayQueries(n), { seriesStart: true, limit: 10 })}
       >
@@ -53,7 +53,7 @@ export function BirthdayFind({ name, available, now, onPick }: { name: string; a
       <CalendarHint app="Pet" available={available} />
       {search.state.status === 'error' && <ErrorNotice message={search.state.message} onRetry={() => void search.run(birthdayQueries(n), { seriesStart: true, limit: 10 })} />}
       {search.state.status === 'done' && found.length === 0 && (
-        <p role="status" className="text-base text-stone-600">
+        <p role="status" className="text-base text-muted">
           No birthday for {n} in your calendars from last week to a year ahead.
         </p>
       )}
@@ -67,11 +67,11 @@ export function BirthdayFind({ name, available, now, onPick }: { name: string; a
                   onPick(b.guess);
                   search.reset();
                 }}
-                className="w-full rounded-xl border border-stone-200 px-3 py-2 text-left hover:border-forest-500 hover:bg-forest-50"
+                className="w-full rounded-xl border border-line px-3 py-2 text-left hover:border-forest-500 hover:bg-tint"
               >
-                <span className="block font-medium text-stone-800">{guessWords(b.guess)}</span>
-                <span className="block text-sm text-stone-600 [overflow-wrap:anywhere]">{guessSource(b)}</span>
-                <span className="block text-sm text-stone-600">{matchWhen(b.match)}</span>
+                <span className="block font-medium text-ink">{guessWords(b.guess)}</span>
+                <span className="block text-sm text-muted [overflow-wrap:anywhere]">{guessSource(b)}</span>
+                <span className="block text-sm text-muted">{matchWhen(b.match)}</span>
               </button>
             </li>
           ))}

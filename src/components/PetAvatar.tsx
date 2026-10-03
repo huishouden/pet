@@ -60,5 +60,5 @@ export function PetChips({ pets, selected, onSelect, all = true, label = 'Pets' 
 
 const chip = (active: boolean) =>
   `inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border pr-4 text-base font-medium whitespace-nowrap transition-colors duration-150 has-[span]:pl-1.5 pl-4 ${
-    active ? 'border-forest-700 bg-forest-700 text-white' : 'border-stone-200 bg-white text-stone-700 hover:border-forest-400'
+    active ? 'border-primary bg-primary text-on-primary' : 'border-line bg-surface text-ink-soft hover:border-forest-400'
   }`;

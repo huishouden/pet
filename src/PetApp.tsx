@@ -257,7 +257,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   const logCourse = doseLog ? store.data.courses.find((c) => c.id === doseLog) : undefined;
 
   let content: ReactNode;
-  if (!store.ready) content = <p className="p-2 text-lg text-stone-600">Loading the pets</p>;
+  if (!store.ready) content = <p className="p-2 text-lg text-muted">Loading the pets</p>;
   else if (tab === 'care') content = <Care store={store} pets={pets} open={open} {...reminderActions} notify={notify} deviceSettings={deviceSettings} />;
   else if (tab === 'appointments') content = <Appointments store={store} pets={pets} open={open} calendarAvailable={calendar} notify={notify} onImport={importEvents} />;
   else if (tab === 'pets') content = <Pets store={store} pets={pets} open={open} shown={shownPet} onShow={setShownPet} {...reminderActions} notify={notify} />;
@@ -277,13 +277,13 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
 
   return (
     <PetPhotos.Provider value={photos}>
-    <div className="flex min-h-dvh flex-col bg-cream font-sans text-stone-800 antialiased lg:h-dvh lg:overflow-hidden">
+    <div className="flex min-h-dvh flex-col bg-page font-sans text-ink antialiased lg:h-dvh lg:overflow-hidden">
       <Header tabs={TABS} tab={tab} onTab={(id) => chooseTab(id as TabId)} user={user} onSignIn={onSignIn} onSignOut={onSignOut} signingIn={signingIn} />
       <main className="mx-auto flex w-full max-w-[1200px] min-h-0 flex-1 flex-col gap-4 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-6">
         {banner}
         {backfillCourse && (
-          <div role="status" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-stone-200 bg-white px-5 py-3 shadow-sm">
-            <p className="min-w-0 flex-1 text-base text-stone-800">
+          <div role="status" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-line bg-surface px-5 py-3 shadow-sm">
+            <p className="min-w-0 flex-1 text-base text-ink">
               Started on {longDate(backfillCourse.startDate, toYmd(now))}. Mark the doses already given?
             </p>
             <button type="button" className={secondaryButton} onClick={() => open.doseLog(backfillCourse)}>

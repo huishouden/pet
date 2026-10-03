@@ -79,7 +79,7 @@ export function AppointmentDialog({ appointment, petId, pets, now, contacts, cal
           {onDelete && (
             <button
               type="button"
-              className="mr-auto inline-flex min-h-11 items-center gap-2 rounded-xl px-3 font-medium text-red-700 hover:bg-stone-100"
+              className="mr-auto inline-flex min-h-11 items-center gap-2 rounded-xl px-3 font-medium text-error hover:bg-sunken"
               onClick={() => {
                 onDelete();
                 onClose();
@@ -125,7 +125,7 @@ export function AppointmentDialog({ appointment, petId, pets, now, contacts, cal
 
         {pets.length > 0 && (
           <fieldset>
-            <legend className="mb-1.5 block text-sm font-medium text-stone-700">For</legend>
+            <legend className="mb-1.5 block text-sm font-medium text-ink-soft">For</legend>
             <div className="flex flex-wrap gap-2">
               {pets.map((p) => (
                 <Chip key={p.id} active={petIds.includes(p.id)} onClick={() => togglePet(p.id)}>
@@ -137,7 +137,7 @@ export function AppointmentDialog({ appointment, petId, pets, now, contacts, cal
         )}
 
         <fieldset>
-          <legend className="mb-1.5 block text-sm font-medium text-stone-700">Kind</legend>
+          <legend className="mb-1.5 block text-sm font-medium text-ink-soft">Kind</legend>
           <div className="flex flex-wrap gap-2">
             {APPOINTMENT_KINDS.map((k) => (
               <Chip key={k} active={kind === k} onClick={() => setKind(k)}>

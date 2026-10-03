@@ -36,7 +36,7 @@ export function MealDialog({ meal, pet, onSave, onDelete, onClose }: {
           {onDelete && (
             <button
               type="button"
-              className="mr-auto inline-flex min-h-11 items-center gap-2 rounded-xl px-3 font-medium text-red-700 hover:bg-stone-100"
+              className="mr-auto inline-flex min-h-11 items-center gap-2 rounded-xl px-3 font-medium text-error hover:bg-sunken"
               onClick={() => {
                 onDelete();
                 onClose();
