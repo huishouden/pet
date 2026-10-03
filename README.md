@@ -110,7 +110,7 @@ own buttons make:
 | Item | Ref | Done | Cancel |
 |---|---|---|---|
 | a care reminder due today or overdue, not dismissed ("Flea and tick", the pet as who, due its day, added when the reminder was) | `reminder:<id>` | Given ("Done" for Other): logs a dose (`petDoses/todo-<id>-<due>`) and sets `lastDoneAt`, and a repeating one's next due day from today; admins, members, helpers | Dismiss: sets `dismissedAt`; admins, members and whoever added it |
-| each of today's doses of a course not yet given or skipped ("Antibiotic for Pepper", the dose and its time, added when the course was) | `dose:<courseId>:<day>:<slot>` | Given: logs the dose (`petMedDoses/todo-<courseId>-<day>-<slot>`) | Skip: the same, `skipped: true` |
+| each of today's doses of a course not yet given or skipped ("Antibiotic for Pepper", the dose and its time, added when the course was) | `dose:<courseId>:<day>:<slot>` | Given: logs the dose at its own time that day (`petMedDoses/todo-<courseId>-<day>-<slot>`), so an item left over from yesterday never ticks today's | Skip: the same, `skipped: true` |
 
 A course's doses go to admins, members and helpers, or with "Only approved helpers" to admins,
 members and those helpers by name; never kids, and Given on care never for kids either (it logs a

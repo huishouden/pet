@@ -177,28 +177,45 @@ describe('running an item does what Pet does', () => {
     expect(todoItems(viaTodo, later, ORIGIN).some((i) => i.ref === 'reminder:demo-rem-1')).toBe(false);
   });
 
-  test('Given and Skip on a dose: the same dose Pet logs (skipped for Skip), under one id per course, day and slot; then not published', () => {
+  test('Given and Skip on a dose: the dose Pet logs at the slot’s time (skipped for Skip), under one id per course, day and slot; then not published', () => {
     const data = demoData();
     const course: Course = data.courses.find((c) => c.id === 'demo-course-1')!;
     const ref = `dose:${course.id}:${TODAY}:0`;
     const item = byRef(todoItems(data, DEMO_NOW, ORIGIN)).get(ref)!;
     const id = todoMedDoseId(course.id, TODAY, 0);
-    expect(item.done!.ops).toEqual([{ col: 'petMedDoses', id, data: { petId: course.petId, courseId: course.id, slot: 0, at: '$now', by: '$me', createdAt: '$now' } }]);
-    expect(item.cancel!.ops).toEqual([{ col: 'petMedDoses', id, data: { petId: course.petId, courseId: course.id, slot: 0, at: '$now', skipped: true, by: '$me', createdAt: '$now' } }]);
+    const slot = slotAt('09:00', TODAY);
+    expect(item.done!.ops).toEqual([{ col: 'petMedDoses', id, data: { petId: course.petId, courseId: course.id, slot: 0, at: slot, by: '$me', createdAt: slot } }]);
+    expect(item.cancel!.ops).toEqual([{ col: 'petMedDoses', id, data: { petId: course.petId, courseId: course.id, slot: 0, at: slot, skipped: true, by: '$me', createdAt: slot } }]);
 
+    // Pet's own tick of that slot at its time (as on an earlier day): the same dose but for when it was logged.
     const given = applyTodoOps(data, item.done!.ops, later);
     const inApp = app(data, later);
-    const mine = inApp.actions.giveMedDose(course, 0, later);
-    expect(withoutId(given.medDoses.find((d) => d.id === id)!)).toEqual(withoutId(mine));
+    const mine = inApp.actions.giveMedDose(course, 0, slot);
+    expect(withoutId(given.medDoses.find((d) => d.id === id)!)).toEqual({ ...withoutId(mine), createdAt: slot });
     expect(dosesOn(course, given.medDoses, TODAY, later)[0].status.state).toBe('given');
     expect(todoItems(given, later, ORIGIN).some((i) => i.ref === ref)).toBe(false);
 
     const skipped = applyTodoOps(data, item.cancel!.ops, later);
     const inApp2 = app(data, later);
-    const mySkip = inApp2.actions.skipMedDose(course, 0, later);
-    expect(withoutId(skipped.medDoses.find((d) => d.id === id)!)).toEqual(withoutId(mySkip));
+    const mySkip = inApp2.actions.skipMedDose(course, 0, slot);
+    expect(withoutId(skipped.medDoses.find((d) => d.id === id)!)).toEqual({ ...withoutId(mySkip), createdAt: slot });
     expect(dosesOn(course, skipped.medDoses, TODAY, later)[0].status.state).toBe('skipped');
     expect(todoItems(skipped, later, ORIGIN).some((i) => i.ref === ref)).toBe(false);
     for (const k of Object.keys(withoutId(mySkip))) expect(FIELDS.petMedDoses as readonly string[]).toContain(k);
   });
+
+  test('an item still listed the next morning logs the dose it was for, and leaves that day’s dose due', () => {
+    const data = demoData();
+    const course: Course = data.courses.find((c) => c.id === 'demo-course-1')!;
+    const item = byRef(todoItems(data, DEMO_NOW, ORIGIN)).get(`dose:${course.id}:${TODAY}:0`)!;
+    const nextMorning = DEMO_NOW + 24 * 3_600_000 - 2 * 3_600_000;
+    const tomorrow = toYmd(nextMorning);
+    for (const which of ['done', 'cancel'] as const) {
+      const after = applyTodoOps(data, item[which]!.ops, nextMorning);
+      expect(dosesOn(course, after.medDoses, TODAY, nextMorning)[0].status.state).toBe(which === 'done' ? 'given' : 'skipped');
+      expect(dosesOn(course, after.medDoses, tomorrow, nextMorning)[0].status.state).toBe('due');
+      expect(todoItems(after, nextMorning, ORIGIN).some((i) => i.ref === `dose:${course.id}:${tomorrow}:0`)).toBe(true);
+    }
+  });
 });
+
