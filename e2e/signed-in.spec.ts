@@ -132,12 +132,13 @@ test('care due today, done from the portal’s To-do list, moves on to its next 
   try {
     // Pet publishes it within seconds; the portal's Done gives it as Pet's own Done would.
     await runPortalTodo(page, title, { action: 'done' });
-    await page.goto('./?tab=care');
+    // Back in Pet, signed in afresh (signing in again is harmless if the session carried over).
+    await signInTestUser(page, { email: 'test-a@example.com', path: './?tab=care' });
     const row = page.getByRole('listitem').filter({ hasText: title });
     await expect(row).toContainText('Due in 7 days', { timeout: 20_000 });
     await expect(row).toContainText('last given today');
   } finally {
-    await page.goto('./?tab=care');
+    await signInTestUser(page, { email: 'test-a@example.com', path: './?tab=care' });
     const edit = page.getByRole('button', { name: `Edit ${title} for ${PET}` });
     await expect(edit.first()).toBeVisible({ timeout: 20_000 });
     await edit.first().click();
