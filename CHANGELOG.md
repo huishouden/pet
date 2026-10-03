@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/huishouden/pet/compare/v1.7.1...v1.8.0) (2026-10-03)
+
+
+### Features
+
+* **contacts:** add a vet or sitter from your own contacts; contact cards in the Share menu ([#33](https://github.com/huishouden/pet/issues/33)) ([81a6b18](https://github.com/huishouden/pet/commit/81a6b180bfa528d6593a469c633952bce6e7cba4))
+
 ## [1.7.1](https://github.com/huishouden/pet/compare/v1.7.0...v1.7.1) (2026-10-03)
 
 
