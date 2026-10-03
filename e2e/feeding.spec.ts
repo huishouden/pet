@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 // has had AM but not his 9:00 antibiotic, Miso has not had AM and her cut-off (9:00) has passed.
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime('2031-05-14T10:30:00');
-  await page.goto('/');
+  await page.goto('./');
 });
 
 test('the board shows who fed whom and who is still waiting', async ({ page }) => {
@@ -93,7 +93,7 @@ test('Scan the label fills the course from the photo and lists what it did not u
   await page.addInitScript((text) => {
     (window as unknown as { __mockLabelText: string }).__mockLabelText = text;
   }, label);
-  await page.goto('/?tab=pets&pet=demo-pet-miso');
+  await page.goto('./?tab=pets&pet=demo-pet-miso');
   await page.getByRole('region', { name: "Miso's medicine" }).getByRole('button', { name: 'Add course' }).click();
   const dialog = page.getByRole('dialog', { name: 'Medicine course for Miso' });
   await expect(dialog.getByRole('button', { name: 'Scan the label' })).toBeVisible();

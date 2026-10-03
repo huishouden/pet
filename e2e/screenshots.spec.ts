@@ -18,28 +18,28 @@ test('today', ({ page }) =>
 
 test('birthday', ({ page }) =>
   captureScreenshot(page, 'birthday', {
-    path: '/?tab=pets&pet=demo-pet-biscuit',
+    path: './?tab=pets&pet=demo-pet-biscuit',
     fixedTime,
     prepare: (p) => expect(p.getByRole('region', { name: "Biscuit's profile" }).getByText('Happy birthday, Biscuit!')).toBeVisible(),
   }));
 
 test('care', ({ page }) =>
   captureScreenshot(page, 'care', {
-    path: '/?tab=care',
+    path: './?tab=care',
     fixedTime,
     prepare: (p) => expect(p.getByRole('region', { name: 'Overdue' })).toBeVisible(),
   }));
 
 test('pet', ({ page }) =>
   captureScreenshot(page, 'pet', {
-    path: '/?tab=pets',
+    path: './?tab=pets',
     fixedTime,
     prepare: (p) => expect(p.getByRole('region', { name: "Biscuit's weight" })).toBeVisible(),
   }));
 
 test('weight target', ({ page }) =>
   captureScreenshot(page, 'weight-target', {
-    path: '/?tab=pets',
+    path: './?tab=pets',
     fixedTime,
     prepare: async (p) => {
       const weight = p.getByRole('region', { name: "Biscuit's weight" });
@@ -50,21 +50,21 @@ test('weight target', ({ page }) =>
 
 test('appointments', ({ page }) =>
   captureScreenshot(page, 'appointments', {
-    path: '/?tab=appointments',
+    path: './?tab=appointments',
     fixedTime,
     prepare: (p) => expect(p.getByText('Yearly check-up')).toBeVisible(),
   }));
 
 test('contacts', ({ page }) =>
   captureScreenshot(page, 'contacts', {
-    path: '/?tab=contacts',
+    path: './?tab=contacts',
     fixedTime,
     prepare: (p) => expect(p.getByText('Example Vet Clinic')).toBeVisible(),
   }));
 
 test('new reminder', ({ page }) =>
   captureScreenshot(page, 'new-reminder', {
-    path: '/?tab=care',
+    path: './?tab=care',
     fixedTime,
     prepare: async (p) => {
       await p.getByRole('button', { name: 'Add reminder' }).click();
@@ -77,7 +77,7 @@ test('new reminder', ({ page }) =>
 test('contact search', async ({ page }) => {
   await page.route('https://nominatim.openstreetmap.org/**', (route) => route.fulfill({ json: places }));
   await captureScreenshot(page, 'contact-search', {
-    path: '/?tab=contacts',
+    path: './?tab=contacts',
     fixedTime,
     prepare: async (p) => {
       await p.getByRole('button', { name: 'Add contact' }).click();
@@ -92,7 +92,7 @@ test('contact search', async ({ page }) => {
 test('calendar import', async ({ page }) => {
   await page.addInitScript(mockCalendar, calendarEvents);
   await captureScreenshot(page, 'calendar-import', {
-    path: '/?tab=appointments',
+    path: './?tab=appointments',
     fixedTime,
     prepare: async (p) => {
       await p.getByRole('button', { name: 'Import from calendar' }).click();
@@ -112,7 +112,7 @@ test('phone: today', async ({ page }) => {
 test('phone: pet', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await captureScreenshot(page, 'phone-pet', {
-    path: '/?tab=pets',
+    path: './?tab=pets',
     fixedTime,
     prepare: (p) => expect(p.getByRole('region', { name: "Biscuit's weight" })).toBeVisible(),
   });
@@ -124,7 +124,7 @@ test('scan the label', async ({ page }) => {
     (window as unknown as { __mockLabelText: string }).__mockLabelText = text;
   }, label);
   await captureScreenshot(page, 'scan-label', {
-    path: '/?tab=pets&pet=demo-pet-miso',
+    path: './?tab=pets&pet=demo-pet-miso',
     fixedTime,
     prepare: async (p) => {
       await p.getByRole('region', { name: "Miso's medicine" }).getByRole('button', { name: 'Add course' }).click();
@@ -140,7 +140,7 @@ test('scan the label', async ({ page }) => {
 // only approved helpers may give refused in words.
 test('who can give a course', ({ page }) =>
   captureScreenshot(page, 'course-givers', {
-    path: '/?tab=pets&pet=demo-pet-biscuit',
+    path: './?tab=pets&pet=demo-pet-biscuit',
     fixedTime,
     prepare: async (p) => {
       await p.getByRole('button', { name: 'Edit Antibiotic' }).click();
@@ -151,7 +151,7 @@ test('who can give a course', ({ page }) =>
 
 test('a private appointment', ({ page }) =>
   captureScreenshot(page, 'appointment-private', {
-    path: '/?tab=appointments',
+    path: './?tab=appointments',
     fixedTime,
     prepare: async (p) => {
       await p.getByRole('button', { name: /^Add appointment|^New appointment|^Add$/ }).first().click();
@@ -162,7 +162,7 @@ test('a private appointment', ({ page }) =>
 
 test('a helper’s pet page', ({ page }) =>
   captureScreenshot(page, 'helper-pet', {
-    path: '/?tab=pets&pet=demo-pet-biscuit&as=helper',
+    path: './?tab=pets&pet=demo-pet-biscuit&as=helper',
     fixedTime,
     prepare: async (p) => {
       await expect(p.getByText('Only approved helpers can give Antibiotic.')).toBeVisible();
@@ -172,7 +172,7 @@ test('a helper’s pet page', ({ page }) =>
 
 test('a helper’s refused dose', ({ page }) =>
   captureScreenshot(page, 'helper-dose-refused', {
-    path: '/?as=helper',
+    path: './?as=helper',
     fixedTime,
     prepare: async (p) => {
       await p.getByRole('button', { name: /^Biscuit Antibiotic/ }).first().click();

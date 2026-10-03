@@ -11,7 +11,7 @@ import otherContacts from './fixtures/contacts/other-contacts.json' with { type:
 const fixture = (name: string) => new URL(`./fixtures/contacts/${name}`, import.meta.url).pathname;
 
 const newContact = async (page: Page) => {
-  await page.goto('/?tab=contacts');
+  await page.goto('./?tab=contacts');
   await page.getByRole('button', { name: 'Add contact' }).click();
   return page.getByRole('dialog', { name: 'New contact' });
 };
@@ -98,7 +98,7 @@ test('Find in my Google Contacts searches saved and other contacts', async ({ pa
 });
 
 test('a contact card shared to the app opens a new contact, filled in', async ({ page }) => {
-  await shareContactCard(page, readFileSync(fixture('sitter.vcf'), 'utf8'), { name: 'Casey Example.vcf' });
+  await shareContactCard(page, readFileSync(fixture('sitter.vcf'), 'utf8'), { name: 'Casey Example.vcf', path: './' });
   const dialog = page.getByRole('dialog', { name: 'New contact' });
   await expect(dialog.getByLabel('Name', { exact: true })).toHaveValue('Casey Example');
   await expect(dialog.getByText('from the shared contact')).toBeVisible();
@@ -107,14 +107,14 @@ test('a contact card shared to the app opens a new contact, filled in', async ({
 
 test('a place shared to the app still opens a new contact', async ({ page }) => {
   // Google Maps shares text, not a file: the service worker sends it on to the place flow.
-  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.goto('./', { waitUntil: 'networkidle' });
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.reload({ waitUntil: 'networkidle' });
   const target = await page.evaluate(async () => {
     const form = new FormData();
     form.append('share_title', 'Example Animal Hospital');
     form.append('share_text', 'Example Animal Hospital\n1234 Example Ave, Springfield, IL 62704');
-    return (await fetch('/share-target', { method: 'POST', body: form })).url;
+    return (await fetch('./share-target', { method: 'POST', body: form })).url;
   });
   await page.goto(target);
   const dialog = page.getByRole('dialog', { name: 'New contact' });

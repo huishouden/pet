@@ -18,10 +18,12 @@ export default defineConfig({
     react(),
     tailwindcss(),
     pwaApp({
+      // Pet's path on the suite's one site (pwa-kit docs/one-site.md).
+      base: '/pet/',
       name: 'Huishouden Pet',
       shortName: 'Pet',
       description: 'Looking after the pets, together',
-      url: 'https://huishouden-pet.web.app',
+      url: 'https://huishouden-piekstra.web.app/pet/',
       push: true,
       ocr: true,
       // Google Maps places and contact cards from the Share menu (Android, installed).

@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime('2031-05-14T10:30:00');
-  await page.goto('/');
+  await page.goto('./');
 });
 
 const photoOf = (scope: ReturnType<import('@playwright/test').Page['locator']>) => scope.locator('img[src^="data:image/webp;base64,"]');
