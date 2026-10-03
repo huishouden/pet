@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/huishouden/pet/compare/v1.8.0...v1.9.0) (2026-10-03)
+
+
+### Features
+
+* Pet moves to /pet/ on the suite's one site (pwa-kit 0.48.0) ([#35](https://github.com/huishouden/pet/issues/35)) ([ff84a80](https://github.com/huishouden/pet/commit/ff84a80a988c52f1537d78b46dc68496692cdc36))
+
 ## [1.8.0](https://github.com/huishouden/pet/compare/v1.7.1...v1.8.0) (2026-10-03)
 
 
