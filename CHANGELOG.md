@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/huishouden/pet/compare/v1.9.1...v1.10.0) (2026-10-03)
+
+
+### Features
+
+* sections in a bottom bar on phones (kit 0.52.0) ([#39](https://github.com/huishouden/pet/issues/39)) ([d701114](https://github.com/huishouden/pet/commit/d70111432d2878d23feff85a7e11af8f9f2225ca))
+
 ## [1.9.1](https://github.com/huishouden/pet/compare/v1.9.0...v1.9.1) (2026-10-03)
 
 
