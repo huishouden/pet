@@ -10,7 +10,7 @@ and medicine board, and the pets; tap a pet for its page, which holds its profil
 medicine courses and care. On a pet's birthday, Today and its page celebrate. Everyone in the
 household sees and updates the same.
 
-Live at https://huishouden-pet.web.app, also linked from the [Huishouden portal](https://huishouden-piekstra.web.app).
+Live at https://huishouden-piekstra.web.app/pet/, also linked from the [Huishouden portal](https://huishouden-piekstra.web.app). The old address, huishouden-pet.web.app, redirects there.
 Installable on the tablet, phones and laptops, and works offline (changes sync when the connection is back).
 
 ## Screenshots

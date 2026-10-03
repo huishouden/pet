@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('Today leads with what is overdue, and Given moves it on with an undo', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('./');
   const needs = page.getByRole('region', { name: 'Needs doing' });
   await expect(needs.getByRole('listitem').first()).toContainText('Flea and tick for Biscuit');
   await expect(needs.getByRole('listitem').first()).toContainText('Overdue by 2 days');
@@ -18,7 +18,7 @@ test('Today leads with what is overdue, and Given moves it on with an undo', asy
 });
 
 test('Care groups reminders by when they are due, filtered by pet', async ({ page }) => {
-  await page.goto('/?tab=care');
+  await page.goto('./?tab=care');
   await expect(page.getByRole('region', { name: 'Overdue' })).toContainText('2 days overdue');
   await expect(page.getByRole('region', { name: 'Due this week' })).toContainText('Kidney supplement');
   await page.getByRole('button', { name: 'Miso', exact: true }).click();
@@ -28,7 +28,7 @@ test('Care groups reminders by when they are due, filtered by pet', async ({ pag
 });
 
 test('a new reminder from a preset repeats every month and shows its due date', async ({ page }) => {
-  await page.goto('/?tab=care');
+  await page.goto('./?tab=care');
   await page.getByRole('button', { name: 'Add reminder' }).click();
   const dialog = page.getByRole('dialog', { name: 'New reminder' });
   await dialog.getByRole('button', { name: 'Miso', exact: true }).click();
@@ -42,7 +42,7 @@ test('a new reminder from a preset repeats every month and shows its due date', 
 });
 
 test('the dose history shows who gave it', async ({ page }) => {
-  await page.goto('/?tab=care');
+  await page.goto('./?tab=care');
   await page.getByRole('button', { name: 'Edit Kidney supplement for Miso' }).click();
   const given = page.getByRole('dialog', { name: 'Edit reminder' }).getByRole('region', { name: 'Given' });
   await expect(given.getByRole('listitem')).toHaveCount(3);

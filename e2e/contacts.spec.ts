@@ -5,7 +5,7 @@ import places from './fixtures/nominatim.json' with { type: 'json' };
 // OpenStreetMap's Nominatim, stubbed here with invented results.
 
 test('the vet is one tap from a call or a map', async ({ page }) => {
-  await page.goto('/?tab=contacts');
+  await page.goto('./?tab=contacts');
   const card = page.getByRole('region', { name: 'Example Vet Clinic' });
   await expect(card).toContainText('Vet');
   await expect(card.getByRole('link', { name: 'Call Example Vet Clinic, (555) 010-0150' })).toHaveAttribute('href', 'tel:5550100150');
@@ -19,7 +19,7 @@ test('Find a business fills the contact from OpenStreetMap, only on Search', asy
     searches++;
     return route.fulfill({ json: places });
   });
-  await page.goto('/?tab=contacts');
+  await page.goto('./?tab=contacts');
   await page.getByRole('button', { name: 'Add contact' }).click();
   const dialog = page.getByRole('dialog', { name: 'New contact' });
   await dialog.getByLabel('Phone').fill('(555) 010-0199');
@@ -46,7 +46,7 @@ test('Find a business fills the contact from OpenStreetMap, only on Search', asy
 });
 
 test('deleting a contact can be undone', async ({ page }) => {
-  await page.goto('/?tab=contacts');
+  await page.goto('./?tab=contacts');
   await page.getByRole('button', { name: 'Delete Example Pet Lodge' }).click();
   await expect(page.getByRole('region', { name: 'Example Pet Lodge' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
@@ -54,7 +54,7 @@ test('deleting a contact can be undone', async ({ page }) => {
 });
 
 test('an appointment with the vet takes their address and shows their phone', async ({ page }) => {
-  await page.goto('/?tab=appointments');
+  await page.goto('./?tab=appointments');
   await page.getByRole('button', { name: 'Add appointment' }).click();
   const dialog = page.getByRole('dialog', { name: 'New appointment' });
   await dialog.getByLabel('What').fill('Booster shots');
@@ -71,7 +71,7 @@ test('an appointment with the vet takes their address and shows their phone', as
 
 test('a place shared from Google Maps opens a new contact, prefilled', async ({ page }) => {
   const text = 'Example Animal Hospital\n1234 Example Ave, Springfield, IL 62704\nhttps://maps.app.goo.gl/example1';
-  await page.goto(`/?share_title=${encodeURIComponent('Example Animal Hospital')}&share_text=${encodeURIComponent(text)}`);
+  await page.goto(`./?share_title=${encodeURIComponent('Example Animal Hospital')}&share_text=${encodeURIComponent(text)}`);
   const dialog = page.getByRole('dialog', { name: 'New contact' });
   await expect(dialog.getByLabel('Name')).toHaveValue('Example Animal Hospital');
   await expect(dialog.getByLabel('Address')).toHaveValue('1234 Example Ave, Springfield, IL 62704');
@@ -80,7 +80,7 @@ test('a place shared from Google Maps opens a new contact, prefilled', async ({ 
 });
 
 test('the installed app is offered in the Share menu', async ({ request }) => {
-  const manifest = await (await request.get('/manifest.webmanifest')).json();
+  const manifest = await (await request.get('./manifest.webmanifest')).json();
   expect(manifest.share_target).toEqual({
     action: 'share-target',
     method: 'POST',
@@ -95,7 +95,7 @@ test('the installed app is offered in the Share menu', async ({ request }) => {
 });
 
 test('pasted listing text fills the contact and shows what was not used', async ({ page }) => {
-  await page.goto('/?tab=contacts');
+  await page.goto('./?tab=contacts');
   await page.getByRole('button', { name: 'Add contact' }).click();
   const dialog = page.getByRole('dialog', { name: 'New contact' });
   await dialog.getByRole('button', { name: 'Paste listing text' }).click();
@@ -111,7 +111,7 @@ test('pasted listing text fills the contact and shows what was not used', async 
 
 test('a Google Maps screenshot is read on the device and fills the contact', async ({ page }) => {
   test.setTimeout(120_000); // the OCR engine downloads on first use
-  await page.goto('/?tab=contacts');
+  await page.goto('./?tab=contacts');
   await page.getByRole('button', { name: 'Add contact' }).click();
   const dialog = page.getByRole('dialog', { name: 'New contact' });
   await expect(dialog).toContainText('Take a screenshot of the business in Google Maps, then choose it here.');

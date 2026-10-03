@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime('2031-05-14T10:30:00');
-  await page.goto('/?tab=pets');
+  await page.goto('./?tab=pets');
 });
 
 test('a pet page shows the profile, the weight trend and the records', async ({ page }) => {

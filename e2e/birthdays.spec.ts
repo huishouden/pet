@@ -13,7 +13,7 @@ async function addPet(page: Page, name: string) {
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(mockCalendar, [...calendarEvents, ...birthdayEvents]);
-  await page.goto('/?tab=pets');
+  await page.goto('./?tab=pets');
 });
 
 test('the sample pets show their next birthday', async ({ page }) => {
@@ -115,7 +115,7 @@ test('Import from calendar offers birthdays instead of adding them as visits', a
 
 test('Import from calendar sets a birthday whose title gives the age', async ({ page }) => {
   await page.addInitScript(mockCalendar, [...calendarEvents, ...birthdayEvents, { ...birthdayEvents[1], id: 'evt-bo-bday', title: "Bo's 3rd birthday" }]);
-  await page.goto('/?tab=pets');
+  await page.goto('./?tab=pets');
   await addPet(page, 'Bo');
   await page.getByRole('button', { name: 'Appointments', exact: true }).click();
   await page.getByRole('button', { name: 'Import from calendar' }).click();

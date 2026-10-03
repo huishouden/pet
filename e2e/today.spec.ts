@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 // and Biscuit's birthday.
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime('2031-05-14T10:30:00');
-  await page.goto('/');
+  await page.goto('./');
 });
 
 test('Needs doing comes first, most overdue first, the late dose saying how late', async ({ page }) => {
@@ -71,7 +71,7 @@ test('the pets row opens a pet’s page, where its details live', async ({ page 
 
 test('on a phone the overdue dose and its Given button are on screen without scrolling', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
+  await page.goto('./');
   const given = page.getByRole('region', { name: 'Needs doing' }).getByRole('button', { name: 'Given: Antibiotic for Biscuit' });
   await expect(given).toBeInViewport({ ratio: 1 });
   const box = await given.boundingBox();

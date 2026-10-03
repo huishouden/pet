@@ -2,6 +2,7 @@
 // per remaining dose of a medicine course, and one per meal cut-off that nobody has ticked yet.
 // Pure: the live store writes these with replaceReminders; the sample never does.
 
+import { appUrl } from '@huishouden/pwa-kit/site';
 import { remindersForCourse, type ReminderInput } from '@huishouden/pwa-kit/reminders';
 import type { Course, Feeding, Meal, MedDose, Pet } from './model';
 import { courseState } from './courses';
@@ -10,14 +11,19 @@ import { addDays, startOfDay } from '@huishouden/pwa-kit/time';
 import { birthdayReminder } from './birthday';
 
 export const APP = 'pet';
-export const APP_URL = 'https://huishouden-pet.web.app';
+/** Pet's path on the suite's one site (pwa-kit docs/one-site.md); bun tests have no Vite env. */
+export const APP_BASE = import.meta.env.BASE_URL ?? '/pet/';
+/** The page's origin, so staging links to staging; tests run without a page. */
+export const APP_ORIGIN = globalThis.location?.origin ?? 'https://huishouden-piekstra.web.app';
+/** The app's own address: Today, its home. */
+export const APP_URL = appUrl(APP_BASE, '', APP_ORIGIN);
 
 export const courseRef = (courseId: string) => `${APP}:course:${courseId}`;
 export const mealsRef = (petId: string) => `${APP}:meals:${petId}`;
 export const birthdayRef = (petId: string) => `${APP}:birthday:${petId}`;
 
 /** A link that opens Pet on one pet's page. */
-export const petUrl = (petId: string) => `${APP_URL}/?tab=pets&pet=${encodeURIComponent(petId)}`;
+export const petUrl = (petId: string) => appUrl(APP_BASE, `?tab=pets&pet=${encodeURIComponent(petId)}`, APP_ORIGIN);
 
 /**
  * Every remaining dose of a running or upcoming course, except doses already ticked today (given
@@ -53,7 +59,7 @@ export function mealReminders(pet: Pick<Pet, 'id' | 'name'>, meals: Meal[], feed
         title: `${pet.name}: ${meal.name} not fed yet`,
         body: 'Nobody has ticked it on the board. Tap to open Pet.',
         at,
-        url: `${APP_URL}/`,
+        url: APP_URL,
         ref: mealsRef(pet.id),
       });
     }

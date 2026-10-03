@@ -12,7 +12,8 @@ import { nextBirthday } from './birthday';
 import { dosesOn, lastDay, slotAt, timesText } from './courses';
 import { fedTodayFor, mealAt, mealsOf } from './feeding';
 import { describeRecurrence, dueState } from './schedule';
-import { APP, APP_URL } from './notify';
+import { appUrl } from '@huishouden/pwa-kit/site';
+import { APP, APP_BASE, APP_ORIGIN } from './notify';
 
 /** The repo short name the agenda files Pet's items under. */
 export const AGENDA_APP = APP;
@@ -29,12 +30,15 @@ export const doseRef = (courseId: string, day: string, slot: number) => `dose:${
 /** How far ahead a birthday is published. */
 export const BIRTHDAY_AHEAD_DAYS = 180;
 
-/** A link that opens one tab (Today, where meals and doses are ticked, is the app's home), on one pet when given. */
-export function tabUrl(tab: 'today' | 'care' | 'appointments' | 'pets', petId?: string, appUrl = APP_URL): string {
-  if (tab === 'today') return `${appUrl}/`;
+/**
+ * A link that opens one tab (Today, where meals and doses are ticked, is the app's home), on one pet
+ * when given. `origin` is the page's in the browser, so staging links to staging.
+ */
+export function tabUrl(tab: 'today' | 'care' | 'appointments' | 'pets', petId?: string, origin = APP_ORIGIN): string {
+  if (tab === 'today') return appUrl(APP_BASE, '', origin);
   const params = new URLSearchParams({ tab });
   if (petId) params.set('pet', petId);
-  return `${appUrl}/?${params}`;
+  return appUrl(APP_BASE, `?${params}`, origin);
 }
 
 const nameOf = (pets: Pick<Pet, 'id' | 'name'>[], id: string) => pets.find((p) => p.id === id)?.name.trim() || undefined;
@@ -44,7 +48,7 @@ const inWindow = (items: AgendaEntry[], now: number) => items.filter((i) => inAg
 export const forPet = (what: string, who: string | undefined) => (who ? `${what.trim()} for ${who}` : what.trim()).slice(0, AGENDA_LIMITS.title);
 
 /** An appointment at its time, at its place, for the pets it is for. */
-export function appointmentAgenda(a: Appointment, pets: Pick<Pet, 'id' | 'name'>[], now: number, appUrl = APP_URL): AgendaEntry[] {
+export function appointmentAgenda(a: Appointment, pets: Pick<Pet, 'id' | 'name'>[], now: number, origin = APP_ORIGIN): AgendaEntry[] {
   if (!a.title.trim() || !Number.isFinite(a.at)) return [];
   const who = a.petIds.map((id) => nameOf(pets, id)).filter(Boolean).join(', ');
   const location = a.location?.trim();
@@ -56,7 +60,7 @@ export function appointmentAgenda(a: Appointment, pets: Pick<Pet, 'id' | 'name'>
         start: a.at,
         allDay: false,
         ...(location ? { detail: location } : {}),
-        url: tabUrl('appointments', a.petIds.length === 1 ? a.petIds[0] : undefined, appUrl),
+        url: tabUrl('appointments', a.petIds.length === 1 ? a.petIds[0] : undefined, origin),
         ...(who ? { who } : {}),
         // A private appointment stays private on the agenda: helpers and kids never read it.
         ...(a.private ? { private: true } : {}),
@@ -67,7 +71,7 @@ export function appointmentAgenda(a: Appointment, pets: Pick<Pet, 'id' | 'name'>
 }
 
 /** A care reminder's next due day only, overdue once that day has passed. A given one-off has none. */
-export function reminderAgenda(r: Reminder, pets: Pick<Pet, 'id' | 'name'>[], now: number, appUrl = APP_URL): AgendaEntry[] {
+export function reminderAgenda(r: Reminder, pets: Pick<Pet, 'id' | 'name'>[], now: number, origin = APP_ORIGIN): AgendaEntry[] {
   const state = dueState(r, now);
   if (state === 'done' || parseYmd(r.due) === null || !r.title.trim()) return [];
   const who = nameOf(pets, r.petId);
@@ -79,7 +83,7 @@ export function reminderAgenda(r: Reminder, pets: Pick<Pet, 'id' | 'name'>[], no
         start: allDayStart(r.due),
         allDay: true,
         detail: describeRecurrence(r),
-        url: tabUrl('care', undefined, appUrl),
+        url: tabUrl('care', undefined, origin),
         ...(who ? { who } : {}),
         status: state === 'overdue' ? 'overdue' : 'upcoming',
       },
@@ -97,7 +101,7 @@ export function courseDetail(c: Pick<Course, 'dose' | 'times' | 'timesPerDay' | 
  * A medicine course as one all-day item from its first day through its last, for the calendar. It
  * has no status, so the portal's Today leaves it out; the doses below are what Today shows.
  */
-export function courseAgenda(c: Course, pets: Pick<Pet, 'id' | 'name'>[], now: number, appUrl = APP_URL): AgendaEntry[] {
+export function courseAgenda(c: Course, pets: Pick<Pet, 'id' | 'name'>[], now: number, origin = APP_ORIGIN): AgendaEntry[] {
   if (parseYmd(c.startDate) === null || !c.name.trim()) return [];
   const who = nameOf(pets, c.petId);
   return inWindow(
@@ -109,7 +113,7 @@ export function courseAgenda(c: Course, pets: Pick<Pet, 'id' | 'name'>[], now: n
         end: allDayStart(addDays(lastDay(c), 1)),
         allDay: true,
         detail: courseDetail(c),
-        url: tabUrl('pets', c.petId, appUrl),
+        url: tabUrl('pets', c.petId, origin),
         ...(who ? { who } : {}),
       },
     ],
@@ -122,7 +126,7 @@ export function courseAgenda(c: Course, pets: Pick<Pet, 'id' | 'name'>[], now: n
  * the dose as the detail): done once given that day, otherwise upcoming (the kit reads it as overdue
  * once its time has passed). Days outside the course have none.
  */
-export function doseAgenda(c: Course, medDoses: MedDose[], pets: Pick<Pet, 'id' | 'name'>[], now: number, appUrl = APP_URL): { ref: string; items: AgendaEntry[] }[] {
+export function doseAgenda(c: Course, medDoses: MedDose[], pets: Pick<Pet, 'id' | 'name'>[], now: number, origin = APP_ORIGIN): { ref: string; items: AgendaEntry[] }[] {
   if (!c.name.trim()) return [];
   const who = nameOf(pets, c.petId);
   const dose = c.dose.trim();
@@ -136,7 +140,7 @@ export function doseAgenda(c: Course, medDoses: MedDose[], pets: Pick<Pet, 'id' 
           start: slotAt(time, day),
           allDay: false,
           ...(dose ? { detail: dose } : {}),
-          url: tabUrl('today', undefined, appUrl),
+          url: tabUrl('today', undefined, origin),
           ...(who ? { who } : {}),
           status: status.state === 'given' ? ('done' as const) : ('upcoming' as const),
         },
@@ -146,7 +150,7 @@ export function doseAgenda(c: Course, medDoses: MedDose[], pets: Pick<Pet, 'id' 
 }
 
 /** The pet's next birthday when it is within `BIRTHDAY_AHEAD_DAYS`; none for an approximate birth date. */
-export function birthdayAgenda(pet: Pick<Pet, 'id' | 'name' | 'birthDate' | 'birthDateApprox'>, now: number, appUrl = APP_URL): AgendaEntry[] {
+export function birthdayAgenda(pet: Pick<Pet, 'id' | 'name' | 'birthDate' | 'birthDateApprox'>, now: number, origin = APP_ORIGIN): AgendaEntry[] {
   if (!pet.birthDate || pet.birthDateApprox) return [];
   const next = nextBirthday(pet.birthDate, now);
   if (!next || next.days > BIRTHDAY_AHEAD_DAYS) return [];
@@ -157,7 +161,7 @@ export function birthdayAgenda(pet: Pick<Pet, 'id' | 'name' | 'birthDate' | 'bir
       title: `${name} turns ${next.turns}`,
       start: allDayStart(next.date),
       allDay: true,
-      url: tabUrl('pets', pet.id, appUrl),
+      url: tabUrl('pets', pet.id, origin),
       who: name,
     },
   ];
@@ -169,7 +173,7 @@ export function birthdayAgenda(pet: Pick<Pet, 'id' | 'name' | 'birthDate' | 'bir
  * as overdue once its time has passed). Tomorrow's are out already, so the portal's Today has the
  * morning meals even before anyone opens Pet that day.
  */
-export function mealAgenda(pet: Pick<Pet, 'id' | 'name'>, meals: Meal[], feedings: Feeding[], now: number, appUrl = APP_URL): { ref: string; items: AgendaEntry[] }[] {
+export function mealAgenda(pet: Pick<Pet, 'id' | 'name'>, meals: Meal[], feedings: Feeding[], now: number, origin = APP_ORIGIN): { ref: string; items: AgendaEntry[] }[] {
   const name = pet.name.trim();
   return [now, addDays(now, 1)].flatMap((day) =>
     mealsOf(meals, pet.id).map((meal) => {
@@ -180,7 +184,7 @@ export function mealAgenda(pet: Pick<Pet, 'id' | 'name'>, meals: Meal[], feeding
         start: mealAt(meal.time, day),
         allDay: false,
         ...(detail ? { detail } : {}),
-        url: tabUrl('today', undefined, appUrl),
+        url: tabUrl('today', undefined, origin),
         who: name,
         status: fedTodayFor(feedings, meal.id, day).length ? 'done' : 'upcoming',
       };
@@ -192,24 +196,24 @@ export function mealAgenda(pet: Pick<Pet, 'id' | 'name'>, meals: Meal[], feeding
 export type AgendaData = Pick<PetHouseholdData, 'pets' | 'appointments' | 'reminders' | 'courses' | 'medDoses' | 'meals' | 'feedings'>;
 
 /** Every record's items by ref, refs with nothing to publish included (empty), for per-ref writes. */
-export function agendaByRef(data: AgendaData, now: number, appUrl = APP_URL): Map<string, AgendaEntry[]> {
+export function agendaByRef(data: AgendaData, now: number, origin = APP_ORIGIN): Map<string, AgendaEntry[]> {
   const out = new Map<string, AgendaEntry[]>();
-  for (const a of data.appointments) out.set(appointmentRef(a.id), appointmentAgenda(a, data.pets, now, appUrl));
-  for (const r of data.reminders) out.set(reminderRef(r.id), reminderAgenda(r, data.pets, now, appUrl));
+  for (const a of data.appointments) out.set(appointmentRef(a.id), appointmentAgenda(a, data.pets, now, origin));
+  for (const r of data.reminders) out.set(reminderRef(r.id), reminderAgenda(r, data.pets, now, origin));
   for (const c of data.courses) {
-    out.set(courseAgendaRef(c.id), courseAgenda(c, data.pets, now, appUrl));
-    for (const { ref, items } of doseAgenda(c, data.medDoses, data.pets, now, appUrl)) out.set(ref, items);
+    out.set(courseAgendaRef(c.id), courseAgenda(c, data.pets, now, origin));
+    for (const { ref, items } of doseAgenda(c, data.medDoses, data.pets, now, origin)) out.set(ref, items);
   }
   for (const p of data.pets) {
-    out.set(birthdayAgendaRef(p.id), birthdayAgenda(p, now, appUrl));
-    for (const { ref, items } of mealAgenda(p, data.meals, data.feedings, now, appUrl)) out.set(ref, items);
+    out.set(birthdayAgendaRef(p.id), birthdayAgenda(p, now, origin));
+    for (const { ref, items } of mealAgenda(p, data.meals, data.feedings, now, origin)) out.set(ref, items);
   }
   return out;
 }
 
 /** Everything Pet publishes, for `syncAgenda`. */
-export function agendaItems(data: AgendaData, now: number, appUrl = APP_URL): AgendaInput[] {
-  return [...agendaByRef(data, now, appUrl)].flatMap(([ref, items]) => items.map((i) => ({ ...i, ref })));
+export function agendaItems(data: AgendaData, now: number, origin = APP_ORIGIN): AgendaInput[] {
+  return [...agendaByRef(data, now, origin)].flatMap(([ref, items]) => items.map((i) => ({ ...i, ref })));
 }
 
 /**
