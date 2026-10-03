@@ -92,7 +92,7 @@ can read it, so it carries titles, pet names, places and doses, never notes:
 | `medicine` (all day) | each course ("Antibiotic for Pepper"), one item from its first day through its last ("1 tablet, twice a day, with food"), for the calendar; with no status, the portal's Today leaves it out | none |
 | `medicine` | today's and tomorrow's doses at their times ("Antibiotic for Pepper", the dose as the detail), ref `dose:<courseId>:<day>:<slot>` | `done` once given, else `upcoming` |
 | `birthday` (all day) | a pet's next birthday within 180 days ("Pepper turns 5"); not for an approximate birth date | none |
-| `feeding` | today's meals at their times ("Feed Pepper · AM"), with food and portion as the detail when set | `done` once fed today, else `upcoming` |
+| `feeding` | today's and tomorrow's meals at their times ("Feed Pepper · AM"), with food and portion as the detail when set, ref `meal:<mealId>:<day>` | `done` once fed that day, else `upcoming` |
 
 Items cover 30 days back to 180 days ahead (overdue reminders whatever their age) and link to
 Today (meals and doses), `?tab=care`, `?tab=appointments` or `?tab=pets&pet=<id>`. Logs (doses given, feeds, weights,
