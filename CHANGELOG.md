@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.0](https://github.com/huishouden/pet/compare/v1.11.1...v1.12.0) (2026-10-03)
+
+
+### Features
+
+* Scan the label shows what it filled and what it did not use (kit 0.56.0) ([#45](https://github.com/huishouden/pet/issues/45)) ([992b439](https://github.com/huishouden/pet/commit/992b439ee415d8193aa15e4cfdbf9bee0d4a224a))
+
 ## [1.11.1](https://github.com/huishouden/pet/compare/v1.11.0...v1.11.1) (2026-10-03)
 
 
