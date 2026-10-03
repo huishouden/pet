@@ -4,7 +4,7 @@
 
 import { MINUTE, daysBetween, dueText, formatTime, parseYmd, relativeDay, startOfDay, toYmd } from '@huishouden/pwa-kit/time';
 import type { Appointment, Course, Feeding, Meal, MedDose, Pet, Reminder } from './model';
-import { dosesOn } from './courses';
+import { dosesOn, isHandled } from './courses';
 import { mealsOn } from './feeding';
 import { dueState, headline } from './schedule';
 import { birthdayCountdown, birthdayLine, turnsOn, type BirthdayCountdown } from './birthday';
@@ -84,7 +84,7 @@ export function needsDoing(data: TodayData, pets: Pet[], now: number): Need[] {
   for (const pet of pets) {
     for (const c of data.courses.filter((x) => x.petId === pet.id)) {
       for (const { slot, status } of dosesOn(c, data.medDoses, today, now)) {
-        if (status.state === 'given' || status.at > soon) continue;
+        if (isHandled(status) || status.at > soon) continue;
         out.push({ kind: 'dose', key: `dose:${c.id}:${slot}`, petId: pet.id, course: c, slot, title: forPet(c.name, pet.name), when: timedWhen(status.at, now), late: status.state === 'missed', since: status.at, action: 'Given' });
       }
     }

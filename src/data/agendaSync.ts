@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { removeAgenda, replaceAgenda, syncAgenda } from '@huishouden/pwa-kit/agenda';
+import { syncTodos } from '@huishouden/pwa-kit/todos';
 import { addDays, toYmd } from '@huishouden/pwa-kit/time';
 import { AGENDA_APP, agendaByRef, agendaChanges, type AgendaData } from '../lib/agenda';
+import { todoItems } from '../lib/todos';
 import { db } from './firebase';
 import type { DataKey } from './types';
 
@@ -9,6 +11,7 @@ import type { DataKey } from './types';
 export const AGENDA_SOURCES: readonly DataKey[] = ['pets', 'appointments', 'reminders', 'courses', 'medDoses', 'meals', 'feedings'];
 
 const warn = (e: unknown) => console.warn("Couldn't update the household agenda", e);
+const warnTodos = (e: unknown) => console.warn("Couldn't update the household to-do list", e);
 
 /**
  * Keeps Pet's items on the household agenda (households/{id}/agenda) in step with its data. On open
@@ -16,6 +19,10 @@ const warn = (e: unknown) => console.warn("Couldn't update the household agenda"
  * version left, moves care reminders to overdue and replaces yesterday's meals and doses with today's and tomorrow's. After
  * changes settle (2 seconds, so a tick on a meal or a dose reaches the portal within seconds): `replaceAgenda` for each record whose items changed and `removeAgenda` for each one
  * that is gone. A failure never fails a save; the next open repairs it.
+ *
+ * The household to-do list (households/{id}/todos) follows the same timing: `syncTodos` with care
+ * due today or overdue and today's doses not yet given or skipped, writing only what changed, so one
+ * given or dismissed here or in the portal leaves the list within seconds.
  */
 export function useAgendaSync(householdId: string, me: string, data: AgendaData, ready: boolean, restricted = false) {
   const written = useRef(new Map<string, string>());
@@ -28,6 +35,7 @@ export function useAgendaSync(householdId: string, me: string, data: AgendaData,
       const now = Date.now();
       const today = toYmd(now);
       const wanted = agendaByRef(data, now);
+      syncTodos(db, householdId, AGENDA_APP, todoItems(data, now), { by: me, now, restricted }).catch(warnTodos);
 
       if (syncedDay.current !== today) {
         syncedDay.current = today;

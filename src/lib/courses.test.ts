@@ -125,3 +125,28 @@ describe('dose times', () => {
     expect(slotMealName('13:00', [{ time: '09:00', name: 'AM' }])).toBeNull();
   });
 });
+
+describe('skipped doses', () => {
+  const skip = { id: 's1', courseId: 'k1', slot: 1, at: at('2031-05-14T08:00:00'), by: 'sam@example.com', skipped: true };
+
+  test('a skipped slot is handled, not given: neither due nor counted', () => {
+    const today = todaysDoses(course, [...doses, skip], now);
+    expect(today[1].status.state).toBe('skipped');
+    expect(progress(course, [...doses, skip])).toEqual(progress(course, doses));
+    // Un-skipping removes it, as un-ticking a given one.
+    expect(givenTodayFor([...doses, skip], 'k1', 1, now)).toEqual([skip]);
+  });
+
+  test('given wins over skipped on the same slot and day', () => {
+    const given = { id: 'g1', courseId: 'k1', slot: 1, at: at('2031-05-14T07:00:00'), by: 'alex@example.com' };
+    const today = todaysDoses(course, [...doses, skip, given], now);
+    expect(today[1].status.state).toBe('given');
+  });
+
+  test('a day with a skipped dose is not complete', () => {
+    const day1 = courseHistory(course, [doses[0], { ...doses[1], skipped: true }], now)[0];
+    expect(day1.complete).toBe(false);
+    expect(day1.doses.map((d) => d.status.state)).toEqual(['given', 'skipped']);
+  });
+});
+

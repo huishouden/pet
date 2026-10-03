@@ -101,7 +101,10 @@ function reminders(): Reminder[] {
     ['demo-rem-7', MISO, 'vaccine', 'FVRCP vaccine', 1, 'year', ymd(9, 22), on(9, 22, '10:00', 2030)],
     ['demo-rem-8', BISCUIT, 'vaccine', 'DHPP vaccine', 1, 'year', ymd(11, 3), on(11, 3, '11:00', 2030)],
     ['demo-rem-9', BISCUIT, 'medication', 'Ear drops, last day', undefined, undefined, ymd(5, 9), on(5, 9, '20:00')],
+    ['demo-rem-10', MISO, 'other', 'Brush teeth', 1, 'week', ymd(5, 8), undefined],
   ];
+  // Miso won't sit for brushing, so it was dismissed: it stays in the care list to restore.
+  const dismissed: Record<string, number> = { 'demo-rem-10': on(5, 9, '18:20') };
   return rows.map(([id, petId, kind, title, every, unit, due, lastDoneAt, notes], i) => ({
     id,
     petId,
@@ -111,6 +114,7 @@ function reminders(): Reminder[] {
     due,
     ...(lastDoneAt ? { lastDoneAt } : {}),
     ...(notes ? { notes } : {}),
+    ...(dismissed[id] ? { dismissedAt: dismissed[id] } : {}),
     createdAt: CREATED,
     by: i % 2 ? ALEX : SAM,
   }));
@@ -273,15 +277,16 @@ function courses(): Course[] {
 
 function medDoses(): MedDose[] {
   const out: MedDose[] = [];
-  const add = (courseId: string, petId: string, month: number, day: number, slot: number, hhmm: string, by: string) => {
+  const add = (courseId: string, petId: string, month: number, day: number, slot: number, hhmm: string, by: string, skipped = false) => {
     const at = on(month, day, hhmm);
-    out.push({ id: `demo-med-${out.length + 1}`, petId, courseId, slot, at, by, createdAt: at });
+    out.push({ id: `demo-med-${out.length + 1}`, petId, courseId, slot, at, ...(skipped ? { skipped } : {}), by, createdAt: at });
   };
   for (const day of [12, 13]) {
     add('demo-course-1', BISCUIT, 5, day, 0, '07:08', day % 2 ? ALEX : SAM);
     add('demo-course-1', BISCUIT, 5, day, 1, '18:05', day % 2 ? SAM : ALEX);
   }
-  for (const day of [22, 23, 24, 25, 26]) add('demo-course-2', MISO, 4, day, 0, '07:40', day % 2 ? ALEX : SAM);
+  // The last day's dose was skipped: Miso was eating well again.
+  for (const day of [22, 23, 24, 25, 26]) add('demo-course-2', MISO, 4, day, 0, '07:40', day % 2 ? ALEX : SAM, day === 26);
   return out;
 }
 

@@ -67,6 +67,8 @@ export interface ReminderInput {
   due: string;
   lastDoneAt?: number;
   notes?: string;
+  /** Kept through edits; cleared by Restore. */
+  dismissedAt?: number;
 }
 
 export function reminderDoc(r: ReminderInput, by: string, createdAt: number, updatedAt?: number): ReminderData {
@@ -80,6 +82,7 @@ export function reminderDoc(r: ReminderInput, by: string, createdAt: number, upd
     due: r.due,
     lastDoneAt: typeof r.lastDoneAt === 'number' ? Math.round(r.lastDoneAt) : undefined,
     notes: trimmed(r.notes, LIMITS.reminderNotes),
+    dismissedAt: typeof r.dismissedAt === 'number' ? Math.round(r.dismissedAt) : undefined,
     createdAt: Math.round(createdAt),
     updatedAt: updatedAt === undefined ? undefined : Math.round(updatedAt),
     by,
@@ -220,8 +223,8 @@ export function courseDoc(c: CourseInput, by: string, createdAt: number, updated
   });
 }
 
-export function medDoseDoc(d: { petId: string; courseId: string; slot: number; at: number }, by: string, createdAt: number): MedDoseData {
-  return { petId: d.petId, courseId: d.courseId, slot: Math.round(d.slot), at: Math.round(d.at), by, createdAt: Math.round(createdAt) };
+export function medDoseDoc(d: { petId: string; courseId: string; slot: number; at: number; skipped?: boolean }, by: string, createdAt: number): MedDoseData {
+  return { petId: d.petId, courseId: d.courseId, slot: Math.round(d.slot), at: Math.round(d.at), ...(d.skipped ? { skipped: true } : {}), by, createdAt: Math.round(createdAt) };
 }
 
 /** A pet's photo document; throws for anything but a WebP or JPEG data URL within the limit. */

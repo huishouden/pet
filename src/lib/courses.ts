@@ -30,6 +30,7 @@ interface DoseLike {
   slot: number;
   at: number;
   by: string;
+  skipped?: boolean;
 }
 
 /** YYYY-MM-DD of the course's last day. */
@@ -61,7 +62,14 @@ export function courseText(c: Pick<CourseLike, 'startDate' | 'days'>, now: numbe
   return day === 0 ? 'Starts tomorrow' : `Starts in ${1 - day} days`;
 }
 
-export type DoseStatus<D> = { state: 'given'; dose: D; at: number } | { state: 'due'; at: number } | { state: 'missed'; at: number };
+export type DoseStatus<D> =
+  | { state: 'given'; dose: D; at: number }
+  | { state: 'skipped'; dose: D; at: number }
+  | { state: 'due'; at: number }
+  | { state: 'missed'; at: number };
+
+/** Whether a slot is handled: given, or skipped on purpose. Either way nothing more is due for it. */
+export const isHandled = (s: { state: string }) => s.state === 'given' || s.state === 'skipped';
 
 /** The moment of a dose time ('HH:MM') on a day. */
 export function slotAt(time: string, day: Ymd): number {
@@ -70,15 +78,19 @@ export function slotAt(time: string, day: Ymd): number {
 
 /**
  * One day's doses of a course, one per time; empty on a day outside the course. A dose given that
- * day (the latest, if several) is given; one not given is due until its time and missed after it.
+ * day (the latest, if several) is given; else one skipped that day is skipped; one neither is due
+ * until its time and missed after it.
  */
 export function dosesOn<C extends CourseLike, D extends DoseLike>(c: C, doses: D[], day: Ymd, now: number): { slot: number; time: string; status: DoseStatus<D> }[] {
   const n = courseDay(c, ymdToTime(day));
   if (n < 1 || n > c.days) return [];
   const mine = doses.filter((d) => d.courseId === c.id && toYmd(d.at) === day);
   return c.times.map((time, slot) => {
-    const dose = mine.filter((d) => d.slot === slot).sort((a, b) => b.at - a.at)[0];
+    const logged = mine.filter((d) => d.slot === slot).sort((a, b) => b.at - a.at);
+    const dose = logged.find((d) => !d.skipped);
     if (dose) return { slot, time, status: { state: 'given', dose, at: dose.at } };
+    const skip = logged[0];
+    if (skip) return { slot, time, status: { state: 'skipped', dose: skip, at: skip.at } };
     const at = slotAt(time, day);
     return { slot, time, status: { state: now > at ? 'missed' : 'due', at } };
   });
@@ -89,7 +101,7 @@ export function todaysDoses<C extends CourseLike, D extends DoseLike>(c: C, dose
   return dosesOn(c, doses, toYmd(now), now);
 }
 
-/** One slot's logged doses on a day: what un-ticking it removes. */
+/** One slot's logged doses (given or skipped) on a day: what un-ticking it removes. */
 export function givenOnFor<D extends DoseLike>(doses: D[], courseId: string, slot: number, day: Ymd): D[] {
   return doses.filter((d) => d.courseId === courseId && d.slot === slot && toYmd(d.at) === day);
 }
@@ -116,13 +128,14 @@ export function courseHistory<C extends CourseLike, D extends DoseLike>(c: C, do
 
 /**
  * Doses given over the whole course, out of how many it has, and the days on which every dose was
- * given: "9 of 14 doses · 4 of 7 days complete". Only doses on the course's days and times count.
+ * given: "9 of 14 doses · 4 of 7 days complete". Only doses on the course's days and times count;
+ * skipped ones don't.
  */
 export function progress(c: CourseLike, doses: DoseLike[]): { given: number; total: number; daysComplete: number; days: number } {
   const start = parseYmd(c.startDate);
   const perDay = new Map<string, Set<number>>();
   for (const d of doses) {
-    if (d.courseId !== c.id || d.slot < 0 || d.slot >= c.times.length || start === null) continue;
+    if (d.skipped || d.courseId !== c.id || d.slot < 0 || d.slot >= c.times.length || start === null) continue;
     const n = daysBetween(start, d.at) + 1;
     if (n < 1 || n > c.days) continue;
     const day = toYmd(d.at);

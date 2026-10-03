@@ -50,6 +50,10 @@ export interface PetActions {
   /** Records a dose and moves the reminder to its next due date; Undo is `undoDose`. */
   giveDose(r: Reminder, at: number): Dose;
   undoDose(dose: Dose, before: Reminder): void;
+  /** Stops a reminder coming due (it stays in the care list as Dismissed); Undo is `restoreReminder(r)`. */
+  dismissReminder(r: Reminder): void;
+  /** Brings a dismissed reminder back, due as it was; Undo is `restoreReminder(r)`. */
+  undismissReminder(r: Reminder): void;
   saveAppointment(id: string | null, input: AppointmentInput): void;
   deleteAppointment(a: Appointment): void;
   restoreAppointment(a: Appointment): void;
@@ -81,6 +85,8 @@ export interface PetActions {
   restoreCourse(c: Course): void;
   /** Ticks one dose of a course as given at `at` (now, or its time on an earlier day); Undo is deleteMedDoses. */
   giveMedDose(c: Course, slot: number, at: number): MedDose;
+  /** Marks one dose of a course skipped (handled, not given); Undo is deleteMedDoses. */
+  skipMedDose(c: Course, slot: number, at: number): MedDose;
   /** Changes when a dose was given; who gave it stays. */
   moveMedDose(d: MedDose, at: number): void;
   deleteMedDoses(list: MedDose[]): void;

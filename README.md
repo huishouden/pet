@@ -53,9 +53,9 @@ accept nothing else.
 | `petMeals` | petId, name, time (`HH:MM`, after which an unticked meal is late), food, portion, note, createdAt, updatedAt, by |
 | `petFeedings` | petId, mealId, at, portion, note, by, createdAt, updatedAt |
 | `petMedCourses` | petId, name, dose, timesPerDay, times, startDate, days, withFood, notes, createdAt, updatedAt, by |
-| `petMedDoses` | petId, courseId, slot, at, by, createdAt |
+| `petMedDoses` | petId, courseId, slot, at, skipped (a dose skipped rather than given: handled, not counted as given), by, createdAt |
 | `petPhotos` | data, updatedAt, by (id = the pet's id; `data` a WebP or JPEG data URL under 60 000 characters, from `@huishouden/pwa-kit/photo`, kept apart from the profile so reading the pets stays light) |
-| `petReminders` | petId, kind, title, every, unit, due, lastDoneAt, notes, createdAt, updatedAt, by |
+| `petReminders` | petId, kind, title, every, unit, due, lastDoneAt, notes, dismissedAt (never due again until restored), createdAt, updatedAt, by |
 | `petDoses` | petId, reminderId, title, at, by, createdAt |
 | `petAppointments` | petIds, kind, title, at, location, notes, contactId, calendarEventId, calendarLink, createdAt, by |
 | `petWeights` | petId, at, value, unit, by, createdAt |
@@ -65,7 +65,7 @@ The daily board is not stored: it is today's feeds and doses, so it starts empty
 Yesterday switches it to the day before, and a course's "Doses by day" lists every day from its
 start; ticking an earlier day logs the feed or dose at its own time that day (a dose's time can be
 changed after). A course saved with a start date in the past offers to mark the doses already
-given. A course day is complete when all its doses were given. New
+given. A course day is complete when all its doses were given (a skipped one isn't). New
 pets start with an AM and a PM meal. Contacts live in the household-wide `contacts` collection
 shared by every app (`@huishouden/pwa-kit/contacts`); Pet shows those whose `apps` include `pet`.
 The Firestore rules live in the repo that owns the project's rules file
@@ -101,6 +101,23 @@ has loaded; after that, two seconds after changes settle, each changed record's 
 (a tick on a meal or dose reaches the portal within seconds), and a deleted record's removed.
 The signed-out sample writes nothing. The mapping is `src/lib/agenda.ts`; the writes are
 `src/data/agendaSync.ts`.
+
+Pet also publishes its open care to the household to-do list (`households/{householdId}/todos`, app
+`pet`, through `@huishouden/pwa-kit/todos`), which the portal's To-do tab lists with every app's,
+at the same moments as the agenda. Each item carries the writes its buttons make, the same Pet's
+own buttons make:
+
+| Item | Ref | Done | Cancel |
+|---|---|---|---|
+| a care reminder due today or overdue, not dismissed ("Flea and tick", the pet as who, due its day, added when the reminder was) | `reminder:<id>` | Given ("Done" for Other): logs a dose (`petDoses/todo-<id>-<due>`) and sets `lastDoneAt`, and a repeating one's next due day from today; admins, members, helpers | Dismiss: sets `dismissedAt`; admins, members and whoever added it |
+| each of today's doses of a course not yet given or skipped ("Antibiotic for Pepper", the dose and its time, added when the course was) | `dose:<courseId>:<day>:<slot>` | Given: logs the dose (`petMedDoses/todo-<courseId>-<day>-<slot>`) | Skip: the same, `skipped: true` |
+
+A course's doses go to admins, members and helpers, or with "Only approved helpers" to admins,
+members and those helpers by name; never kids, and Given on care never for kids either (it logs a
+dose). A dismissed reminder shows under Dismissed in Care and in the pet's care list, with Restore;
+Dismiss is in the reminder's dialog. A skipped dose shows "Skipped" on the board and in "Doses by
+day", where Skip sits under each dose not given; a tap on a skipped one undoes it. The mapping is
+`src/lib/todos.ts`.
 
 Find in my calendar and Import from calendar read Google Calendar (read-only) through
 `@huishouden/pwa-kit/calendar`; Google asks once for permission the first time. Find a business looks

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { signInTestUser } from '@huishouden/pwa-kit/e2e';
+import { runPortalTodo, signInTestUser } from '@huishouden/pwa-kit/e2e';
 import { seedTestHousehold } from '@huishouden/pwa-kit/staging';
 
 // Signed in as an invented test user on the staging site (pwa-kit STANDARD.md "Staging"): the real
@@ -109,4 +109,58 @@ test('a helper is refused a course only approved helpers give, and logs a feed',
   await expect(page.getByText(/only admins and members can do that/)).toHaveCount(0);
   await page.waitForTimeout(3000);
   await expect(page.getByText(/only admins and members can do that/)).toHaveCount(0);
+});
+
+const TODO_PREFIX = 'To-do check ';
+
+/** Deletes this run's reminder and any an earlier run left behind (over 10 minutes old), from Care. */
+async function removeTodoChecks(page: Page, title: string) {
+  await page.getByRole('button', { name: 'Care', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Care', level: 2 })).toBeVisible();
+  const edits = page.getByRole('button', { name: new RegExp(`^Edit ${TODO_PREFIX}\\d+ for `) });
+  const names = await edits.evaluateAll((els) => els.map((e) => e.getAttribute('aria-label') ?? ''));
+  for (const name of new Set(names)) {
+    const stamp = Number(name.slice(`Edit ${TODO_PREFIX}`.length).split(' ')[0]);
+    if (!name.startsWith(`Edit ${title} `) && Date.now() - stamp < 10 * 60_000) continue;
+    await page.getByRole('button', { name, exact: true }).first().click();
+    await page.getByRole('dialog', { name: 'Edit reminder' }).getByRole('button', { name: 'Delete' }).click();
+    await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
+  }
+}
+
+test('care due today, done from the portal’s To-do list, moves on to its next due day in Pet', async ({ page, context }) => {
+  test.setTimeout(120_000);
+  const title = `${TODO_PREFIX}${Date.now()}`;
+  await signInTestUser(page, { email: 'test-a@example.com' });
+  await openBoard(page);
+
+  try {
+    // A weekly "Other" reminder for the test pet, due today (the dialog's default).
+    await page.getByRole('button', { name: 'Pets', exact: true }).click();
+    await page.getByRole('button', { name: PET }).first().click();
+    await page.getByRole('region', { name: `${PET}'s care` }).getByRole('button', { name: 'Add reminder' }).click();
+    const dialog = page.getByRole('dialog', { name: 'New reminder' });
+    await dialog.getByLabel('What').fill(title);
+    await dialog.getByLabel('Kind').selectOption('other');
+    await dialog.getByLabel('Every how many').fill('1');
+    await dialog.getByLabel('Unit').selectOption('week');
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText(`Added ${title}`)).toBeVisible();
+    await page.getByRole('button', { name: 'Care', exact: true }).click();
+    const row = page.getByRole('listitem').filter({ hasText: title });
+    await expect(row).toContainText('Due today');
+
+    // Pet stays open (it publishes a couple of seconds after the change) while the portal, in
+    // another tab signed in as the same member, gives it from the To-do list as Pet's own Done.
+    const portal = await context.newPage();
+    try {
+      await runPortalTodo(portal, title, { action: 'done' });
+    } finally {
+      await portal.close();
+    }
+    await expect(row).toContainText('Due in 7 days', { timeout: 20_000 });
+    await expect(row).toContainText('last given today');
+  } finally {
+    await removeTodoChecks(page, title);
+  }
 });

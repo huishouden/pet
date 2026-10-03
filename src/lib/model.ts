@@ -64,6 +64,8 @@ export interface ReminderData {
   due: string;
   lastDoneAt?: number;
   notes?: string;
+  /** When someone dismissed it (here or from the household's to-do list): it no longer comes due, and stays in the pet's care list until restored. */
+  dismissedAt?: number;
   createdAt: number;
   updatedAt?: number;
   by: string;
@@ -191,12 +193,14 @@ export interface Course extends CourseData {
   id: string;
 }
 
-/** petMedDoses/{id}: one dose of a course, given. `slot` is the index into the course's times. */
+/** petMedDoses/{id}: one dose of a course, given (or skipped). `slot` is the index into the course's times. */
 export interface MedDoseData {
   petId: string;
   courseId: string;
   slot: number;
   at: number;
+  /** Skipped rather than given: the slot is handled, but the dose doesn't count as given. */
+  skipped?: boolean;
   by: string;
   createdAt: number;
 }
@@ -207,7 +211,7 @@ export interface MedDose extends MedDoseData {
 /** The only keys each collection's documents may carry; the rules list the same. */
 export const FIELDS = {
   petProfiles: ['name', 'species', 'breed', 'birthDate', 'birthDateApprox', 'weightUnit', 'targetWeight', 'targetNote', 'notes', 'createdAt', 'updatedAt', 'by'],
-  petReminders: ['petId', 'kind', 'title', 'every', 'unit', 'due', 'lastDoneAt', 'notes', 'createdAt', 'updatedAt', 'by'],
+  petReminders: ['petId', 'kind', 'title', 'every', 'unit', 'due', 'lastDoneAt', 'notes', 'dismissedAt', 'createdAt', 'updatedAt', 'by'],
   petDoses: ['petId', 'reminderId', 'title', 'at', 'by', 'createdAt'],
   petAppointments: ['petIds', 'kind', 'title', 'at', 'location', 'notes', 'contactId', 'calendarEventId', 'calendarLink', 'private', 'createdAt', 'by'],
   petWeights: ['petId', 'at', 'value', 'unit', 'by', 'createdAt'],
@@ -215,7 +219,7 @@ export const FIELDS = {
   petMeals: ['petId', 'name', 'time', 'food', 'portion', 'note', 'createdAt', 'updatedAt', 'by'],
   petFeedings: ['petId', 'mealId', 'at', 'portion', 'note', 'by', 'createdAt', 'updatedAt'],
   petMedCourses: ['petId', 'name', 'dose', 'timesPerDay', 'times', 'startDate', 'days', 'withFood', 'notes', 'givers', 'approvedHelpers', 'createdAt', 'updatedAt', 'by'],
-  petMedDoses: ['petId', 'courseId', 'slot', 'at', 'by', 'createdAt'],
+  petMedDoses: ['petId', 'courseId', 'slot', 'at', 'skipped', 'by', 'createdAt'],
   petPhotos: ['data', 'updatedAt', 'by'],
 } as const;
 

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Check, Pencil, Plus } from 'lucide-react';
+import { Check, Pencil, Plus, RotateCcw } from 'lucide-react';
 import type { Pet, Reminder } from '../lib/model';
 import { describeRecurrence, dueState, dueText, groupByDue } from '../lib/schedule';
 import { formatDayShort, parseYmd } from '@huishouden/pwa-kit/time';
@@ -11,11 +11,13 @@ import { PetAvatar, PetChips } from '../components/PetAvatar';
 import { cardClass, iconButton, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 
 /** Every reminder, grouped by how soon it is due, with one-tap Given. */
-export function Care({ store, pets, open, onGive, deviceSettings }: {
+export function Care({ store, pets, open, onGive, onRestore, deviceSettings }: {
   store: PetStore;
   pets: Pet[];
   open: Open;
   onGive: (r: Reminder) => void;
+  /** Restore for a dismissed reminder, when this person may (left out otherwise). */
+  onRestore: (r: Reminder) => (() => void) | undefined;
   notify: (message: string, undo?: () => void) => void;
   deviceSettings?: ReactNode;
 }) {
@@ -44,7 +46,7 @@ export function Care({ store, pets, open, onGive, deviceSettings }: {
           </h3>
           <ul className={cardClass}>
             {g.items.map((r) => (
-              <ReminderRow key={r.id} r={r} pets={pets} now={now} onGive={() => onGive(r)} onEdit={() => open.reminder(r)} />
+              <ReminderRow key={r.id} r={r} pets={pets} now={now} onGive={() => onGive(r)} onRestore={onRestore(r)} onEdit={() => open.reminder(r)} />
             ))}
           </ul>
         </section>
@@ -54,16 +56,26 @@ export function Care({ store, pets, open, onGive, deviceSettings }: {
   );
 }
 
-export function ReminderRow({ r, pets, now, onGive, onEdit, compact }: { r: Reminder; pets: Pet[]; now: number; onGive: () => void; onEdit: () => void; compact?: boolean }) {
+export function ReminderRow({ r, pets, now, onGive, onRestore, onEdit, compact }: {
+  r: Reminder;
+  pets: Pet[];
+  now: number;
+  onGive: () => void;
+  /** Brings a dismissed reminder back; absent for those who may not. */
+  onRestore?: () => void;
+  onEdit: () => void;
+  compact?: boolean;
+}) {
   const pet = pets.find((p) => p.id === r.petId);
   const state = dueState(r, now);
+  const dismissed = state === 'dismissed';
   const urgent = state === 'overdue' || state === 'today';
   const due = parseYmd(r.due);
-  const dueColour = urgent ? 'text-terracotta-dark' : state === 'done' ? 'text-forest-700' : 'text-stone-700';
+  const dueColour = urgent ? 'text-terracotta-dark' : state === 'done' ? 'text-forest-700' : dismissed ? 'text-stone-600' : 'text-stone-700';
   const meta = [
     compact ? null : pet?.name,
     describeRecurrence(r),
-    compact || state === 'done' ? null : due !== null ? formatDayShort(due) : null,
+    compact || state === 'done' ? null : dismissed ? (r.dismissedAt ? `dismissed ${formatDayShort(r.dismissedAt)}` : null) : due !== null ? formatDayShort(due) : null,
     compact ? null : r.lastDoneAt ? `last given ${formatWhenGiven(r.lastDoneAt, now)}` : null,
   ].filter(Boolean);
   return (
@@ -77,9 +89,14 @@ export function ReminderRow({ r, pets, now, onGive, onEdit, compact }: { r: Remi
         </p>
       </div>
       {!compact && <p className={`mr-auto shrink-0 text-lg font-semibold sm:mr-0 sm:text-right ${dueColour}`}>{dueText(r, now)}</p>}
-      {state !== 'done' && (
+      {state !== 'done' && !dismissed && (
         <button type="button" className={urgent || state === 'soon' ? primaryButton : secondaryButton} onClick={onGive} aria-label={`Mark ${r.title} given to ${pet?.name ?? 'the pet'}`}>
           <Check size={18} /> Given
+        </button>
+      )}
+      {dismissed && onRestore && (
+        <button type="button" className={secondaryButton} onClick={onRestore} aria-label={`Restore ${r.title}${pet ? ` for ${pet.name}` : ''}`}>
+          <RotateCcw size={18} /> Restore
         </button>
       )}
       <button type="button" className={iconButton} onClick={onEdit} aria-label={`Edit ${r.title}${pet ? ` for ${pet.name}` : ''}`}>

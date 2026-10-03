@@ -18,6 +18,8 @@ export interface Scheduled {
   every?: number;
   unit?: Unit;
   lastDoneAt?: number;
+  /** Dismissed: never due again until restored. */
+  dismissedAt?: number;
 }
 
 export const isRecurring = (s: { every?: number; unit?: Unit }): s is Recurrence => !!s.unit && typeof s.every === 'number' && s.every >= 1;
@@ -35,7 +37,10 @@ export function markGiven(s: Scheduled, at: number): { lastDoneAt: number; due: 
 /** A one-off that has been given; nothing further is due. */
 export const isFinished = (s: Scheduled) => !isRecurring(s) && typeof s.lastDoneAt === 'number';
 
-export type DueState = 'overdue' | 'today' | 'soon' | 'later' | 'done';
+/** Dismissed (in Pet or from the household's to-do list): not due anywhere until restored. */
+export const isDismissed = (s: Pick<Scheduled, 'dismissedAt'>) => typeof s.dismissedAt === 'number';
+
+export type DueState = 'overdue' | 'today' | 'soon' | 'later' | 'done' | 'dismissed';
 
 /** How many days ahead a reminder starts showing as "soon": a month for yearly ones, a week otherwise. */
 export function leadDays(s: { every?: number; unit?: Unit }): number {
@@ -51,6 +56,7 @@ export function daysUntil(due: string, now: number): number {
 }
 
 export function dueState(s: Scheduled, now: number): DueState {
+  if (isDismissed(s)) return 'dismissed';
   if (isFinished(s)) return 'done';
   const days = daysUntil(s.due, now);
   if (days < 0) return 'overdue';
@@ -70,10 +76,11 @@ export function inWords(days: number): string {
   return `in ${plural(Math.floor(days / 30.44), 'month')}`;
 }
 
-/** "Due today", "Due tomorrow", "Due in 3 days", "2 days overdue", "Given". */
+/** "Due today", "Due tomorrow", "Due in 3 days", "2 days overdue", "Given", "Dismissed". */
 export function dueText(s: Scheduled, now: number): string {
   const state = dueState(s, now);
   if (state === 'done') return 'Given';
+  if (state === 'dismissed') return 'Dismissed';
   const days = daysUntil(s.due, now);
   if (days < 0) return `${plural(-days, 'day')} overdue`;
   return `Due ${inWords(days)}`;
@@ -88,6 +95,7 @@ export function headline(s: Scheduled & { title: string }, now: number): string 
   const title = s.title.trim();
   if (state === 'overdue') return `Overdue: ${lowerFirst(title)}`;
   if (state === 'done') return `${title} given`;
+  if (state === 'dismissed') return `${title} dismissed`;
   return `${title} due ${inWords(daysUntil(s.due, now))}`;
 }
 
@@ -103,9 +111,9 @@ export function describeRecurrence(s: { every?: number; unit?: Unit }): string {
   return s.every === 1 ? `Every ${s.unit}` : `Every ${s.every} ${s.unit}s`;
 }
 
-const RANK: Record<DueState, number> = { overdue: 0, today: 1, soon: 2, later: 3, done: 4 };
+const RANK: Record<DueState, number> = { overdue: 0, today: 1, soon: 2, later: 3, done: 4, dismissed: 5 };
 
-/** Most urgent first: overdue (oldest first), then by due date; finished one-offs last. */
+/** Most urgent first: overdue (oldest first), then by due date; finished one-offs, then dismissed ones, last. */
 export function byUrgency<T extends Scheduled & { title: string }>(items: T[], now: number): T[] {
   return [...items].sort(
     (a, b) => RANK[dueState(a, now)] - RANK[dueState(b, now)] || (a.due < b.due ? -1 : a.due > b.due ? 1 : 0) || a.title.localeCompare(b.title),
@@ -121,22 +129,24 @@ export function needsAttention<T extends Scheduled & { title: string }>(items: T
 }
 
 export interface DueGroup<T> {
-  label: 'Overdue' | 'Due this week' | 'Later' | 'Given';
+  label: 'Overdue' | 'Due this week' | 'Later' | 'Given' | 'Dismissed';
   items: T[];
 }
 
-/** Groups for the Care screen: Overdue, Due this week (today through 7 days), Later, Given (finished one-offs). */
+/** Groups for the Care screen: Overdue, Due this week (today through 7 days), Later, Given (finished one-offs), Dismissed. */
 export function groupByDue<T extends Scheduled & { title: string }>(items: T[], now: number): DueGroup<T>[] {
   const groups: DueGroup<T>[] = [
     { label: 'Overdue', items: [] },
     { label: 'Due this week', items: [] },
     { label: 'Later', items: [] },
     { label: 'Given', items: [] },
+    { label: 'Dismissed', items: [] },
   ];
   for (const s of byUrgency(items, now)) {
     const state = dueState(s, now);
     const days = daysUntil(s.due, now);
-    if (state === 'done') groups[3].items.push(s);
+    if (state === 'dismissed') groups[4].items.push(s);
+    else if (state === 'done') groups[3].items.push(s);
     else if (state === 'overdue') groups[0].items.push(s);
     else if (days <= 7) groups[1].items.push(s);
     else groups[2].items.push(s);
