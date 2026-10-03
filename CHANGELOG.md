@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.1](https://github.com/huishouden/pet/compare/v1.9.0...v1.9.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* dialogs keep focus where it was tapped on phones (pwa-kit 0.51.0) ([#37](https://github.com/huishouden/pet/issues/37)) ([daff60b](https://github.com/huishouden/pet/commit/daff60bcc30d85e6fde37b65b7891e0e50a83e00))
+
 ## [1.9.0](https://github.com/huishouden/pet/compare/v1.8.0...v1.9.0) (2026-10-03)
 
 
