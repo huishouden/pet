@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import {
   expectCleanLoad,
+  expectBottomNav,
   expectCompactSampleBanner,
   expectGoogleSignInPopup,
   expectHuishoudenFrame,
@@ -34,3 +35,5 @@ test('Google sign-in popup reaches Google with an allowed redirect URI', ({ page
 test('sends the security headers and leaves sign-in un-framed', ({ request }) => expectSecurityHeaders(request, './', { camera: true }));
 
 test('the Sample data banner is one line on a phone', ({ page }) => expectCompactSampleBanner(page, './'));
+
+test('on a phone the sections are a bottom bar, with Contacts under More', ({ page }) => expectBottomNav(page, { path: './', labels: ['Today', 'Care', 'Visits', 'Pets', 'More'], more: ['Contacts'] }));
