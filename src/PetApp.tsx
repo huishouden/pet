@@ -1,3 +1,4 @@
+import { CalendarDays, Contact as ContactIcon, PawPrint, Pill, Sun } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import { clearSharedContact, readSharedContact, type Contact, type ParsedContact } from '@huishouden/pwa-kit/contacts';
@@ -42,12 +43,13 @@ import { personName } from '@huishouden/pwa-kit/people';
 
 export type TabId = 'today' | 'care' | 'appointments' | 'pets' | 'contacts';
 
+// On phones Today, Care, Visits and Pets sit in the bottom bar; Contacts is under More.
 const TABS: Tab[] = [
-  { id: 'today', label: 'Today' },
-  { id: 'care', label: 'Care' },
-  { id: 'appointments', label: 'Appointments' },
-  { id: 'pets', label: 'Pets' },
-  { id: 'contacts', label: 'Contacts' },
+  { id: 'today', label: 'Today', icon: Sun, primary: true },
+  { id: 'care', label: 'Care', icon: Pill, primary: true },
+  { id: 'appointments', label: 'Appointments', short: 'Visits', icon: CalendarDays, primary: true },
+  { id: 'pets', label: 'Pets', icon: PawPrint, primary: true },
+  { id: 'contacts', label: 'Contacts', icon: ContactIcon },
 ];
 
 interface Props {
