@@ -1,6 +1,6 @@
 // What Pet puts on the household agenda (households/{id}/agenda, read by the portal): appointments,
 // each care reminder's next due day, medicine courses (the span, and today's and tomorrow's doses at
-// their times), birthdays coming up, and today's meals.
+// their times), birthdays coming up, and today's and tomorrow's meals.
 // Logs of what already happened (doses given, feeds, weights, records) stay in the app.
 // Pure: every function takes `now`.
 
@@ -163,24 +163,30 @@ export function birthdayAgenda(pet: Pick<Pet, 'id' | 'name' | 'birthDate' | 'bir
   ];
 }
 
-/** Today's meals for one pet, at their times ("Feed Milo · PM", the food and portion as the detail): done once a feed for the meal is logged today. */
+/**
+ * Today's and tomorrow's meals for one pet, at their times ("Feed Milo · PM", the food and portion as
+ * the detail): done once a feed for the meal is logged that day, otherwise upcoming (the kit reads it
+ * as overdue once its time has passed). Tomorrow's are out already, so the portal's Today has the
+ * morning meals even before anyone opens Pet that day.
+ */
 export function mealAgenda(pet: Pick<Pet, 'id' | 'name'>, meals: Meal[], feedings: Feeding[], now: number, appUrl = APP_URL): { ref: string; items: AgendaEntry[] }[] {
-  const today = toYmd(now);
   const name = pet.name.trim();
-  return mealsOf(meals, pet.id).map((meal) => {
-    const detail = [meal.food, meal.portion].map((s) => s?.trim()).filter(Boolean).join(', ');
-    const item: AgendaEntry = {
-      kind: 'feeding',
-      title: `Feed ${name} · ${meal.name.trim()}`.slice(0, AGENDA_LIMITS.title),
-      start: mealAt(meal.time, now),
-      allDay: false,
-      ...(detail ? { detail } : {}),
-      url: tabUrl('today', undefined, appUrl),
-      who: name,
-      status: fedTodayFor(feedings, meal.id, now).length ? 'done' : 'upcoming',
-    };
-    return { ref: mealRef(meal.id, today), items: [item] };
-  });
+  return [now, addDays(now, 1)].flatMap((day) =>
+    mealsOf(meals, pet.id).map((meal) => {
+      const detail = [meal.food, meal.portion].map((s) => s?.trim()).filter(Boolean).join(', ');
+      const item: AgendaEntry = {
+        kind: 'feeding',
+        title: `Feed ${name} · ${meal.name.trim()}`.slice(0, AGENDA_LIMITS.title),
+        start: mealAt(meal.time, day),
+        allDay: false,
+        ...(detail ? { detail } : {}),
+        url: tabUrl('today', undefined, appUrl),
+        who: name,
+        status: fedTodayFor(feedings, meal.id, day).length ? 'done' : 'upcoming',
+      };
+      return { ref: mealRef(meal.id, toYmd(day)), items: [item] };
+    }),
+  );
 }
 
 export type AgendaData = Pick<PetHouseholdData, 'pets' | 'appointments' | 'reminders' | 'courses' | 'medDoses' | 'meals' | 'feedings'>;

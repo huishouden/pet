@@ -13,7 +13,7 @@ const warn = (e: unknown) => console.warn("Couldn't update the household agenda"
 /**
  * Keeps Pet's items on the household agenda (households/{id}/agenda) in step with its data. On open
  * and when the day turns: `syncAgenda` with everything, which repairs what another device or an older
- * version left, moves care reminders to overdue and replaces yesterday's meals with today's. After
+ * version left, moves care reminders to overdue and replaces yesterday's meals and doses with today's and tomorrow's. After
  * changes settle (2 seconds, so a tick on a meal or a dose reaches the portal within seconds): `replaceAgenda` for each record whose items changed and `removeAgenda` for each one
  * that is gone. A failure never fails a save; the next open repairs it.
  */

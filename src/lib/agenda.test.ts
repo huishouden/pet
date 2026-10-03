@@ -227,9 +227,9 @@ describe('birthdays', () => {
 });
 
 describe('feeding', () => {
-  test("today's meals at their times: done once fed today, otherwise upcoming", () => {
+  test("today's and tomorrow's meals at their times: done once fed that day, otherwise upcoming", () => {
     const list = mealAgenda(pepper, meals, [fedAm], NOW, URL);
-    expect(list.map((m) => m.ref)).toEqual(['meal:meal-am:2031-05-14', 'meal:meal-pm:2031-05-14']);
+    expect(list.map((m) => m.ref)).toEqual(['meal:meal-am:2031-05-14', 'meal:meal-pm:2031-05-14', 'meal:meal-am:2031-05-15', 'meal:meal-pm:2031-05-15']);
     expect(list[0].items).toEqual([
       {
         kind: 'feeding',
@@ -245,6 +245,29 @@ describe('feeding', () => {
     expect(list[1].items[0]).toMatchObject({ title: 'Feed Pepper · PM', start: mealAt('19:00', NOW), status: 'upcoming' });
     expect(list[1].items[0]).not.toHaveProperty('detail');
     valid(list.flatMap((m) => m.items));
+  });
+
+  test("tomorrow's meals at tomorrow's times, upcoming even though today's is fed", () => {
+    const list = mealAgenda(pepper, meals, [fedAm], NOW, URL);
+    expect(list[2].items).toEqual([
+      {
+        kind: 'feeding',
+        title: 'Feed Pepper · AM',
+        start: at(5, 15, '09:00'),
+        allDay: false,
+        detail: 'Lamb kibble, 1 cup',
+        url: `${URL}/`,
+        who: 'Pepper',
+        status: 'upcoming',
+      },
+    ]);
+    expect(list[3].items[0]).toMatchObject({ title: 'Feed Pepper · PM', start: at(5, 15, '19:00'), status: 'upcoming' });
+  });
+
+  test("just before midnight, tomorrow's morning meal is already published", () => {
+    const late = at(5, 14, '23:59');
+    const list = mealAgenda(pepper, meals, [], late, URL);
+    expect(list.find((m) => m.ref === 'meal:meal-am:2031-05-15')!.items[0]).toMatchObject({ start: at(5, 15, '09:00'), status: 'upcoming' });
   });
 
   test("yesterday's feed does not tick today's meal", () => {
@@ -281,6 +304,8 @@ describe('everything Pet publishes', () => {
         'dose:course-1:2031-05-15:1',
         'meal:meal-am:2031-05-14',
         'meal:meal-pm:2031-05-14',
+        'meal:meal-am:2031-05-15',
+        'meal:meal-pm:2031-05-15',
         'reminder:rem-1',
         'reminder:rem-done',
       ].sort(),
@@ -298,6 +323,8 @@ describe('everything Pet publishes', () => {
         'due reminder:rem-1',
         'feeding meal:meal-am:2031-05-14',
         'feeding meal:meal-pm:2031-05-14',
+        'feeding meal:meal-am:2031-05-15',
+        'feeding meal:meal-pm:2031-05-15',
         'medicine course:course-1',
         'medicine dose:course-1:2031-05-14:0',
         'medicine dose:course-1:2031-05-14:1',
@@ -310,7 +337,7 @@ describe('everything Pet publishes', () => {
 
   test('logs are not published', () => {
     const items = agendaItems({ ...data, feedings: [fedAm, { ...fedAm, id: 'extra', mealId: undefined }] }, NOW, URL);
-    expect(items.filter((i) => i.kind === 'feeding')).toHaveLength(2);
+    expect(items.filter((i) => i.kind === 'feeding')).toHaveLength(4);
   });
 
   test('links default to the live app', () => {
