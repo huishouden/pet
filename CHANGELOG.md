@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.1](https://github.com/huishouden/pet/compare/v1.11.0...v1.11.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* a dose to-do logs its own slot's time, never today's ([#43](https://github.com/huishouden/pet/issues/43)) ([10de464](https://github.com/huishouden/pet/commit/10de464ae761ce6b72eb6be30071f0a1981818d1))
+
 ## [1.11.0](https://github.com/huishouden/pet/compare/v1.10.0...v1.11.0) (2026-10-03)
 
 
