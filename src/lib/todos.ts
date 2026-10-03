@@ -49,13 +49,18 @@ export function reminderDoneOps(r: Reminder): Op[] {
 /** Dismiss on a care reminder, as Pet's own Dismiss. */
 export const reminderDismissOps = (r: Reminder): Op[] => [{ col: COLLECTIONS.reminders, id: r.id, data: { dismissedAt: '$now', updatedAt: '$now' }, merge: true }];
 
-/** Given (or Skip, `skipped`) on one dose of a course, as Pet's own tick writes it. */
+/**
+ * Given (or Skip, `skipped`) on one dose of a course, logged at the slot's own time on its own day,
+ * as Pet's tick on an earlier day. Not '$now': an item still listed the next morning (before any
+ * device has opened Pet that day) must log the dose it was for, never mark today's as given.
+ */
 export function medDoseOps(c: Course, day: string, slot: number, skipped = false): Op[] {
+  const at = slotAt(c.times[slot], day);
   return [
     {
       col: COLLECTIONS.medDoses,
       id: todoMedDoseId(c.id, day, slot),
-      data: { petId: c.petId, courseId: c.id, slot, at: '$now', ...(skipped ? { skipped: true } : {}), by: '$me', createdAt: '$now' },
+      data: { petId: c.petId, courseId: c.id, slot, at, ...(skipped ? { skipped: true } : {}), by: '$me', createdAt: at },
     },
   ];
 }
