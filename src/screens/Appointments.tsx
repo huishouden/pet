@@ -9,6 +9,7 @@ import { appointmentLabel } from '../lib/care';
 import { petNames } from '../lib/pets';
 import { formatDayLong, formatTime, monthShort, relativeDay } from '@huishouden/pwa-kit/time';
 import { useClock } from '@huishouden/pwa-kit/react/clock';
+import { useHome } from '@huishouden/pwa-kit/react/home';
 import type { PetStore } from '../data/types';
 import { birthdayQueries, guessWords, isBirthdayOf } from '../lib/birthday';
 import { petInputOf } from '../lib/build';
@@ -18,6 +19,7 @@ import { auth } from '../data/firebase';
 import type { Open } from '../PetApp';
 import { PetAvatar, PetChips } from '../components/PetAvatar';
 import { appointmentEntry } from '../lib/agenda';
+import { appointmentFromHome } from '../lib/contacts';
 import { cardClass, ghostButton, iconButton, linkClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 import { capitalize } from '@huishouden/pwa-kit/i18n';
 import { useT } from '../i18n';
@@ -171,9 +173,11 @@ function Row({ a, now, pets, contacts, first, onEdit }: { a: Appointment; now: n
   const t = useT();
   const d = new Date(a.at);
   const who = a.contactId ? contacts.find((c) => c.id === a.contactId) : undefined;
+  const home = useHome();
+  const away = appointmentFromHome(a.location, who, { home });
   const forPets = a.petIds.map((id) => pets.find((p) => p.id === id)).filter((p): p is Pet => !!p);
   return (
-    <li className="flex items-start gap-5 border-b border-line p-5 last:border-b-0">
+    <li className="flex items-start gap-3 border-b border-line p-4 last:border-b-0 sm:gap-5 sm:p-5">
       <div className={`flex w-16 shrink-0 flex-col items-center rounded-xl py-2 ${first ? 'bg-primary text-on-primary' : 'bg-tint text-link'}`}>
         <span className="text-sm font-medium">{capitalize(monthShort(a.at))}</span>
         <span className="text-2xl font-semibold tabular-nums">{d.getDate()}</span>
@@ -196,18 +200,22 @@ function Row({ a, now, pets, contacts, first, onEdit }: { a: Appointment; now: n
         {who && (
           <div className="flex flex-wrap items-center gap-x-4 text-base text-muted">
             <span className="flex items-center gap-1.5">
-              <UserRound size={16} aria-hidden="true" /> {who.name}
+              <UserRound size={16} className="shrink-0" aria-hidden="true" /> {who.name}
             </span>
             {who.phone && (
               <a className={`${linkClass} tabular-nums`} href={telHref(who.phone)} aria-label={t('who.call', { name: who.name, phone: who.phone })}>
-                <Phone size={16} aria-hidden="true" /> {who.phone}
+                <Phone size={16} className="shrink-0" aria-hidden="true" /> {who.phone}
               </a>
             )}
           </div>
         )}
-        {a.location && (
-          <p className="mt-0.5 flex items-center gap-1.5 text-base text-muted">
-            <MapPin size={16} aria-hidden="true" /> {a.location}
+        {(a.location || away) && (
+          <p className="mt-0.5 flex items-start gap-1.5 text-base text-muted">
+            <MapPin size={16} className="mt-1 shrink-0" aria-hidden="true" />
+            <span className="min-w-0">
+              {a.location}
+              {away && <span className="text-sm whitespace-nowrap">{a.location ? ` · ${away}` : away}</span>}
+            </span>
           </p>
         )}
         {a.notes && <p className="mt-1 text-base whitespace-pre-line text-muted">{a.notes}</p>}
@@ -217,10 +225,13 @@ function Row({ a, now, pets, contacts, first, onEdit }: { a: Appointment; now: n
           </a>
         )}
       </div>
-      <AddToCalendar entry={appointmentEntry(a, pets)} compact />
-      <button type="button" className={iconButton} onClick={onEdit} aria-label={t('a11y.edit', { name: a.title })}>
-        <Pencil size={18} />
-      </button>
+      {/* Stacked on a phone, so the appointment itself keeps the width. */}
+      <div className="flex shrink-0 flex-col sm:flex-row">
+        <AddToCalendar entry={appointmentEntry(a, pets)} compact />
+        <button type="button" className={iconButton} onClick={onEdit} aria-label={t('a11y.edit', { name: a.title })}>
+          <Pencil size={18} />
+        </button>
+      </div>
     </li>
   );
 }

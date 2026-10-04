@@ -1,8 +1,14 @@
 import { expect, test } from '@playwright/test';
+import { stubOpenStreetMap } from '@huishouden/pwa-kit/e2e';
 import places from './fixtures/nominatim.json' with { type: 'json' };
 
 // The sample pets' vet, groomer and boarding (signed out, nothing saved). Place search goes to
-// OpenStreetMap's Nominatim, stubbed here with invented results.
+// OpenStreetMap's Nominatim, stubbed here with invented results; nothing else reaches it (a contact
+// saved with a typed address is looked up once, now that the sample household has a home).
+
+test.beforeEach(async ({ page }) => {
+  await stubOpenStreetMap(page);
+});
 
 test('the vet is one tap from a call or a map', async ({ page }) => {
   await page.goto('./?tab=contacts');
@@ -65,6 +71,29 @@ test('an appointment with the vet takes their address and shows their phone', as
   const row = page.locator('main li', { hasText: 'Booster shots' });
   await expect(row).toContainText('Miso');
   await expect(row.getByRole('link', { name: 'Call Example Vet Clinic, (555) 010-0150' })).toHaveAttribute('href', 'tel:5550100150');
+});
+
+// The sample home is 12 Example Lane (39.7817, -89.6501); the vet is 2.3 miles east.
+test('the vet, its appointments and the map search say how far from home', async ({ page }) => {
+  await stubOpenStreetMap(page, {
+    search: [{ osm_type: 'node', osm_id: 1000021, lat: '39.7817', lon: '-89.6066', name: 'Example Cat Clinic', display_name: 'Example Cat Clinic, 25 Example Street, Springfield, 00000, United States', extratags: {} }],
+  });
+  await page.goto('./?tab=contacts');
+  await expect(page.getByRole('region', { name: 'Example Vet Clinic' })).toContainText('2.3 mi from home');
+  // No address, no position: no distance.
+  await expect(page.getByRole('region', { name: 'Example Grooming' })).not.toContainText('from home');
+
+  await page.getByRole('button', { name: 'Add contact' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New contact' });
+  await dialog.getByLabel('Find a business').fill('cat clinic');
+  await dialog.getByRole('button', { name: 'Search', exact: true }).click();
+  await expect(dialog.getByRole('list', { name: 'Places' })).toContainText('Example Cat Clinic');
+  await expect(dialog.getByRole('list', { name: 'Places' })).toContainText('2.3 mi from home');
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+
+  await page.goto('./?tab=appointments');
+  await expect(page.locator('main li', { hasText: 'Yearly check-up' })).toContainText('25 Example Street, Springfield · 2.3 mi from home');
+  await expect(page.locator('main li', { hasText: 'Bath and nail trim' })).not.toContainText('from home');
 });
 
 // Businesses OpenStreetMap lacks: Google Maps' Share menu, a listing screenshot, or pasted text.
