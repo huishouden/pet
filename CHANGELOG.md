@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.15.0](https://github.com/huishouden/pet/compare/v1.14.1...v1.15.0) (2026-10-04)
+
+
+### Features
+
+* **calendar:** appointments and care reminders come back from Google Calendar; Add to calendar on appointments, reminders and courses (kit v0.67.0) ([#53](https://github.com/huishouden/pet/issues/53)) ([e998821](https://github.com/huishouden/pet/commit/e9988212545d6f4e7d69b911f97ef8748cc8b90c))
+
+
+### Bug Fixes
+
+* **dark:** pet avatars keep an edge in dark; kit 0.70.0 ([#56](https://github.com/huishouden/pet/issues/56)) ([f7d22a2](https://github.com/huishouden/pet/commit/f7d22a21ce53a14426a32dd1063051ab318699d6))
+
 ## [1.14.1](https://github.com/huishouden/pet/compare/v1.14.0...v1.14.1) (2026-10-04)
 
 
