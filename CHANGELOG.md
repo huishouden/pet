@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.1](https://github.com/huishouden/pet/compare/v1.14.0...v1.14.1) (2026-10-04)
+
+
+### Bug Fixes
+
+* Pet's Spanish and Dutch name and role words match the portal's ([#51](https://github.com/huishouden/pet/issues/51)) ([3de7f2e](https://github.com/huishouden/pet/commit/3de7f2ec734be07e03f4fb22f84d3c3fbcaed537))
+
 ## [1.14.0](https://github.com/huishouden/pet/compare/v1.13.0...v1.14.0) (2026-10-04)
 
 
