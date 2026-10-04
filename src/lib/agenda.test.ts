@@ -23,6 +23,7 @@ import {
 } from './agenda';
 import { mealAt } from './feeding';
 import type { Appointment, Course, Feeding, Meal, MedDose, Pet, Reminder } from './model';
+import { SUITE_ORIGIN } from '@huishouden/pwa-kit/site';
 
 // Invented household: two pets on a fixed day in 2031.
 const NOW = new Date(2031, 4, 14, 10, 30).getTime();
@@ -353,8 +354,8 @@ describe('everything Pet publishes', () => {
   });
 
   test('links default to the live app', () => {
-    expect(tabUrl('care')).toBe('https://huishouden-piekstra.web.app/pet/?tab=care');
-    expect(agendaItems(data, NOW).every((i) => i.url.startsWith('https://huishouden-piekstra.web.app/pet/'))).toBe(true);
+    expect(tabUrl('care')).toBe(`${SUITE_ORIGIN}/pet/?tab=care`);
+    expect(agendaItems(data, NOW).every((i) => i.url.startsWith(`${SUITE_ORIGIN}/pet/`))).toBe(true);
   });
 
   test('the course span has no status, so the portal shows it on the calendar but not on Today', () => {
