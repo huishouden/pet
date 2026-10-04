@@ -25,7 +25,7 @@ export function PetAvatar({ pet, pets, size = 40, plain }: { pet: Pet | undefine
   const Icon = pet ? ICONS[pet.species] ?? PawPrint : PawPrint;
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center rounded-full text-white"
+      className="inline-flex shrink-0 items-center justify-center rounded-full text-white ring-1 ring-tile-ring"
       style={{ width: size, height: size, backgroundColor: pet ? petColour(pet.id, pets) : '#78716c' }}
       aria-hidden="true"
     >
