@@ -9,6 +9,7 @@ import {
   expectSecurityHeaders,
   expectThemeConsistent,
 } from '@huishouden/pwa-kit/e2e';
+import { SUITE_ORIGIN } from '@huishouden/pwa-kit/site';
 
 test('loads without runtime errors and shows the sample board', async ({ page }) => {
   await expectCleanLoad(page);
@@ -22,7 +23,7 @@ test('loads without runtime errors and shows the sample board', async ({ page })
 test('link previews say what Pet is', async ({ page, request }) => {
   await page.goto('./');
   await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', 'Looking after the pets, together');
-  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', 'https://huishouden-piekstra.web.app/pet/og.png');
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', `${SUITE_ORIGIN}/pet/og.png`);
   expect((await request.get('./og.png')).ok()).toBe(true);
 });
 

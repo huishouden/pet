@@ -23,7 +23,6 @@ export default defineConfig({
       name: 'Huishouden Pet',
       shortName: 'Pet',
       description: 'Looking after the pets, together',
-      url: 'https://huishouden-piekstra.web.app/pet/',
       push: true,
       ocr: true,
       // Google Maps places and contact cards from the Share menu (Android, installed).

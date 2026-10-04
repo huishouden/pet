@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { SUITE_ORIGIN } from '@huishouden/pwa-kit/site';
 
 // Smoke tests against a deployed site: BASE_URL defaults to production, Pet's path on the suite's
 // one site. Specs use relative paths (`./`, `./?tab=x`): a leading `/` would open the portal.
@@ -8,7 +9,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
   use: {
-    baseURL: process.env.BASE_URL ?? 'https://huishouden-piekstra.web.app/pet/',
+    baseURL: process.env.BASE_URL || `${SUITE_ORIGIN}/pet/`,
     trace: 'retain-on-failure',
   },
   projects: [

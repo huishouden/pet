@@ -2,7 +2,7 @@
 // per remaining dose of a medicine course, and one per meal cut-off that nobody has ticked yet.
 // Pure: the live store writes these with replaceReminders; the sample never does.
 
-import { appUrl } from '@huishouden/pwa-kit/site';
+import { appUrl, SUITE_ORIGIN } from '@huishouden/pwa-kit/site';
 import { remindersForCourse, type ReminderInput } from '@huishouden/pwa-kit/reminders';
 import type { Course, Feeding, Meal, MedDose, Pet } from './model';
 import { courseState } from './courses';
@@ -15,7 +15,7 @@ export const APP = 'pet';
 /** Pet's path on the suite's one site (pwa-kit docs/one-site.md); bun tests have no Vite env. */
 export const APP_BASE = import.meta.env.BASE_URL ?? '/pet/';
 /** The page's origin, so staging links to staging; tests run without a page. */
-export const APP_ORIGIN = globalThis.location?.origin ?? 'https://huishouden-piekstra.web.app';
+export const APP_ORIGIN = globalThis.location?.origin ?? SUITE_ORIGIN;
 /** The app's own address: Today, its home. */
 export const APP_URL = appUrl(APP_BASE, '', APP_ORIGIN);
 
