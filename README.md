@@ -68,6 +68,9 @@ changed after). A course saved with a start date in the past offers to mark the 
 given. A course day is complete when all its doses were given (a skipped one isn't). New
 pets start with an AM and a PM meal. Contacts live in the household-wide `contacts` collection
 shared by every app (`@huishouden/pwa-kit/contacts`); Pet shows those whose `apps` include `pet`.
+Once the household has set its home in the portal (`households/{id}.home`, kit `./home`), each
+contact's card and an appointment at that contact's place say how far it is from home ("2.3 mi
+from home"), from the position the contact's map search found; the search prefers places near home.
 The Firestore rules live in the repo that owns the project's rules file
 ([huishouden/rules](https://github.com/huishouden/rules)). Signing in uses Google with no extra
 scopes; the household comes from the shared `households` document, so one invite from the portal

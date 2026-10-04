@@ -1,4 +1,5 @@
-import type { Contact } from '@huishouden/pwa-kit/contacts';
+import { coordinates, type Contact } from '@huishouden/pwa-kit/contact-core';
+import { formatFromHome, type HouseholdHome } from '@huishouden/pwa-kit/home';
 import { t } from '../i18n';
 
 // The pets' people: which roles Pet knows about and how free-text roles map onto them. Grouping,
@@ -48,4 +49,28 @@ export function contactForRole(contacts: Contact[], role: KnownRole): Contact | 
   return [...contacts]
     .sort((a, b) => a.name.localeCompare(b.name))
     .find((c) => c.role?.trim().toLowerCase() === role.toLowerCase() || knownRole(c.role) === role);
+}
+
+const plain = (text: string | undefined) => (text ?? '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+
+/**
+ * Where an appointment is, when that is its contact's place: no other location, the contact's
+ * address (the dialog copies it in, cut to the field's length), or its name ("City Hospital, level
+ * 2"). Undefined when the contact has no position or the appointment is somewhere else.
+ */
+export function appointmentPoint(location: string | undefined, contact: Contact | undefined): { lat: number; lng: number } | undefined {
+  const point = coordinates(contact);
+  if (!contact || !point) return undefined;
+  const where = plain(location);
+  if (!where) return point;
+  const address = plain(contact.address);
+  const name = plain(contact.name);
+  const atAddress = !!address && (address.startsWith(where) || where.includes(address));
+  const atName = !!name && (where === name || where.startsWith(`${name} `));
+  return atAddress || atName ? point : undefined;
+}
+
+/** "2.3 mi from home" for an appointment at its contact's place, when the household has a home. */
+export function appointmentFromHome(location: string | undefined, contact: Contact | undefined, { home, locale }: { home: HouseholdHome | undefined; locale?: string }): string | undefined {
+  return formatFromHome(appointmentPoint(location, contact), { home, locale });
 }

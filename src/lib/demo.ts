@@ -1,4 +1,5 @@
 import type { Contact } from '@huishouden/pwa-kit/contacts';
+import type { HouseholdHome } from '@huishouden/pwa-kit/home';
 import type { Appointment, Course, Dose, Feeding, Meal, MedDose, Pet, PetPhoto, PetRecord, Reminder, Weight } from './model';
 import { DEMO_PHOTOS } from './demoPhotos';
 import { toYmd } from '@huishouden/pwa-kit/time';
@@ -301,6 +302,8 @@ function contacts(): Contact[] {
       phone: '(555) 010-0150',
       website: 'https://vet.example.com',
       address: '25 Example Street, Springfield',
+      lat: 39.7817,
+      lng: -89.6066,
       notes: 'Open Monday to Saturday, 8 to 6. Both pets are registered here.',
       ...base,
     },
@@ -310,6 +313,8 @@ function contacts(): Contact[] {
       role: 'Emergency vet',
       phone: '(555) 010-0111',
       address: '90 Highway Road, Springfield',
+      lat: 39.7561,
+      lng: -89.5928,
       notes: 'Open all night and on holidays.',
       ...base,
     },
@@ -328,10 +333,15 @@ function contacts(): Contact[] {
       phone: '(555) 010-0178',
       website: 'https://lodge.example.com',
       address: '7 Kennel Lane, Springfield',
+      lat: 39.8231,
+      lng: -89.6998,
       ...base,
     },
   ];
 }
+
+/** The sample household's home, so the vet's card and appointments say how far they are. */
+export const DEMO_HOME: HouseholdHome = { address: '12 Example Lane, Springfield, Illinois 62701', lat: 39.7817, lng: -89.6501, setBy: SAM, updatedAt: CREATED };
 
 export function demoData(): PetHouseholdData {
   const rs = reminders();
