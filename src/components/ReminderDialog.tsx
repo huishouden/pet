@@ -11,6 +11,8 @@ import type { ReminderInput } from '../lib/build';
 import { PetAvatar } from './PetAvatar';
 import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 import { useT } from '../i18n';
+import { AddToCalendar } from '@huishouden/pwa-kit/react/calendar';
+import { reminderEntry } from '../lib/agenda';
 
 // i18n-dynamic: unit.
 const UNIT_KEYS = { day: 'unit.day', week: 'unit.week', month: 'unit.month', year: 'unit.year' } as const satisfies Record<Unit, string>;
@@ -76,6 +78,7 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
       onClose={onClose}
       footer={
         <>
+          {reminder && reminderEntry(reminder, pets, now) && <AddToCalendar entry={reminderEntry(reminder, pets, now)!} />}
           {onDelete && (
             <button
               type="button"

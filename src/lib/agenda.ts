@@ -4,7 +4,9 @@
 // Logs of what already happened (doses given, feeds, weights, records) stay in the app.
 // Pure: every function takes `now`.
 
-import { AGENDA_LIMITS, allDayStart, inAgendaWindow, type AgendaInput } from '@huishouden/pwa-kit/agenda';
+import { AGENDA_LIMITS, allDayStart, inAgendaWindow, type AgendaEdit, type AgendaInput } from '@huishouden/pwa-kit/agenda';
+import type { CalendarEntry } from '@huishouden/pwa-kit/calendar-export';
+import type { Role } from '@huishouden/pwa-kit/roles';
 import { addDays, parseYmd, toYmd } from '@huishouden/pwa-kit/time';
 import type { Appointment, Course, Feeding, Meal, MedDose, Pet, Reminder } from './model';
 import type { PetHouseholdData } from './demo';
@@ -48,6 +50,43 @@ const inWindow = (items: AgendaEntry[], now: number) => items.filter((i) => inAg
 /** "Heartworm prevention for Milo": what to do and for whom, read on its own in the portal. */
 export const forPet = (what: string, who: string | undefined) => (who ? t('today.forPet', { what: what.trim(), name: who }) : what.trim()).slice(0, AGENDA_LIMITS.title);
 
+const STAFF: Role[] = ['admin', 'member'];
+
+/**
+ * How a change made in someone's own calendar (huishouden/calendar's Google sync) comes back to an
+ * appointment: moved, renamed, new notes, or deleted (as Delete does here). Admins and members,
+ * and whoever added it, as the petAppointments rules allow (which keep no `updatedAt`).
+ */
+export function appointmentEdit(a: Pick<Appointment, 'id' | 'by'>): AgendaEdit {
+  const who = { roles: STAFF, emails: [a.by] };
+  const merge = (data: object) => ({ ops: [{ col: 'petAppointments', id: a.id, data, merge: true }], ...who });
+  return {
+    reschedule: merge({ at: '$start' }),
+    rename: merge({ title: '$title' }),
+    notes: merge({ notes: '$notes' }),
+    cancel: { ops: [{ col: 'petAppointments', id: a.id, data: null }], ...who },
+  };
+}
+
+/** Medicine reminders, which a kid may tick only when they added them (the rules say the same). */
+const MEDICINE_KINDS = ['flea-tick', 'heartworm', 'deworming', 'medication'];
+
+/**
+ * A care reminder moved to another day in a calendar moves its due day; deleted there, it is
+ * dismissed, as Dismiss does here. The due day is one of the fields anyone may tick, so helpers (and
+ * kids, except on medicine) may move it; dismissing and notes are for admins, members and whoever
+ * added it. The title on the agenda names the pet ("Heartworm for Milo"), so renaming stays in the app.
+ */
+export function reminderEdit(r: Pick<Reminder, 'id' | 'by' | 'kind'>): AgendaEdit {
+  const own = { emails: [r.by] };
+  const merge = (data: object) => [{ col: 'petReminders', id: r.id, data, merge: true }];
+  return {
+    reschedule: { ops: merge({ due: '$date', updatedAt: '$now' }), roles: MEDICINE_KINDS.includes(r.kind) ? [...STAFF, 'helper'] : [...STAFF, 'helper', 'kid'], ...own },
+    notes: { ops: merge({ notes: '$notes', updatedAt: '$now' }), roles: STAFF, ...own },
+    cancel: { ops: merge({ dismissedAt: '$now', updatedAt: '$now' }), roles: STAFF, ...own },
+  };
+}
+
 /** An appointment at its time, at its place, for the pets it is for. */
 export function appointmentAgenda(a: Appointment, pets: Pick<Pet, 'id' | 'name'>[], now: number, origin = APP_ORIGIN): AgendaEntry[] {
   if (!a.title.trim() || !Number.isFinite(a.at)) return [];
@@ -65,6 +104,7 @@ export function appointmentAgenda(a: Appointment, pets: Pick<Pet, 'id' | 'name'>
         ...(who ? { who } : {}),
         // A private appointment stays private on the agenda: helpers and kids never read it.
         ...(a.private ? { private: true } : {}),
+        edit: appointmentEdit(a),
       },
     ],
     now,
@@ -87,6 +127,7 @@ export function reminderAgenda(r: Reminder, pets: Pick<Pet, 'id' | 'name'>[], no
         url: tabUrl('care', undefined, origin),
         ...(who ? { who } : {}),
         status: state === 'overdue' ? 'overdue' : 'upcoming',
+        edit: reminderEdit(r),
       },
     ],
     now,
@@ -229,4 +270,27 @@ export function agendaChanges(written: ReadonlyMap<string, string>, wanted: Read
     if (written.get(ref) !== signature) replace.push([ref, items, signature]);
   }
   return { replace, remove: [...written.keys()].filter((ref) => !wanted.has(ref)) };
+}
+
+// ---- "Add to calendar" ----
+
+/** An appointment for "Add to calendar": its time, place and notes. */
+export function appointmentEntry(a: Appointment, pets: Pick<Pet, 'id' | 'name'>[], origin = APP_ORIGIN): CalendarEntry {
+  const who = a.petIds.map((id) => nameOf(pets, id)).filter(Boolean).join(', ');
+  const location = a.location?.trim();
+  const notes = [who, a.notes?.trim()].filter(Boolean).join('\n');
+  return { title: a.title, start: a.at, allDay: false, kind: 'appointment', url: tabUrl('appointments', a.petIds.length === 1 ? a.petIds[0] : undefined, origin), ...(location ? { location } : {}), ...(notes ? { detail: notes } : {}) };
+}
+
+/** A care reminder's next due day for "Add to calendar"; none once given or dismissed. */
+export function reminderEntry(r: Reminder, pets: Pick<Pet, 'id' | 'name'>[], now: number, origin = APP_ORIGIN): CalendarEntry | null {
+  const state = dueState(r, now);
+  if (state === 'done' || state === 'dismissed' || parseYmd(r.due) === null || !r.title.trim()) return null;
+  return { title: forPet(r.title, nameOf(pets, r.petId)), start: allDayStart(r.due), allDay: true, kind: 'due', detail: describeRecurrence(r), url: tabUrl('care', undefined, origin) };
+}
+
+/** A medicine course, first day to last, for "Add to calendar". */
+export function courseEntry(c: Course, pets: Pick<Pet, 'id' | 'name'>[], origin = APP_ORIGIN): CalendarEntry | null {
+  if (parseYmd(c.startDate) === null || !c.name.trim()) return null;
+  return { title: forPet(c.name, nameOf(pets, c.petId)), start: allDayStart(c.startDate), end: allDayStart(addDays(lastDay(c), 1)), allDay: true, kind: 'medicine', detail: courseDetail(c), url: tabUrl('pets', c.petId, origin) };
 }

@@ -1,7 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import { agendaDoc, allDayStart } from '@huishouden/pwa-kit/agenda';
+import { agendaDoc, agendaOpsAllowed, allDayStart, canEdit, fillEditOps } from '@huishouden/pwa-kit/agenda';
 import { toYmd } from '@huishouden/pwa-kit/time';
 import {
+  appointmentEdit,
+  appointmentEntry,
+  courseEntry,
+  reminderEdit,
+  reminderEntry,
   agendaByRef,
   agendaItems,
   appointmentAgenda,
@@ -95,6 +100,7 @@ describe('appointments', () => {
       detail: 'Example Animal Clinic',
       url: `${URL}/?tab=appointments&pet=pet-pepper`,
       who: 'Pepper',
+      edit: appointmentEdit(appointment()),
     });
     valid([item]);
   });
@@ -129,6 +135,7 @@ describe('care reminders', () => {
         url: `${URL}/?tab=care`,
         who: 'Pepper',
         status: 'upcoming',
+        edit: reminderEdit(reminder()),
       },
     ]);
     valid(items);
@@ -382,5 +389,37 @@ describe('writes after a change', () => {
   test('a deleted course removes its span and its doses', () => {
     const { remove } = agendaChanges(writtenFrom(data), agendaByRef({ ...data, courses: [] }, NOW, ORIGIN));
     expect(remove.sort()).toEqual(['course:course-1', 'dose:course-1:2031-05-14:0', 'dose:course-1:2031-05-14:1', 'dose:course-1:2031-05-15:0', 'dose:course-1:2031-05-15:1']);
+  });
+});
+
+describe('changes made in a calendar come back', () => {
+  test('an appointment: moved, renamed, re-noted (no updatedAt, as its rules say), deleted', () => {
+    const a = appointment();
+    const edit = appointmentEdit(a);
+    expect(fillEditOps(edit.reschedule!.ops, { start: a.at + 3_600_000 })).toEqual([{ col: 'petAppointments', id: a.id, data: { at: a.at + 3_600_000 }, merge: true }]);
+    expect(fillEditOps(edit.rename!.ops, { title: 'Checkup' })[0].data).toEqual({ title: 'Checkup' });
+    expect(edit.cancel!.ops).toEqual([{ col: 'petAppointments', id: a.id, data: null }]);
+    for (const x of Object.values(edit)) expect(agendaOpsAllowed('pet', x!.ops)).toBe(true);
+    const item = agendaDoc('pet', { ...appointmentAgenda(a, pets, NOW, ORIGIN)[0], ref: 'appointment:x' }, a.by);
+    expect(canEdit(item, 'reschedule', 'helper', 'someone@example.com')).toBe(false);
+    expect(canEdit(item, 'reschedule', 'helper', a.by)).toBe(true);
+  });
+
+  test('a reminder: moved to another day moves its due day; deleted dismisses it; no rename', () => {
+    const r = reminder();
+    const edit = reminderEdit(r);
+    expect(fillEditOps(edit.reschedule!.ops, { date: '2031-06-01' })[0].data).toEqual({ due: '2031-06-01', updatedAt: '$now' });
+    expect(edit.cancel!.ops[0].data).toEqual({ dismissedAt: '$now', updatedAt: '$now' });
+    expect(edit.rename).toBeUndefined();
+    expect(edit.reschedule!.roles).toEqual(['admin', 'member', 'helper']);
+    expect(reminderEdit({ ...r, kind: 'vaccine' }).reschedule!.roles).toContain('kid');
+  });
+
+  test('"Add to calendar" entries: an appointment at its place, a reminder all day, a course first day to last', () => {
+    expect(appointmentEntry(appointment(), pets, ORIGIN)).toMatchObject({ title: 'Annual checkup', allDay: false, location: 'Example Animal Clinic' });
+    expect(reminderEntry(reminder(), pets, NOW, ORIGIN)).toMatchObject({ title: 'Flea and tick for Pepper', allDay: true });
+    expect(reminderEntry(reminder({ dismissedAt: NOW }), pets, NOW, ORIGIN)).toBeNull();
+    const [span] = courseAgenda(course(), pets, NOW, ORIGIN);
+    expect(courseEntry(course(), pets, ORIGIN)).toMatchObject({ allDay: true, start: span.start, end: span.end });
   });
 });

@@ -8,13 +8,14 @@ import { appointmentLabel } from '../lib/care';
 import { fromCalendar, guessKind } from '../lib/calendarImport';
 import { addDays, fromLocalInput, toLocalInput } from '@huishouden/pwa-kit/time';
 import type { AppointmentInput } from '../lib/build';
-import { CalendarFind, LinkedEvent } from '@huishouden/pwa-kit/react/calendar';
+import { AddToCalendar, CalendarFind, LinkedEvent } from '@huishouden/pwa-kit/react/calendar';
 import { auth } from '../data/firebase';
 import { PetAvatar } from './PetAvatar';
 import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 import { PrivateCheckbox } from '@huishouden/pwa-kit/react/contacts';
 import { useT } from '../i18n';
 import { roleLabel } from '../lib/contacts';
+import { appointmentEntry } from '../lib/agenda';
 
 export function AppointmentDialog({ appointment, petId, pets, now, contacts, calendarAvailable, canMarkPrivate = true, onSave, onDelete, onClose }: {
   appointment: Appointment | null;
@@ -79,6 +80,7 @@ export function AppointmentDialog({ appointment, petId, pets, now, contacts, cal
       onClose={onClose}
       footer={
         <>
+          {appointment && <AddToCalendar entry={appointmentEntry(appointment, pets)} />}
           {onDelete && (
             <button
               type="button"

@@ -13,6 +13,8 @@ import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from '@hu
 import { useT } from '../i18n';
 import { formatList } from '@huishouden/pwa-kit/i18n';
 import { formatClock } from '../lib/format';
+import { AddToCalendar } from '@huishouden/pwa-kit/react/calendar';
+import { courseEntry } from '../lib/agenda';
 
 
 /** A short medicine course: what, how much, how often, from when and for how long. */
@@ -89,6 +91,7 @@ export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (
       onClose={onClose}
       footer={
         <>
+          {course && courseEntry(course, pet ? [pet] : []) && <AddToCalendar entry={courseEntry(course, pet ? [pet] : [])!} />}
           {onDelete && (
             <button
               type="button"
