@@ -11,6 +11,7 @@ import { FeedingBoard } from '../components/FeedingBoard';
 import { NeedsDoing } from '../components/NeedsDoing';
 import { BirthdayCard } from '../components/Celebration';
 import { cardClass, ghostButton, overline, primaryButton } from '@huishouden/pwa-kit/react/ui';
+import { useT } from '../i18n';
 
 const COMING_SHOWN = 5;
 
@@ -28,17 +29,18 @@ export function Today({ store, pets, open, onGive, onToggleMeal, onToggleDose, a
   /** Shown just below Needs doing (calendar suggestions). */
   afterNeeds?: ReactNode;
 }) {
+  const t = useT();
   const { now } = useClock();
   const { data } = store;
 
   if (pets.length === 0)
     return (
-      <section className={`${cardClass} mx-auto max-w-2xl p-8`} aria-label="Welcome">
+      <section className={`${cardClass} mx-auto max-w-2xl p-8`} aria-label={t('today.welcome')}>
         <PawPrint size={32} className="text-link" aria-hidden="true" />
-        <h2 className="mt-3 text-3xl font-semibold text-ink">Add your first pet</h2>
-        <p className="mt-2 text-lg text-muted">Then add their flea, heartworm and vaccine reminders, vet visits and weight. Everyone in the household sees the same.</p>
+        <h2 className="mt-3 text-3xl font-semibold text-ink">{t('today.firstPet')}</h2>
+        <p className="mt-2 text-lg text-muted">{t('today.firstPetBody')}</p>
         <button type="button" className={`${primaryButton} mt-5`} onClick={() => open.pet(null)}>
-          <Plus size={20} /> Add a pet
+          <Plus size={20} /> {t('today.addPet')}
         </button>
       </section>
     );
@@ -69,10 +71,10 @@ export function Today({ store, pets, open, onGive, onToggleMeal, onToggleDose, a
         <BirthdayCard key={pet.id} pet={pet} pets={pets} turns={countdown.turns} onOpen={() => open.showPet(pet.id)} />
       ))}
       <div className="grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-2 md:items-start">
-        <section className={`${cardClass} px-5 py-4 sm:px-6`} aria-label="Later today">
-          <h2 className={overline}>Later today</h2>
+        <section className={`${cardClass} px-5 py-4 sm:px-6`} aria-label={t('today.later')}>
+          <h2 className={overline}>{t('today.later')}</h2>
           {later.length === 0 ? (
-            <p className="mt-2 text-lg text-muted">Nothing else today.</p>
+            <p className="mt-2 text-lg text-muted">{t('today.nothingElse')}</p>
           ) : (
             <ul className="mt-1">
               {later.map((l) => (
@@ -82,8 +84,8 @@ export function Today({ store, pets, open, onGive, onToggleMeal, onToggleDose, a
           )}
         </section>
         {coming.length > 0 && (
-          <section className={`${cardClass} px-5 py-4 sm:px-6`} aria-label="Coming up">
-            <h2 className={overline}>Coming up</h2>
+          <section className={`${cardClass} px-5 py-4 sm:px-6`} aria-label={t('today.comingUp')}>
+            <h2 className={overline}>{t('today.comingUp')}</h2>
             <ul className="mt-1">
               {coming.slice(0, COMING_SHOWN).map((c) => (
                 <ComingRow key={c.key} item={c} pets={pets} onOpen={() => openComing(c, open)} />
@@ -91,7 +93,7 @@ export function Today({ store, pets, open, onGive, onToggleMeal, onToggleDose, a
             </ul>
             {coming.length > COMING_SHOWN && (
               <button type="button" className={`${ghostButton} -ml-2 mt-1`} onClick={() => open.tab('care')}>
-                {coming.length - COMING_SHOWN} more on Care <ChevronRight size={18} />
+                {t('today.moreOnCare', { count: coming.length - COMING_SHOWN })} <ChevronRight size={18} />
               </button>
             )}
           </section>
@@ -171,15 +173,16 @@ function ComingRow({ item, pets, onOpen }: { item: ComingItem; pets: Pet[]; onOp
 
 /** Just the pets: photo and name, each opening the pet's page, where everything about them lives. */
 function PetsRow({ pets, onShow }: { pets: Pet[]; onShow: (id: string) => void }) {
+  const t = useT();
   return (
-    <section className={`${cardClass} px-5 py-4 sm:px-6`} aria-label="Pets">
-      <h2 className={overline}>Pets</h2>
+    <section className={`${cardClass} px-5 py-4 sm:px-6`} aria-label={t('tab.pets')}>
+      <h2 className={overline}>{t('tab.pets')}</h2>
       <ul className="mt-2 flex flex-wrap gap-2">
         {pets.map((p) => (
           <li key={p.id}>
-            <button type="button" onClick={() => onShow(p.id)} className="flex min-h-12 items-center gap-2.5 rounded-full border border-line bg-surface py-1 pr-4 pl-1 text-lg font-medium text-ink hover:border-forest-400" aria-label={`${p.name}'s page`}>
+            <button type="button" onClick={() => onShow(p.id)} className="flex min-h-12 items-center gap-2.5 rounded-full border border-line bg-surface py-1 pr-4 pl-1 text-lg font-medium text-ink hover:border-forest-400" aria-label={t('today.petPage', { name: p.name })}>
               <PetAvatar pet={p} pets={pets} size={40} />
-              {p.name}
+              <span translate="no">{p.name}</span>
             </button>
           </li>
         ))}

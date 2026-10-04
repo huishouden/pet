@@ -4,6 +4,7 @@ import { useTheme } from '@huishouden/pwa-kit/react/theme';
 import type { Pet } from '../lib/model';
 import { celebrationLine, celebrationTitle } from '../lib/today';
 import { PetAvatar } from './PetAvatar';
+import { useT } from '../i18n';
 
 // The suite's one celebration (DESIGN.md, Celebrations): a pet's birthday, on the day only. Confetti
 // in the chart colours (the dark set in dark), settling once on arrival; still under prefers-reduced-motion (index.css).
@@ -38,10 +39,11 @@ export function Confetti({ className = '' }: { className?: string }) {
 
 /** Today's festive card: "Happy birthday, Biscuit!", tapping through to the pet's page. */
 export function BirthdayCard({ pet, pets, turns, onOpen }: { pet: Pet; pets: Pet[]; turns: number; onOpen: () => void }) {
+  const t = useT();
   return (
-    <section aria-label={`${pet.name}'s birthday`} className="relative overflow-hidden rounded-2xl border border-forest-200 bg-tint shadow-sm dark:border-forest-600 dark:bg-forest-800">
+    <section aria-label={t('birthday.title', { name: pet.name })} className="relative overflow-hidden rounded-2xl border border-forest-200 bg-tint shadow-sm dark:border-forest-600 dark:bg-forest-800">
       <Confetti />
-      <button type="button" onClick={onOpen} className="relative flex w-full items-center gap-4 px-5 py-5 text-left sm:px-6" aria-label={`${celebrationTitle(pet.name)} ${celebrationLine(pet.name, turns)}. Open ${pet.name}'s page`}>
+      <button type="button" onClick={onOpen} className="relative flex w-full items-center gap-4 px-5 py-5 text-left sm:px-6" aria-label={t('celebration.open', { title: celebrationTitle(pet.name), line: celebrationLine(pet.name, turns), name: pet.name })}>
         <span className="relative shrink-0">
           <PetAvatar pet={pet} pets={pets} size={56} />
           <span className="absolute -right-1 -bottom-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-terracotta text-white ring-2 ring-white dark:ring-forest-800" aria-hidden="true">

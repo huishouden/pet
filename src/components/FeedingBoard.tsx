@@ -4,7 +4,8 @@ import type { Course, Feeding, Meal, MedDose, Pet } from '../lib/model';
 import { mealsOf, mealsOn } from '../lib/feeding';
 import { courseText, dosesOn, slotMealName } from '../lib/courses';
 import { personName } from '@huishouden/pwa-kit/people';
-import { addDays, formatDayLong, formatTime, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
+import { addDays, atClock, formatDayLong, formatTime, toHhmm, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
+import { useT } from '../i18n';
 import { formatClock } from '../lib/format';
 import { PetAvatar } from './PetAvatar';
 import { Chip, ghostButton, overline } from '@huishouden/pwa-kit/react/ui';
@@ -29,7 +30,11 @@ export function FeedingBoard({ pets, meals, feedings, courses, medDoses, me, now
   onToggleDose: (pet: Pet, course: Course, slot: number, day: Ymd) => void;
   onAddMeal: (petId: string) => void;
 }) {
+  const t = useT();
   const [yesterday, setYesterday] = useState(false);
+  // "Biscuit AM", or "Biscuit AM yesterday" on the day before.
+  const subject = (pet: string, thing: string) => (yesterday ? t('toast.whoYesterday', { who: t('toast.petMeal', { pet, meal: thing }) }) : t('toast.petMeal', { pet, meal: thing }));
+  const at = (ms: number) => atClock(toHhmm(ms));
   // A moment on the shown day: now, or the same time yesterday.
   const day = yesterday ? addDays(now, -1) : now;
   const dayYmd = toYmd(day);
@@ -39,22 +44,22 @@ export function FeedingBoard({ pets, meals, feedings, courses, medDoses, me, now
   // One column count for the whole board, so AM sits above AM like on the paper one.
   const columns = Math.max(1, ...pets.map(tilesOf));
   return (
-    <section className="rounded-2xl border border-line bg-surface px-5 py-4 shadow-sm sm:px-6" aria-label="Feeding">
+    <section className="rounded-2xl border border-line bg-surface px-5 py-4 shadow-sm sm:px-6" aria-label={t('board.feeding')}>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <h2 className={overline}>Feeding and medicine</h2>
+        <h2 className={overline}>{t('board.title')}</h2>
         <div className="flex items-center gap-3">
           {yesterday && <p className="hidden text-base text-muted sm:block">{formatDayLong(day)}</p>}
-          <div className="flex gap-1.5" role="group" aria-label="Day shown">
+          <div className="flex gap-1.5" role="group" aria-label={t('board.dayShown')}>
             <Chip active={!yesterday} onClick={() => setYesterday(false)}>
-              Today
+              {t('board.today')}
             </Chip>
             <Chip active={yesterday} onClick={() => setYesterday(true)}>
-              Yesterday
+              {t('board.yesterday')}
             </Chip>
           </div>
         </div>
       </div>
-      {yesterday && <p className="mt-1 text-base text-muted">Ticking a meal or dose here logs it at its time yesterday.</p>}
+      {yesterday && <p className="mt-1 text-base text-muted">{t('board.yesterdayHint')}</p>}
       <ul>
         {pets.map((pet) => {
           const today = mealsOn(meals, feedings, pet.id, day, now);
@@ -70,10 +75,10 @@ export function FeedingBoard({ pets, meals, feedings, courses, medDoses, me, now
               </div>
               {tiles === 0 ? (
                 <button type="button" className={ghostButton} onClick={() => onAddMeal(pet.id)}>
-                  <Plus size={18} /> Add a meal
+                  <Plus size={18} /> {t('board.addMeal')}
                 </button>
               ) : (
-                <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:grid-cols-[repeat(var(--cols),minmax(0,1fr))]" style={{ '--cols': columns } as CSSProperties} role="group" aria-label={`${pet.name} ${yesterday ? 'yesterday' : 'today'}`}>
+                <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:grid-cols-[repeat(var(--cols),minmax(0,1fr))]" style={{ '--cols': columns } as CSSProperties} role="group" aria-label={yesterday ? t('toast.whoYesterday', { who: pet.name }) : t('board.petToday', { name: pet.name })}>
                   {today.map(({ meal, status }) => {
                     const fed = status.state === 'fed';
                     const late = status.state === 'late';
@@ -84,13 +89,15 @@ export function FeedingBoard({ pets, meals, feedings, courses, medDoses, me, now
                         done={fed}
                         late={late}
                         title={meal.name}
-                        detail={fed ? `${formatTime(status.at)} · ${who(status.feeding.by)}` : late ? (yesterday ? 'Not fed' : 'Not fed yet') : `by ${formatTime(status.at)}`}
+                        detail={fed ? `${formatTime(status.at)} · ${who(status.feeding.by)}` : late ? (yesterday ? t('board.notFed') : t('board.notFedYet')) : t('board.byTime', { time: formatTime(status.at) })}
                         label={
                           fed
-                            ? `${pet.name} ${meal.name}${yesterday ? ' yesterday' : ''}: fed at ${formatTime(status.at)} by ${who(status.feeding.by)}. Tap to undo.`
+                            ? t('board.fedLabel', { what: subject(pet.name, meal.name), at: at(status.at), who: who(status.feeding.by) })
                             : yesterday
-                              ? `${pet.name} ${meal.name} yesterday: not fed. Tap if fed.`
-                              : `${pet.name} ${meal.name}: ${late ? 'not fed yet' : 'not yet'}. Tap when fed.`
+                              ? t('board.notFedYesterdayLabel', { what: subject(pet.name, meal.name) })
+                              : late
+                                ? t('board.notFedYetLabel', { what: subject(pet.name, meal.name) })
+                                : t('board.notYetMealLabel', { what: subject(pet.name, meal.name) })
                         }
                         onClick={() => onToggleMeal(pet, meal, day)}
                       />
@@ -111,15 +118,15 @@ export function FeedingBoard({ pets, meals, feedings, courses, medDoses, me, now
                         icon={<Pill size={20} className="shrink-0" aria-hidden="true" />}
                         compact
                         title={title}
-                        detail={given ? `${formatTime(status.at)} · ${who(status.dose.by)}` : skipped ? `Skipped · ${who(status.dose.by)}` : missed ? 'Missed' : courseText(course, now)}
+                        detail={given ? `${formatTime(status.at)} · ${who(status.dose.by)}` : skipped ? t('board.skippedBy', { who: who(status.dose.by) }) : missed ? t('board.missed') : courseText(course, now)}
                         label={
                           given
-                            ? `${pet.name} ${course.name} ${slotName}${yesterday ? ' yesterday' : ''}: given at ${formatTime(status.at)} by ${who(status.dose.by)}. Tap to undo.`
+                            ? t('board.givenLabel', { what: subject(pet.name, `${course.name} ${slotName}`), at: at(status.at), who: who(status.dose.by) })
                             : skipped
-                              ? `${pet.name} ${course.name} ${slotName}${yesterday ? ' yesterday' : ''}: skipped by ${who(status.dose.by)}. Tap to undo.`
+                              ? t('board.skippedLabel', { what: subject(pet.name, `${course.name} ${slotName}`), who: who(status.dose.by) })
                               : yesterday
-                              ? `${pet.name} ${course.name} ${slotName} yesterday: missed. Tap if given.`
-                              : `${pet.name} ${course.name} ${slotName}: ${missed ? 'missed' : 'not yet'}, ${courseText(course, now)}. Tap when given.`
+                                ? t('board.missedYesterdayLabel', { what: subject(pet.name, `${course.name} ${slotName}`) })
+                                : t(missed ? 'board.missedLabel' : 'board.notYetDoseLabel', { what: subject(pet.name, `${course.name} ${slotName}`), course: courseText(course, now) })
                         }
                         onClick={() => onToggleDose(pet, course, slot, dayYmd)}
                       />

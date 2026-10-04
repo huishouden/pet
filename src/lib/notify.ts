@@ -9,6 +9,7 @@ import { courseState } from './courses';
 import { fedTodayFor, mealAt, mealsOf } from './feeding';
 import { addDays, startOfDay } from '@huishouden/pwa-kit/time';
 import { birthdayReminder } from './birthday';
+import { t } from '../i18n';
 
 export const APP = 'pet';
 /** Pet's path on the suite's one site (pwa-kit docs/one-site.md); bun tests have no Vite env. */
@@ -56,8 +57,8 @@ export function mealReminders(pet: Pick<Pet, 'id' | 'name'>, meals: Meal[], feed
       if (d === 0 && fedTodayFor(feedings, meal.id, now).length) continue;
       out.push({
         app: APP,
-        title: `${pet.name}: ${meal.name} not fed yet`,
-        body: 'Nobody has ticked it on the board. Tap to open Pet.',
+        title: t('notify.mealTitle', { pet: pet.name, meal: meal.name }),
+        body: t('notify.mealBody'),
         at,
         url: APP_URL,
         ref: mealsRef(pet.id),

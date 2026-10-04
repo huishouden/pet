@@ -1,7 +1,8 @@
 import { UserPlus } from 'lucide-react';
 import { groupContacts, type Contact } from '@huishouden/pwa-kit/contacts';
 import { ContactCard } from '@huishouden/pwa-kit/react/contacts';
-import { ROLES } from '../lib/contacts';
+import { ROLES, roleLabel } from '../lib/contacts';
+import { useT } from '../i18n';
 import { permissions } from '../lib/permissions';
 import type { PetStore } from '../data/types';
 import type { Open } from '../PetApp';
@@ -11,19 +12,20 @@ import { cardClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 export function Contacts({ store, open, notify }: { store: PetStore; open: Open; notify: (message: string, undo?: () => void) => void }) {
   const onAdd = () => open.contact(null);
   const onEdit = (c: Contact) => open.contact(c);
-  const groups = groupContacts(store.data.contacts, ROLES);
+  const t = useT();
+  const groups = groupContacts(store.data.contacts, ROLES, roleLabel);
   const perms = permissions(store.role, store.me);
 
   return (
     <div className="space-y-6 lg:h-full lg:overflow-y-auto">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-2xl font-semibold text-ink">Contacts</h2>
+        <h2 className="text-2xl font-semibold text-ink">{t('tab.contacts')}</h2>
         <button type="button" className={primaryButton} onClick={onAdd}>
-          <UserPlus size={20} /> Add contact
+          <UserPlus size={20} /> {t('contacts.add')}
         </button>
       </div>
       {groups.length === 0 && (
-        <p className={`${cardClass} p-6 text-lg text-muted`}>No contacts yet. Add the vet, the emergency vet and the groomer so their numbers are one tap away.</p>
+        <p className={`${cardClass} p-6 text-lg text-muted`}>{t('contacts.empty')}</p>
       )}
       <div className="grid items-start gap-6 md:grid-cols-2">
         {groups.flatMap((g) =>
@@ -31,13 +33,13 @@ export function Contacts({ store, open, notify }: { store: PetStore; open: Open;
             <ContactCard
               key={c.id}
               contact={c}
-              role={g.role}
+              role={roleLabel(g.role)}
               onEdit={perms.mayChange(c) ? () => onEdit(c) : undefined}
               onDelete={
                 perms.mayChange(c)
                   ? () => {
                       store.actions.deleteContact(c);
-                      notify(`Deleted ${c.name}`, () => store.actions.restoreContact(c));
+                      notify(t('common.deleted', { name: c.name }), () => store.actions.restoreContact(c));
                     }
                   : undefined
               }

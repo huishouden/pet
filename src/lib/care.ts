@@ -1,32 +1,40 @@
 import type { AppointmentKind, ReminderKind, Species } from './model';
 import type { Unit } from './schedule';
+import { t } from '../i18n';
 
-export const KIND_LABELS: Record<ReminderKind, string> = {
-  'flea-tick': 'Flea and tick',
-  heartworm: 'Heartworm',
-  vaccine: 'Vaccine',
-  deworming: 'Deworming',
-  medication: 'Medication',
-  other: 'Other',
-};
+const KIND_KEYS = {
+  'flea-tick': 'kind.fleaTick',
+  heartworm: 'kind.heartworm',
+  vaccine: 'kind.vaccine',
+  deworming: 'kind.deworming',
+  medication: 'kind.medication',
+  other: 'kind.other',
+} as const satisfies Record<ReminderKind, string>;
 
-export const APPOINTMENT_LABELS: Record<AppointmentKind, string> = {
-  vet: 'Vet',
-  grooming: 'Grooming',
-  boarding: 'Boarding',
-  other: 'Other',
-};
+const APPOINTMENT_KEYS = {
+  vet: 'appointmentKind.vet',
+  grooming: 'appointmentKind.grooming',
+  boarding: 'appointmentKind.boarding',
+  other: 'appointmentKind.other',
+} as const satisfies Record<AppointmentKind, string>;
 
-export const SPECIES_LABELS: Record<Species, string> = {
-  dog: 'Dog',
-  cat: 'Cat',
-  rabbit: 'Rabbit',
-  bird: 'Bird',
-  fish: 'Fish',
-  reptile: 'Reptile',
-  'small pet': 'Small pet',
-  other: 'Other',
-};
+const SPECIES_KEYS = {
+  dog: 'species.dog',
+  cat: 'species.cat',
+  rabbit: 'species.rabbit',
+  bird: 'species.bird',
+  fish: 'species.fish',
+  reptile: 'species.reptile',
+  'small pet': 'species.smallPet',
+  other: 'species.other',
+} as const satisfies Record<Species, string>;
+
+/** A care reminder's kind in the active language. */
+export const kindLabel = (k: ReminderKind): string => t(KIND_KEYS[k] ?? KIND_KEYS.other);
+/** An appointment's kind in the active language. */
+export const appointmentLabel = (k: AppointmentKind): string => t(APPOINTMENT_KEYS[k] ?? APPOINTMENT_KEYS.other);
+/** A species in the active language. */
+export const speciesLabel = (s: Species): string => t(SPECIES_KEYS[s] ?? SPECIES_KEYS.other);
 
 export interface Preset {
   kind: ReminderKind;
@@ -41,12 +49,12 @@ export interface Preset {
  */
 export function presetsFor(species: Species | undefined): Preset[] {
   const common: Preset[] = [
-    { kind: 'flea-tick', title: 'Flea and tick', every: 1, unit: 'month' },
-    { kind: 'deworming', title: 'Deworming', every: 3, unit: 'month' },
-    { kind: 'vaccine', title: 'Rabies vaccine', every: 1, unit: 'year' },
-    { kind: 'medication', title: 'Daily medication', every: 1, unit: 'day' },
+    { kind: 'flea-tick', title: t('preset.fleaTick'), every: 1, unit: 'month' },
+    { kind: 'deworming', title: t('preset.deworming'), every: 3, unit: 'month' },
+    { kind: 'vaccine', title: t('preset.rabies'), every: 1, unit: 'year' },
+    { kind: 'medication', title: t('preset.dailyMedication'), every: 1, unit: 'day' },
   ];
-  if (species === 'dog') return [common[0], { kind: 'heartworm', title: 'Heartworm prevention', every: 1, unit: 'month' }, common[2], { kind: 'vaccine', title: 'DHPP vaccine', every: 1, unit: 'year' }, common[1], common[3]];
-  if (species === 'cat') return [common[0], common[2], { kind: 'vaccine', title: 'FVRCP vaccine', every: 1, unit: 'year' }, common[1], common[3]];
+  if (species === 'dog') return [common[0], { kind: 'heartworm', title: t('preset.heartworm'), every: 1, unit: 'month' }, common[2], { kind: 'vaccine', title: t('preset.dhpp'), every: 1, unit: 'year' }, common[1], common[3]];
+  if (species === 'cat') return [common[0], common[2], { kind: 'vaccine', title: t('preset.fvrcp'), every: 1, unit: 'year' }, common[1], common[3]];
   return common;
 }

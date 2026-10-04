@@ -1,6 +1,8 @@
 // Weight log maths: units, the latest weight and the trend. The chart is the kit's QuantityChart. Pure.
 
 import { DAY, daysBetween } from '@huishouden/pwa-kit/time';
+import { t } from '../i18n';
+import { numberFormat } from '@huishouden/pwa-kit/i18n';
 
 export type WeightUnit = 'kg' | 'lb';
 export const WEIGHT_UNITS: readonly WeightUnit[] = ['kg', 'lb'];
@@ -12,9 +14,9 @@ export function convert(value: number, from: WeightUnit, to: WeightUnit): number
   return from === 'kg' ? value * LB_PER_KG : value / LB_PER_KG;
 }
 
-/** One decimal: "11.8 lb", "4.0 kg". */
+/** One decimal in the active locale: "11.8 lb", "4,0 kg". */
 export function formatWeight(value: number, unit: WeightUnit): string {
-  return `${(Math.round(value * 10) / 10).toFixed(1)} ${unit}`;
+  return `${numberFormat({ minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Math.round(value * 10) / 10)} ${unit}`;
 }
 
 /** Parses what people type ("11.8", "11,8") into a positive number, or null. */
@@ -48,10 +50,10 @@ export interface Trend {
 }
 
 const span = (days: number) => {
-  if (days < 14) return `${days} day${days === 1 ? '' : 's'}`;
-  if (days < 60) return `${Math.round(days / 7)} weeks`;
+  if (days < 14) return t('age.days', { count: days });
+  if (days < 60) return t('age.weeks', { count: Math.round(days / 7) });
   const months = Math.round(days / 30.44);
-  return months < 24 ? `${months} months` : `${Math.round(days / 365.25)} years`;
+  return months < 24 ? t('age.months', { count: months }) : t('age.years', { count: Math.round(days / 365.25) });
 };
 
 /**
@@ -68,9 +70,10 @@ export function trend(entries: Entry[], unit: WeightUnit, windowDays = 180): Tre
   if (!first) return null;
   const change = Math.round((last.shown - first.shown) * 10) / 10;
   const days = daysBetween(first.at, last.at);
-  if (Math.abs(change) < Math.max(0.1, last.shown * 0.01)) return { direction: 'steady', change: 0, days, text: `Steady over ${span(days)}` };
+  if (Math.abs(change) < Math.max(0.1, last.shown * 0.01)) return { direction: 'steady', change: 0, days, text: t('weight.steady', { span: span(days) }) };
   const direction = change > 0 ? 'up' : 'down';
-  return { direction, change, days, text: `${direction === 'up' ? 'Up' : 'Down'} ${formatWeight(Math.abs(change), unit)} in ${span(days)}` };
+  const amount = formatWeight(Math.abs(change), unit);
+  return { direction, change, days, text: direction === 'up' ? t('weight.up', { amount, span: span(days) }) : t('weight.down', { amount, span: span(days) }) };
 }
 
 export interface TargetProgress {
@@ -93,11 +96,12 @@ export function targetProgress(entries: Entry[], unit: WeightUnit, target: numbe
   const last = latest(entries);
   if (!last || !target) return null;
   const difference = Math.round((convert(last.value, last.unit, unit) - target) * 10) / 10;
-  if (Math.abs(difference) <= target * ON_TARGET_SHARE) return { difference, onTarget: true, text: 'On target', heading: null, headingText: null };
-  const text = `${formatWeight(Math.abs(difference), unit)} to ${difference > 0 ? 'lose' : 'gain'}`;
-  const t = trend(entries, unit);
-  if (!t) return { difference, onTarget: false, text, heading: null, headingText: null };
-  if (t.direction === 'steady') return { difference, onTarget: false, text, heading: 'steady', headingText: 'Holding steady' };
-  const toward = (difference > 0) === (t.direction === 'down');
-  return { difference, onTarget: false, text, heading: toward ? 'toward' : 'away', headingText: toward ? 'Heading toward the target' : 'Moving away from the target' };
+  if (Math.abs(difference) <= target * ON_TARGET_SHARE) return { difference, onTarget: true, text: t('weight.onTarget'), heading: null, headingText: null };
+  const amount = formatWeight(Math.abs(difference), unit);
+  const text = difference > 0 ? t('weight.toLose', { amount }) : t('weight.toGain', { amount });
+  const tr = trend(entries, unit);
+  if (!tr) return { difference, onTarget: false, text, heading: null, headingText: null };
+  if (tr.direction === 'steady') return { difference, onTarget: false, text, heading: 'steady', headingText: t('weight.holding') };
+  const toward = (difference > 0) === (tr.direction === 'down');
+  return { difference, onTarget: false, text, heading: toward ? 'toward' : 'away', headingText: toward ? t('weight.toward') : t('weight.away') };
 }

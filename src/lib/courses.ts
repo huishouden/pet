@@ -4,6 +4,7 @@
 import type { MedCourse } from '@huishouden/pwa-kit/dose';
 import { mealAt } from './feeding';
 import { addDays, daysBetween, parseYmd, toYmd, ymdToTime, type Ymd, isHhmm } from '@huishouden/pwa-kit/time';
+import { t } from '../i18n';
 
 /**
  * What "Scan the label" hands over: the kit's `MedCourse` (read on the device and parsed by
@@ -57,9 +58,9 @@ export function courseState(c: Pick<CourseLike, 'startDate' | 'days'>, now: numb
 /** "Day 3 of 7", "Starts in 2 days", "Starts tomorrow", "Finished". */
 export function courseText(c: Pick<CourseLike, 'startDate' | 'days'>, now: number): string {
   const day = courseDay(c, now);
-  if (day > c.days) return 'Finished';
-  if (day >= 1) return `Day ${day} of ${c.days}`;
-  return day === 0 ? 'Starts tomorrow' : `Starts in ${1 - day} days`;
+  if (day > c.days) return t('course.finished');
+  if (day >= 1) return t('course.dayOf', { day, days: c.days });
+  return day === 0 ? t('course.startsTomorrow') : t('course.startsIn', { count: 1 - day });
 }
 
 export type DoseStatus<D> =
@@ -177,9 +178,7 @@ export function daysUntil(startDate: string, until: string): number | null {
 
 /** "Twice a day", "3 times a day". */
 export function timesText(n: number): string {
-  if (n === 1) return 'Once a day';
-  if (n === 2) return 'Twice a day';
-  return `${n} times a day`;
+  return t('course.timesADay', { count: n });
 }
 
 /** A label for a dose slot: the meal at the same time ("AM"), else null for the caller to show the time. */

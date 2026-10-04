@@ -1,7 +1,8 @@
 import { Fragment } from 'react';
 import { Check, Pill, Utensils, Syringe } from 'lucide-react';
 import type { Pet } from '../lib/model';
-import type { Need } from '../lib/today';
+import { needActionLabel, type Need } from '../lib/today';
+import { useT } from '../i18n';
 import { PetAvatar } from './PetAvatar';
 import { cardClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
@@ -20,19 +21,20 @@ export function NeedsDoing({ needs, pets, allDone, onDo, onOpen }: {
   /** Opens the thing itself (the reminder, the course's doses by day, the pet). */
   onOpen: (need: Need) => void;
 }) {
+  const t = useT();
   const late = needs.filter((n) => n.late).length;
   return (
-    <section className={`${cardClass} px-4 py-4 sm:px-6 sm:py-5`} aria-label="Needs doing">
+    <section className={`${cardClass} px-4 py-4 sm:px-6 sm:py-5`} aria-label={t('needs.title')}>
       <div className="flex items-baseline justify-between gap-4">
-        <h2 className="text-xl font-semibold text-ink sm:text-2xl">Needs doing</h2>
-        {late > 0 && <p className="text-base font-medium text-attention sm:text-lg">{late} past due</p>}
+        <h2 className="text-xl font-semibold text-ink sm:text-2xl">{t('needs.title')}</h2>
+        {late > 0 && <p className="text-base font-medium text-attention sm:text-lg">{t('needs.pastDue', { count: late })}</p>}
       </div>
       {needs.length === 0 ? (
         <p className="mt-2 flex items-center gap-3 text-xl font-medium text-link sm:text-2xl" aria-live="polite">
           <Check size={28} className="shrink-0" aria-hidden="true" /> {allDone}
         </p>
       ) : (
-        <ul className="mt-1" aria-label="Due now">
+        <ul className="mt-1" aria-label={t('needs.dueNow')}>
           {needs.map((n) => (
             <NeedRow key={n.key} need={n} pet={pets.find((p) => p.id === n.petId)} pets={pets} onDo={() => onDo(n)} onOpen={() => onOpen(n)} />
           ))}
@@ -43,6 +45,7 @@ export function NeedsDoing({ needs, pets, allDone, onDo, onOpen }: {
 }
 
 function NeedRow({ need, pet, pets, onDo, onOpen }: { need: Need; pet: Pet | undefined; pets: Pet[]; onDo: () => void; onOpen: () => void }) {
+  const t = useT();
   const Icon = need.kind === 'care' && need.reminder.kind === 'medication' ? Pill : KIND_ICON[need.kind];
   return (
     <li className="flex items-center gap-3 border-b border-line py-3 last:border-b-0 sm:gap-4">
@@ -50,7 +53,7 @@ function NeedRow({ need, pet, pets, onDo, onOpen }: { need: Need; pet: Pet | und
       <span className="hidden sm:block">
         <PetAvatar pet={pet} pets={pets} size={44} />
       </span>
-      <button type="button" onClick={onOpen} className="min-w-0 flex-1 rounded-xl text-left" aria-label={`${need.title}, ${need.when}. Open`}>
+      <button type="button" onClick={onOpen} className="min-w-0 flex-1 rounded-xl text-left" aria-label={t('needs.open', { title: need.title, when: need.when })}>
         <span className={`flex items-center gap-2 text-xl leading-tight font-semibold sm:text-2xl ${need.late ? 'text-attention' : 'text-ink'}`}>
           <Icon size={20} className="hidden shrink-0 sm:block" aria-hidden="true" />
           <span className="min-w-0 [overflow-wrap:anywhere]">{need.title}</span>
@@ -64,8 +67,8 @@ function NeedRow({ need, pet, pets, onDo, onOpen }: { need: Need; pet: Pet | und
           ))}
         </span>
       </button>
-      <button type="button" className={`${primaryButton} min-h-14 shrink-0 px-4 text-lg sm:min-w-32 sm:px-5`} onClick={onDo} aria-label={`${need.action}: ${need.title}`}>
-        <Check size={22} /> {need.action}
+      <button type="button" className={`${primaryButton} min-h-14 shrink-0 px-4 text-lg sm:min-w-32 sm:px-5`} onClick={onDo} aria-label={t('today.actionName', { action: needActionLabel(need.action), name: need.title })}>
+        <Check size={22} /> {needActionLabel(need.action)}
       </button>
     </li>
   );

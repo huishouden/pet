@@ -15,6 +15,7 @@ import { dueState, isRecurring, type Unit } from './schedule';
 import { forPet, reminderRef, doseRef, tabUrl, type AgendaData } from './agenda';
 import { APP_ORIGIN } from './notify';
 import { COLLECTIONS } from '../data/types';
+import { t } from '../i18n';
 
 export type TodoData = Pick<AgendaData, 'pets' | 'reminders' | 'courses' | 'medDoses'>;
 
@@ -85,8 +86,8 @@ export function reminderTodo(r: Reminder, pets: Pick<Pet, 'id' | 'name'>[], now:
     who: pet.name.trim(),
     url: tabUrl('care', r.petId, origin),
     owner: r.by,
-    done: { label: r.kind === 'other' ? 'Done' : 'Given', ops: reminderDoneOps(r), roles: GIVERS },
-    cancel: { label: 'Dismiss', ops: reminderDismissOps(r), roles: STAFF, owner: true },
+    done: { label: r.kind === 'other' ? t('common.done') : t('today.given'), ops: reminderDoneOps(r), roles: GIVERS },
+    cancel: { label: t('todo.dismiss'), ops: reminderDismissOps(r), roles: STAFF, owner: true },
   };
 }
 
@@ -109,8 +110,8 @@ export function doseTodos(c: Course, medDoses: MedDose[], pets: Pick<Pet, 'id' |
         who: pet.name.trim(),
         url: tabUrl('today', undefined, origin),
         owner: c.by,
-        done: { label: 'Given', ops: medDoseOps(c, day, slot), ...rights },
-        cancel: { label: 'Skip', ops: medDoseOps(c, day, slot, true), ...rights },
+        done: { label: t('today.given'), ops: medDoseOps(c, day, slot), ...rights },
+        cancel: { label: t('todo.skip'), ops: medDoseOps(c, day, slot, true), ...rights },
       };
     });
 }

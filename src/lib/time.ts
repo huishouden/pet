@@ -1,4 +1,5 @@
 import { daysBetween, parseYmd } from '@huishouden/pwa-kit/time';
+import { t } from '../i18n';
 
 // Pet's own wording; the shared time and date helpers are in @huishouden/pwa-kit/time.
 
@@ -13,16 +14,16 @@ export function age(birthDate: string | undefined, now: number, approx?: boolean
   const days = daysBetween(born, now);
   if (days < 0) return null;
   if (approx) return approxAge(born, now);
-  if (days === 0) return 'Born today';
-  if (days < 14) return `${days} day${days === 1 ? '' : 's'}`;
+  if (days === 0) return t('age.bornToday');
+  if (days < 14) return t('age.days', { count: days });
   const b = new Date(born);
   const n = new Date(now);
   let months = (n.getFullYear() - b.getFullYear()) * 12 + n.getMonth() - b.getMonth();
   if (n.getDate() < b.getDate()) months -= 1;
-  if (months < 2) return `${Math.floor(days / 7)} weeks`;
-  if (months < 24) return `${months} months`;
+  if (months < 2) return t('age.weeks', { count: Math.floor(days / 7) });
+  if (months < 24) return t('age.months', { count: months });
   const years = Math.floor(months / 12);
-  return `${years} years`;
+  return t('age.years', { count: years });
 }
 
 function approxAge(born: number, now: number): string {
@@ -30,8 +31,8 @@ function approxAge(born: number, now: number): string {
   const n = new Date(now);
   let months = (n.getFullYear() - b.getFullYear()) * 12 + n.getMonth() - b.getMonth();
   if (n.getDate() < b.getDate()) months -= 1;
-  if (months < 1) return 'Under a month';
-  if (months < 12) return `About ${months} month${months === 1 ? '' : 's'}`;
+  if (months < 1) return t('age.underMonth');
+  if (months < 12) return t('age.aboutMonths', { count: months });
   const years = Math.floor(months / 12);
-  return `About ${years} year${years === 1 ? '' : 's'}`;
+  return t('age.aboutYears', { count: years });
 }

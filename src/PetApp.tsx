@@ -7,12 +7,12 @@ import { fedTodayFor, mealAt, mealsOf } from './lib/feeding';
 import { givenOnFor, slotAt } from './lib/courses';
 import { sortPets } from './lib/pets';
 import { isRecurring, markGiven } from './lib/schedule';
-import { addDays, formatDayShort, formatTime, longDate, parseYmd, shortDate, startOfDay, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
+import { addDays, atClock, formatDayShort, longDate, parseYmd, shortDate, startOfDay, toHhmm, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
 import { useClock } from '@huishouden/pwa-kit/react/clock';
 import type { PetStore } from './data/types';
 import { CalendarSuggestions, calendarAvailable, useCalendarSuggestions } from '@huishouden/pwa-kit/react/calendar';
 import { isImported, type CalendarMatch } from '@huishouden/pwa-kit/calendar';
-import { PET_CALENDAR_QUERIES, fromCalendar } from './lib/calendarImport';
+import { calendarWords, fromCalendar } from './lib/calendarImport';
 import { isBirthdayOf } from './lib/birthday';
 import { auth } from './data/firebase';
 import { Header, type Tab } from './components/Header';
@@ -25,7 +25,8 @@ import { WeightDialog } from './components/WeightDialog';
 import { RecordDialog } from './components/RecordDialog';
 import { ContactDialog } from '@huishouden/pwa-kit/react/contacts';
 import { clearSharedPlace, readSharedPlace, type ParsedPlace } from '@huishouden/pwa-kit/places';
-import { APP, ROLES } from './lib/contacts';
+import { APP, ROLES, roleLabel } from './lib/contacts';
+import { useT } from './i18n';
 import { MealDialog } from './components/MealDialog';
 import { FeedingDialog } from './components/FeedingDialog';
 import { CourseDialog } from './components/CourseDialog';
@@ -37,20 +38,22 @@ import { Care } from './screens/Care';
 import { Appointments } from './screens/Appointments';
 import { Pets } from './screens/Pets';
 import { Contacts } from './screens/Contacts';
-import { COURSE_REFUSAL, permissions } from './lib/permissions';
+import { courseRefusalText, permissions } from './lib/permissions';
 import { helpersOf, refusal } from '@huishouden/pwa-kit/roles';
 import { personName } from '@huishouden/pwa-kit/people';
+import { formatWeight } from './lib/weight';
 
 export type TabId = 'today' | 'care' | 'appointments' | 'pets' | 'contacts';
 
 // On phones Today, Care, Visits and Pets sit in the bottom bar; Contacts is under More.
-const TABS: Tab[] = [
-  { id: 'today', label: 'Today', icon: Sun, primary: true },
-  { id: 'care', label: 'Care', icon: Pill, primary: true },
-  { id: 'appointments', label: 'Appointments', short: 'Visits', icon: CalendarDays, primary: true },
-  { id: 'pets', label: 'Pets', icon: PawPrint, primary: true },
-  { id: 'contacts', label: 'Contacts', icon: ContactIcon },
+const tabs = (t: ReturnType<typeof useT>): Tab[] => [
+  { id: 'today', label: t('tab.today'), icon: Sun, primary: true },
+  { id: 'care', label: t('tab.care'), icon: Pill, primary: true },
+  { id: 'appointments', label: t('tab.appointments'), short: t('tab.visits'), icon: CalendarDays, primary: true },
+  { id: 'pets', label: t('tab.pets'), icon: PawPrint, primary: true },
+  { id: 'contacts', label: t('tab.contacts'), icon: ContactIcon },
 ];
+const TAB_IDS: readonly TabId[] = ['today', 'care', 'appointments', 'pets', 'contacts'];
 
 interface Props {
   store: PetStore;
@@ -88,6 +91,7 @@ export interface Open {
 
 /** Everything inside the frame once there is data to show (live or sample). */
 export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, notify, clearToast, banner, deviceSettings }: Props) {
+  const t = useT();
   const { now, read } = useClock();
   // Opened from another app's Share menu (Google Maps → Share → Pet): a new contact, prefilled.
   const [shared] = useState(() => readSharedPlace(location));
@@ -120,7 +124,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   // Birthday events keep their own flow (Set birthday in Import from calendar), so they are never suggested as visits.
   const suggested = useCalendarSuggestions({
     auth,
-    words: PET_CALENDAR_QUERIES,
+    words: calendarWords(),
     isImported: (m) => isImported(m, store.data.appointments) || pets.some((p) => isBirthdayOf(m.title, p.name)),
     app: 'Pet',
   });
@@ -128,12 +132,12 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   /** Calendar events in as appointments: Import from calendar and the new-in-your-calendar card. */
   const importEvents = (list: CalendarMatch[]) => {
     for (const m of list) actions.saveAppointment(null, fromCalendar(m, pets));
-    notify(list.length === 1 ? `Added ${list[0].title}` : `Added ${list.length} appointments`);
+    notify(list.length === 1 ? t('common.added', { name: list[0].title }) : t('toast.addedAppointments', { count: list.length }));
   };
 
   useEffect(() => {
-    document.title = 'Huishouden Pet';
-  }, []);
+    document.title = t('app.documentTitle');
+  }, [t]);
 
   // Opened from the Share menu with a contact card (Contacts → Share → Pet): a new contact, filled in.
   useEffect(() => {
@@ -169,7 +173,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
     contact: (c, role) => editable(c, () => setContact({ contact: c, role })),
     meal: (m, petId) => editable(m, () => setMeal({ meal: m, petId })),
     feeding: (f, petId) => editable(f, () => setFeeding({ feeding: f, petId })),
-    course: (c, petId) => (perms.managesCourses ? setCourse({ course: c, petId }) : notify(COURSE_REFUSAL)),
+    course: (c, petId) => (perms.managesCourses ? setCourse({ course: c, petId }) : notify(courseRefusalText())),
     doseLog: (c) => {
       setBackfill(null);
       setDoseLog(c.id);
@@ -185,8 +189,8 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
     const dose = actions.giveDose(r, read());
     const pet = pets.find((p) => p.id === r.petId);
     const next = isRecurring(r) ? parseYmd(markGiven(r, dose.at).due) : null;
-    const after = next === null ? '' : ` Next due ${formatDayShort(next)}.`;
-    notify(`${r.title} given${pet ? ` to ${pet.name}` : ''}.${after}`, () => actions.undoDose(dose, r));
+    const given = pet ? t('toast.givenTo', { title: r.title, pet: pet.name }) : t('toast.given', { title: r.title });
+    notify(next === null ? given : t('toast.givenNext', { given, date: formatDayShort(next) }), () => actions.undoDose(dose, r));
   };
 
   // Dismiss stops a reminder coming due anywhere (Today, the agenda, the to-do list); it stays in the
@@ -194,21 +198,22 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   const dismiss = (r: Reminder) => {
     if (!perms.mayChange(r)) return notify(refusal('edit-others'));
     actions.dismissReminder(r);
-    notify(`Dismissed ${r.title}`, () => actions.restoreReminder(r));
+    notify(t('toast.dismissed', { title: r.title }), () => actions.restoreReminder(r));
   };
   const undismiss = (r: Reminder) => {
     if (!perms.mayChange(r)) return notify(refusal('edit-others'));
     actions.undismissReminder(r);
-    notify(`Restored ${r.title}`, () => actions.restoreReminder(r));
+    notify(t('toast.restored', { title: r.title }), () => actions.restoreReminder(r));
   };
   const reminderActions = { onGive: give, onRestore: (r: Reminder) => (perms.mayChange(r) ? () => undismiss(r) : undefined) };
 
-  // "yesterday", or "on May 12" for an earlier day; nothing for today.
-  const onDay = (day: Ymd) => {
+  // "Biscuit AM", "Biscuit AM yesterday", "Biscuit AM on May 12": what a tick was, and on which day.
+  const onDay = (who: string, day: Ymd) => {
     const today = toYmd(now);
-    if (day === today) return '';
-    return day === toYmd(addDays(startOfDay(now), -1)) ? ' yesterday' : ` on ${shortDate(day, today)}`;
+    if (day === today) return who;
+    return day === toYmd(addDays(startOfDay(now), -1)) ? t('toast.whoYesterday', { who }) : t('toast.whoOn', { who, date: shortDate(day, today) });
   };
+  const atTimeOf = (at: number) => atClock(toHhmm(at));
 
   // The board: a tap ticks a meal or a dose (now, by me); a tap on a ticked one un-ticks it. Both undo.
   // On an earlier day the tick is logged at the meal's or dose's own time that day.
@@ -216,14 +221,14 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
     const at = read();
     const past = startOfDay(day) < startOfDay(at);
     const done = fedTodayFor(store.data.feedings, m.id, past ? day : at);
-    const when = onDay(toYmd(day));
+    const what = onDay(t('toast.petMeal', { pet: pet.name, meal: m.name }), toYmd(day));
     if (done.some((f) => !perms.mayChange(f))) return notify(refusal('edit-others'));
     if (done.length) {
       actions.deleteFeedings(done);
-      notify(`${pet.name} ${m.name}${when}: not fed`, () => actions.restoreFeedings(done));
+      notify(t('toast.notFed', { what }), () => actions.restoreFeedings(done));
     } else {
       const f = actions.logFeeding({ petId: pet.id, mealId: m.id, at: past ? mealAt(m.time, day) : at, portion: m.portion });
-      notify(`${pet.name} ${m.name}${when}: fed at ${formatTime(f.at)}`, () => actions.deleteFeedings([f]));
+      notify(t('toast.fedAt', { what, at: atTimeOf(f.at) }), () => actions.deleteFeedings([f]));
     }
   };
   const toggleDose = (pet: Pet | undefined, c: Course, slot: number, day?: Ymd) => {
@@ -231,15 +236,15 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
     const d = day ?? toYmd(at);
     const past = d < toYmd(at);
     const done = givenOnFor(store.data.medDoses, c.id, slot, d);
-    const who = pet ? `${pet.name} ${c.name}` : c.name;
+    const what = onDay(pet ? t('toast.petMeal', { pet: pet.name, meal: c.name }) : c.name, d);
     if (!perms.mayGiveCourse(c)) return notify(perms.courseRefusal(c));
     if (done.some((x) => !perms.mayChange(x))) return notify(refusal('edit-others'));
     if (done.length) {
       actions.deleteMedDoses(done);
-      notify(`${who}${onDay(d)}: ${done.every((x) => x.skipped) ? 'not skipped' : 'not given'}`, () => actions.restoreMedDoses(done));
+      notify(done.every((x) => x.skipped) ? t('toast.notSkipped', { what }) : t('toast.notGiven', { what }), () => actions.restoreMedDoses(done));
     } else {
       const given = actions.giveMedDose(c, slot, past ? slotAt(c.times[slot], d) : at);
-      notify(`${who}${onDay(d)}: given at ${formatTime(given.at)}`, () => actions.deleteMedDoses([given]));
+      notify(t('toast.givenAt', { what, at: atTimeOf(given.at) }), () => actions.deleteMedDoses([given]));
     }
   };
 
@@ -248,16 +253,16 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
     const at = read();
     if (!perms.mayGiveCourse(c)) return notify(perms.courseRefusal(c));
     if (givenOnFor(store.data.medDoses, c.id, slot, day).length) return;
-    const who = pet ? `${pet.name} ${c.name}` : c.name;
+    const what = onDay(pet ? t('toast.petMeal', { pet: pet.name, meal: c.name }) : c.name, day);
     const skipped = actions.skipMedDose(c, slot, day < toYmd(at) ? slotAt(c.times[slot], day) : at);
-    notify(`${who}${onDay(day)}: skipped`, () => actions.deleteMedDoses([skipped]));
+    notify(t('toast.skipped', { what }), () => actions.deleteMedDoses([skipped]));
   };
 
   const backfillCourse = backfill ? store.data.courses.find((c) => c.id === backfill) : undefined;
   const logCourse = doseLog ? store.data.courses.find((c) => c.id === doseLog) : undefined;
 
   let content: ReactNode;
-  if (!store.ready) content = <p className="p-2 text-lg text-muted">Loading the pets</p>;
+  if (!store.ready) content = <p className="p-2 text-lg text-muted">{t('app.loading')}</p>;
   else if (tab === 'care') content = <Care store={store} pets={pets} open={open} {...reminderActions} notify={notify} deviceSettings={deviceSettings} />;
   else if (tab === 'appointments') content = <Appointments store={store} pets={pets} open={open} calendarAvailable={calendar} notify={notify} onImport={importEvents} />;
   else if (tab === 'pets') content = <Pets store={store} pets={pets} open={open} shown={shownPet} onShow={setShownPet} {...reminderActions} notify={notify} />;
@@ -278,19 +283,17 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   return (
     <PetPhotos.Provider value={photos}>
     <div className="flex min-h-dvh flex-col bg-page font-sans text-ink antialiased lg:h-dvh lg:overflow-hidden">
-      <Header tabs={TABS} tab={tab} onTab={(id) => chooseTab(id as TabId)} user={user} onSignIn={onSignIn} onSignOut={onSignOut} signingIn={signingIn} />
+      <Header tabs={tabs(t)} tab={tab} onTab={(id) => chooseTab(id as TabId)} user={user} onSignIn={onSignIn} onSignOut={onSignOut} signingIn={signingIn} />
       <main className="mx-auto flex w-full max-w-[1200px] min-h-0 flex-1 flex-col gap-4 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-6">
         {banner}
         {backfillCourse && (
           <div role="status" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-line bg-surface px-5 py-3 shadow-sm">
-            <p className="min-w-0 flex-1 text-base text-ink">
-              Started on {longDate(backfillCourse.startDate, toYmd(now))}. Mark the doses already given?
-            </p>
+            <p className="min-w-0 flex-1 text-base text-ink">{t('backfill.text', { date: longDate(backfillCourse.startDate, toYmd(now)) })}</p>
             <button type="button" className={secondaryButton} onClick={() => open.doseLog(backfillCourse)}>
-              Mark doses
+              {t('backfill.mark')}
             </button>
             <button type="button" className={ghostButton} onClick={() => setBackfill(null)}>
-              Not now
+              {t('backfill.notNow')}
             </button>
           </div>
         )}
@@ -310,10 +313,10 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
             if (photo !== undefined) {
               const name = input.name.trim();
               const before = photo ? actions.savePetPhoto(id, photo) : actions.removePetPhoto(id);
-              if (petDialog.pet) notify(photo ? `Saved ${name}'s photo` : `Removed ${name}'s photo`, () => actions.restorePetPhoto(id, before));
+              if (petDialog.pet) notify(photo ? t('toast.photoSaved', { name }) : t('toast.photoRemoved', { name }), () => actions.restorePetPhoto(id, before));
             }
             if (!petDialog.pet) {
-              notify(`Added ${input.name.trim()}`);
+              notify(t('common.added', { name: input.name.trim() }));
               open.showPet(id);
             }
           }}
@@ -322,7 +325,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
               ? () => {
                   const bundle = actions.removePet(petDialog.pet!);
                   if (shownPet === bundle.pet.id) setShownPet(null);
-                  notify(`Removed ${bundle.pet.name}`, () => actions.restorePet(bundle));
+                  notify(t('toast.removed', { name: bundle.pet.name }), () => actions.restorePet(bundle));
                 }
               : undefined
           }
@@ -340,7 +343,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           onClose={() => setReminder(null)}
           onSave={(input) => {
             actions.saveReminder(reminder.reminder?.id ?? null, input);
-            if (!reminder.reminder) notify(`Added ${input.title.trim()}`);
+            if (!reminder.reminder) notify(t('common.added', { name: input.title.trim() }));
           }}
           onDismiss={reminder.reminder ? () => dismiss(reminder.reminder!) : undefined}
           onRestore={reminder.reminder ? () => undismiss(reminder.reminder!) : undefined}
@@ -349,7 +352,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
               ? () => {
                   const gone = reminder.reminder!;
                   actions.deleteReminder(gone);
-                  notify(`Deleted ${gone.title}`, () => actions.restoreReminder(gone));
+                  notify(t('common.deleted', { name: gone.title }), () => actions.restoreReminder(gone));
                 }
               : undefined
           }
@@ -367,14 +370,14 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           onClose={() => setAppointment(null)}
           onSave={(input) => {
             actions.saveAppointment(appointment.appointment?.id ?? null, input);
-            if (!appointment.appointment) notify(`Added ${input.title.trim()}`);
+            if (!appointment.appointment) notify(t('common.added', { name: input.title.trim() }));
           }}
           onDelete={
             appointment.appointment
               ? () => {
                   const gone = appointment.appointment!;
                   actions.deleteAppointment(gone);
-                  notify(`Deleted ${gone.title}`, () => actions.restoreAppointment(gone));
+                  notify(t('common.deleted', { name: gone.title }), () => actions.restoreAppointment(gone));
                 }
               : undefined
           }
@@ -388,7 +391,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           onSave={(input) => {
             const w = actions.logWeight(input);
             const pet = pets.find((p) => p.id === w.petId);
-            notify(`Logged ${pet?.name ?? 'weight'}: ${w.value} ${w.unit}`, () => actions.deleteWeight(w));
+            notify(pet ? t('toast.weightLogged', { name: pet.name, weight: formatWeight(w.value, w.unit) }) : t('toast.weightLoggedNoPet', { weight: formatWeight(w.value, w.unit) }), () => actions.deleteWeight(w));
           }}
         />
       )}
@@ -401,14 +404,14 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           onClose={() => setRecord(null)}
           onSave={(input) => {
             actions.saveRecord(record.record?.id ?? null, input);
-            if (!record.record) notify(`Added ${input.title.trim()}`);
+            if (!record.record) notify(t('common.added', { name: input.title.trim() }));
           }}
           onDelete={
             record.record
               ? () => {
                   const gone = record.record!;
                   actions.deleteRecord(gone);
-                  notify(`Deleted ${gone.title}`, () => actions.restoreRecord(gone));
+                  notify(t('common.deleted', { name: gone.title }), () => actions.restoreRecord(gone));
                 }
               : undefined
           }
@@ -423,20 +426,21 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           prefill={contact.prefill}
           sharedContacts={contact.shared}
           auth={auth}
-          searchPlaceholder="Clinic or business, and town"
-          namePlaceholder="Example Vet Clinic"
+          roleLabel={roleLabel}
+          searchPlaceholder={t('contacts.searchPlaceholder')}
+          namePlaceholder={t('contacts.namePlaceholder')}
           canMarkPrivate={perms.seesPrivate}
           onClose={() => setContact(null)}
           onSave={(input) => {
             actions.saveContact(contact.contact?.id ?? null, input);
-            if (!contact.contact) notify(`Added ${input.name}`);
+            if (!contact.contact) notify(t('common.added', { name: input.name }));
           }}
           onDelete={
             contact.contact
               ? () => {
                   const gone = contact.contact!;
                   actions.deleteContact(gone);
-                  notify(`Deleted ${gone.name}`, () => actions.restoreContact(gone));
+                  notify(t('common.deleted', { name: gone.name }), () => actions.restoreContact(gone));
                 }
               : undefined
           }
@@ -449,14 +453,14 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           onClose={() => setMeal(null)}
           onSave={(input) => {
             actions.saveMeal(meal.meal?.id ?? null, input);
-            if (!meal.meal) notify(`Added ${input.name.trim()}`);
+            if (!meal.meal) notify(t('common.added', { name: input.name.trim() }));
           }}
           onDelete={
             meal.meal
               ? () => {
                   const gone = meal.meal!;
                   actions.deleteMeal(gone);
-                  notify(`Removed ${gone.name}`, () => actions.restoreMeal(gone));
+                  notify(t('toast.removed', { name: gone.name }), () => actions.restoreMeal(gone));
                 }
               : undefined
           }
@@ -474,7 +478,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
             if (feeding.feeding) actions.updateFeeding(feeding.feeding, input);
             else {
               const f = actions.logFeeding(input);
-              notify(`Logged a feed at ${formatTime(f.at)}`, () => actions.deleteFeedings([f]));
+              notify(t('toast.feedLogged', { at: atTimeOf(f.at) }), () => actions.deleteFeedings([f]));
             }
           }}
           onDelete={
@@ -482,7 +486,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
               ? () => {
                   const gone = feeding.feeding!;
                   actions.deleteFeedings([gone]);
-                  notify(`Deleted the feed at ${formatTime(gone.at)}`, () => actions.restoreFeedings([gone]));
+                  notify(t('toast.feedDeleted', { at: atTimeOf(gone.at) }), () => actions.restoreFeedings([gone]));
                 }
               : undefined
           }
@@ -499,7 +503,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           onClose={() => setCourse(null)}
           onSave={(input) => {
             const id = actions.saveCourse(course.course?.id ?? null, input);
-            if (!course.course) notify(`Added ${input.name.trim()}`);
+            if (!course.course) notify(t('common.added', { name: input.name.trim() }));
             const startChanged = !course.course || course.course.startDate !== input.startDate;
             if (startChanged && input.startDate < toYmd(read())) setBackfill(id);
           }}
@@ -508,7 +512,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
               ? () => {
                   const gone = course.course!;
                   actions.deleteCourse(gone);
-                  notify(`Deleted ${gone.name}`, () => actions.restoreCourse(gone));
+                  notify(t('common.deleted', { name: gone.name }), () => actions.restoreCourse(gone));
                 }
               : undefined
           }
@@ -526,7 +530,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           onSkip={perms.mayGiveCourse(logCourse) ? (slot, day) => skipDose(pets.find((p) => p.id === logCourse.petId), logCourse, slot, day) : undefined}
           onMove={(d, at) => {
             actions.moveMedDose(d, at);
-            notify(`${logCourse.name}${onDay(toYmd(at))}: given at ${formatTime(at)}`, () => actions.moveMedDose(d, d.at));
+            notify(t('toast.givenAt', { what: onDay(logCourse.name, toYmd(at)), at: atTimeOf(at) }), () => actions.moveMedDose(d, d.at));
           }}
           onClose={() => setDoseLog(null)}
         />
@@ -539,6 +543,6 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
 
 function initialTab(): TabId {
   const t = new URLSearchParams(location.search).get('tab');
-  return TABS.some((x) => x.id === t) ? (t as TabId) : 'today';
+  return TAB_IDS.some((x) => x === t) ? (t as TabId) : 'today';
 }
 

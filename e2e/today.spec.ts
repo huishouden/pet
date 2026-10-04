@@ -40,7 +40,7 @@ test('Fed ticks the late meal; with everything done it says what is next', async
   await needs.getByRole('button', { name: 'Fed: Not fed yet: Miso AM' }).click();
   await expect(page.getByText('Miso AM: fed at 10:30 AM')).toBeVisible();
   for (const name of ['Given: Flea and tick for Biscuit', 'Given: Antibiotic for Biscuit', 'Given: Kidney supplement for Miso']) await needs.getByRole('button', { name }).click();
-  await expect(needs).toContainText('All done for now · next: Antibiotic for Biscuit at 7:00 PM');
+  await expect(needs).toContainText('All done for now · next: Antibiotic for Biscuit at 7 PM');
 });
 
 test('later today, and the birthday three weeks away as one quiet line', async ({ page }) => {

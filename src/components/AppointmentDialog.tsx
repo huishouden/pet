@@ -4,7 +4,7 @@ import type { CalendarMatch } from '@huishouden/pwa-kit/calendar';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import type { Appointment, AppointmentKind, Pet } from '../lib/model';
 import { APPOINTMENT_KINDS, LIMITS } from '../lib/model';
-import { APPOINTMENT_LABELS } from '../lib/care';
+import { appointmentLabel } from '../lib/care';
 import { fromCalendar, guessKind } from '../lib/calendarImport';
 import { addDays, fromLocalInput, toLocalInput } from '@huishouden/pwa-kit/time';
 import type { AppointmentInput } from '../lib/build';
@@ -13,6 +13,8 @@ import { auth } from '../data/firebase';
 import { PetAvatar } from './PetAvatar';
 import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 import { PrivateCheckbox } from '@huishouden/pwa-kit/react/contacts';
+import { useT } from '../i18n';
+import { roleLabel } from '../lib/contacts';
 
 export function AppointmentDialog({ appointment, petId, pets, now, contacts, calendarAvailable, canMarkPrivate = true, onSave, onDelete, onClose }: {
   appointment: Appointment | null;
@@ -28,6 +30,7 @@ export function AppointmentDialog({ appointment, petId, pets, now, contacts, cal
   onDelete?: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const initial = toLocalInput(appointment?.at ?? addDays(now, 1) + 9 * 3_600_000);
   const [title, setTitle] = useState(appointment?.title ?? '');
   const [kind, setKind] = useState<AppointmentKind>(appointment?.kind ?? 'vet');
@@ -72,7 +75,7 @@ export function AppointmentDialog({ appointment, petId, pets, now, contacts, cal
 
   return (
     <Dialog
-      title={appointment ? 'Edit appointment' : 'New appointment'}
+      title={appointment ? t('appointmentDialog.edit') : t('appointmentDialog.new')}
       onClose={onClose}
       footer={
         <>
@@ -85,14 +88,14 @@ export function AppointmentDialog({ appointment, petId, pets, now, contacts, cal
                 onClose();
               }}
             >
-              <Trash2 size={18} /> Delete
+              <Trash2 size={18} /> {t('common.delete')}
             </button>
           )}
           <button type="button" className={ghostButton} onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="button" className={primaryButton} disabled={!valid} onClick={save}>
-            Save
+            {t('common.save')}
           </button>
         </>
       }
@@ -104,7 +107,7 @@ export function AppointmentDialog({ appointment, petId, pets, now, contacts, cal
           save();
         }}
       >
-        <Field label="What">
+        <Field label={t('form.what')}>
           <input
             className={inputClass}
             value={title}
@@ -117,15 +120,15 @@ export function AppointmentDialog({ appointment, petId, pets, now, contacts, cal
                 if (k !== 'other') setKind(k);
               }
             }}
-            placeholder="Yearly check-up"
+            placeholder={t('appointmentDialog.placeholder')}
           />
         </Field>
 
-        <CalendarFind auth={auth} app="Pet" query={title} available={calendarAvailable} onPick={pickMatch} />
+        <CalendarFind auth={auth} app="Pet" name={t('app.name')} query={title} available={calendarAvailable} onPick={pickMatch} />
 
         {pets.length > 0 && (
           <fieldset>
-            <legend className="mb-1.5 block text-sm font-medium text-ink-soft">For</legend>
+            <legend className="mb-1.5 block text-sm font-medium text-ink-soft">{t('form.for')}</legend>
             <div className="flex flex-wrap gap-2">
               {pets.map((p) => (
                 <Chip key={p.id} active={petIds.includes(p.id)} onClick={() => togglePet(p.id)}>
@@ -137,41 +140,41 @@ export function AppointmentDialog({ appointment, petId, pets, now, contacts, cal
         )}
 
         <fieldset>
-          <legend className="mb-1.5 block text-sm font-medium text-ink-soft">Kind</legend>
+          <legend className="mb-1.5 block text-sm font-medium text-ink-soft">{t('form.kind')}</legend>
           <div className="flex flex-wrap gap-2">
             {APPOINTMENT_KINDS.map((k) => (
               <Chip key={k} active={kind === k} onClick={() => setKind(k)}>
-                {APPOINTMENT_LABELS[k]}
+                {appointmentLabel(k)}
               </Chip>
             ))}
           </div>
         </fieldset>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Date">
+          <Field label={t('common.date')}>
             <input className={inputClass} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
-          <Field label="Time">
+          <Field label={t('common.time')}>
             <input className={inputClass} type="time" value={time} onChange={(e) => setTime(e.target.value)} />
           </Field>
         </div>
         {(contacts.length > 0 || contactId) && (
-          <Field label="With (optional)">
+          <Field label={t('appointmentDialog.with')}>
             <select className={inputClass} value={contactId} onChange={(e) => pickContact(e.target.value)}>
-              <option value="">No one in particular</option>
+              <option value="">{t('contactSelect.noOne')}</option>
               {contacts.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.role ? `${c.name} (${c.role})` : c.name}
+                  {c.role ? t('contactSelect.withRole', { name: c.name, role: roleLabel(c.role) }) : c.name}
                 </option>
               ))}
-              {unknownContact && <option value={contactId}>A removed contact</option>}
+              {unknownContact && <option value={contactId}>{t('contactSelect.removed')}</option>}
             </select>
           </Field>
         )}
-        <Field label="Where (optional)">
+        <Field label={t('appointmentDialog.where')}>
           <input className={inputClass} value={location} maxLength={LIMITS.location} onChange={(e) => setLocation(e.target.value)} />
         </Field>
-        <Field label="Notes (optional)">
+        <Field label={t('form.notesOptional')}>
           <textarea className={`${inputClass} min-h-20`} maxLength={LIMITS.notes} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </Field>
         {canMarkPrivate && <PrivateCheckbox checked={isPrivate} onChange={setPrivate} />}

@@ -10,6 +10,9 @@ import { mealsOf } from '../lib/feeding';
 import { isYmd, toYmd, isHhmm } from '@huishouden/pwa-kit/time';
 import type { CourseInput } from '../lib/build';
 import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
+import { useT } from '../i18n';
+import { formatList } from '@huishouden/pwa-kit/i18n';
+import { formatClock } from '../lib/format';
 
 
 /** A short medicine course: what, how much, how often, from when and for how long. */
@@ -25,6 +28,7 @@ export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (
   onDelete?: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const mealTimes = pet ? mealsOf(meals, pet.id).map((m) => m.time) : [];
   const [name, setName] = useState(course?.name ?? '');
   const [dose, setDose] = useState(course?.dose ?? '');
@@ -43,18 +47,19 @@ export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (
   // "Scan the label" (the kit's LabelScan): the photo is read on this device and never stored or
   // uploaded; the course is filled from it and the card says field by field what was filled.
   const readLabelInto = (parsed: ParsedCourse): LabelFill[] => {
-    const am = mealsOf(meals, pet?.id ?? '').find((m) => m.name === 'AM')?.time;
-    const pm = mealsOf(meals, pet?.id ?? '').find((m) => m.name === 'PM')?.time;
+    // The pet's first meals (`defaultMeals`: ids end in -am and -pm, whatever language named them).
+    const am = mealsOf(meals, pet?.id ?? '').find((m) => m.id.endsWith('-am') || m.name === 'AM')?.time;
+    const pm = mealsOf(meals, pet?.id ?? '').find((m) => m.id.endsWith('-pm') || m.name === 'PM')?.time;
     const draft = toMedCourse(parsed, { startDate: toYmd(now), defaultTimes: { ...(am ? { morning: am } : {}), ...(pm ? { evening: pm } : {}) } });
     if (!draft.name && !draft.dose && draft.times.length === 0) return [];
     fill(draft);
     return [
-      { label: 'Medicine', value: draft.name },
-      { label: 'Dose', value: draft.dose },
-      { label: 'Times', value: draft.times.join(', ') },
-      { label: 'Days', value: draft.days ? String(draft.days) : '' },
-      { label: 'Food', value: draft.withFood === true ? 'With food' : '' },
-      { label: 'Notes', value: draft.notes },
+      { label: t('courseDialog.medicine'), value: draft.name },
+      { label: t('courseDialog.dose'), value: draft.dose },
+      { label: t('courseDialog.times'), value: formatList(draft.times.map(formatClock)) },
+      { label: t('courseDialog.days'), value: draft.days ? String(draft.days) : '' },
+      { label: t('courseDialog.food'), value: draft.withFood === true ? t('courseDialog.withFood') : '' },
+      { label: t('common.notes'), value: draft.notes },
     ];
   };
 
@@ -80,7 +85,7 @@ export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (
 
   return (
     <Dialog
-      title={course ? `Edit ${course.name}` : `Medicine course${pet ? ` for ${pet.name}` : ''}`}
+      title={course ? t('a11y.edit', { name: course.name }) : pet ? t('courseDialog.newFor', { name: pet.name }) : t('courseDialog.new')}
       onClose={onClose}
       footer={
         <>
@@ -93,14 +98,14 @@ export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (
                 onClose();
               }}
             >
-              <Trash2 size={18} /> Delete
+              <Trash2 size={18} /> {t('common.delete')}
             </button>
           )}
           <button type="button" className={ghostButton} onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="button" className={primaryButton} disabled={!valid} onClick={save}>
-            Save
+            {t('common.save')}
           </button>
         </>
       }
@@ -112,49 +117,49 @@ export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (
           save();
         }}
       >
-        <LabelScan onRead={readLabelInto} intro="Take a photo of the pharmacy or vet label. It is read on this device and not kept." />
+        <LabelScan onRead={readLabelInto} intro={t('courseDialog.scanIntro')} />
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Medicine">
-            <input className={inputClass} value={name} maxLength={LIMITS.courseName} onChange={(e) => setName(e.target.value)} placeholder="Antibiotic" autoComplete="off" />
+          <Field label={t('courseDialog.medicine')}>
+            <input className={inputClass} value={name} maxLength={LIMITS.courseName} onChange={(e) => setName(e.target.value)} placeholder={t('courseDialog.medicinePlaceholder')} autoComplete="off" />
           </Field>
-          <Field label="Dose">
-            <input className={inputClass} value={dose} maxLength={LIMITS.courseDose} onChange={(e) => setDose(e.target.value)} placeholder="1 tablet" autoComplete="off" />
+          <Field label={t('courseDialog.dose')}>
+            <input className={inputClass} value={dose} maxLength={LIMITS.courseDose} onChange={(e) => setDose(e.target.value)} placeholder={t('courseDialog.dosePlaceholder')} autoComplete="off" />
           </Field>
         </div>
         <fieldset>
-          <legend className="mb-1.5 block text-sm font-medium text-ink-soft">How often</legend>
+          <legend className="mb-1.5 block text-sm font-medium text-ink-soft">{t('courseDialog.howOften')}</legend>
           <div className="flex flex-wrap gap-2">
             {[1, 2, 3].map((n) => (
               <Chip key={n} active={times.length === n} onClick={() => setCount(n)}>
-                {n === 1 ? 'Once a day' : n === 2 ? 'Twice a day' : '3 times a day'}
+                {t('course.timesADay', { count: n })}
               </Chip>
             ))}
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            {times.map((t, i) => (
+            {times.map((time, i) => (
               <input
                 key={i}
                 className={`${inputClass} max-w-36`}
                 type="time"
-                value={t}
-                aria-label={`Dose ${i + 1} time`}
+                value={time}
+                aria-label={t('courseDialog.doseTime', { n: i + 1 })}
                 onChange={(e) => setTimes((list) => list.map((x, j) => (j === i ? e.target.value : x)))}
               />
             ))}
             {times.length < MAX_TIMES_PER_DAY && (
               <button type="button" className={ghostButton} onClick={() => setCount(times.length + 1)}>
-                Another time
+                {t('courseDialog.anotherTime')}
               </button>
             )}
           </div>
-          <p className="mt-1.5 text-sm text-muted">After each time, a dose nobody has ticked shows as missed. Twice a day starts at the pet's AM and PM meals.</p>
+          <p className="mt-1.5 text-sm text-muted">{t('courseDialog.timesHint')}</p>
         </fieldset>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="First day">
+          <Field label={t('courseDialog.firstDay')}>
             <input className={inputClass} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </Field>
           <fieldset>
-            <legend className="mb-1.5 block text-sm font-medium text-ink-soft">For</legend>
+            <legend className="mb-1.5 block text-sm font-medium text-ink-soft">{t('courseDialog.for')}</legend>
             <div className="flex items-center gap-2">
               {length === 'days' ? (
                 <>
@@ -163,18 +168,18 @@ export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (
                     inputMode="numeric"
                     value={days}
                     onChange={(e) => setDays(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                    aria-label="Number of days"
+                    aria-label={t('courseDialog.numberOfDays')}
                   />
-                  <span className="text-base text-ink-soft">days</span>
+                  <span className="text-base text-ink-soft">{t('courseDialog.daysWord', { count: Math.round(Number(days)) || 0 })}</span>
                   <button type="button" className={`${ghostButton} whitespace-nowrap`} onClick={() => setLength('until')}>
-                    Until a date
+                    {t('courseDialog.untilDate')}
                   </button>
                 </>
               ) : (
                 <>
-                  <input className={inputClass} type="date" value={until} min={startDate} onChange={(e) => setUntil(e.target.value)} aria-label="Last day" />
+                  <input className={inputClass} type="date" value={until} min={startDate} onChange={(e) => setUntil(e.target.value)} aria-label={t('courseDialog.lastDay')} />
                   <button type="button" className={ghostButton} onClick={() => setLength('days')}>
-                    Days
+                    {t('courseDialog.days')}
                   </button>
                 </>
               )}
@@ -183,10 +188,10 @@ export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (
         </div>
         <label className="flex min-h-11 items-center gap-3 text-base text-ink">
           <input type="checkbox" className="h-5 w-5 accent-forest-700 dark:accent-forest-400" checked={withFood} onChange={(e) => setWithFood(e.target.checked)} />
-          Give with food
+          {t('courseDialog.giveWithFood')}
         </label>
-        <Field label="Notes (optional)">
-          <textarea className={`${inputClass} min-h-20`} maxLength={LIMITS.courseNotes} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="What it is for, how to give it" />
+        <Field label={t('form.notesOptional')}>
+          <textarea className={`${inputClass} min-h-20`} maxLength={LIMITS.courseNotes} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('courseDialog.notesPlaceholder')} />
         </Field>
         <GiversField value={givers} onChange={setGivers} helpers={helpers} name={nameOf} />
         <button type="submit" hidden />

@@ -9,6 +9,8 @@ import type { PetStore } from '../data/types';
 import type { Open } from '../PetApp';
 import { PetAvatar, PetChips } from '../components/PetAvatar';
 import { cardClass, iconButton, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
+import { useT } from '../i18n';
+import { forPet } from '../lib/today';
 
 /** Every reminder, grouped by how soon it is due, with one-tap Given. */
 export function Care({ store, pets, open, onGive, onRestore, deviceSettings }: {
@@ -21,6 +23,7 @@ export function Care({ store, pets, open, onGive, onRestore, deviceSettings }: {
   notify: (message: string, undo?: () => void) => void;
   deviceSettings?: ReactNode;
 }) {
+  const t = useT();
   const { now } = useClock();
   const [petId, setPetId] = useState<string | null>(null);
   const reminders = store.data.reminders.filter((r) => pets.some((p) => p.id === r.petId) && (!petId || r.petId === petId));
@@ -29,20 +32,20 @@ export function Care({ store, pets, open, onGive, onRestore, deviceSettings }: {
   return (
     <div className="mx-auto max-w-4xl space-y-5 lg:h-full lg:overflow-y-auto">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        <h2 className="text-2xl font-semibold text-ink">Care</h2>
+        <h2 className="text-2xl font-semibold text-ink">{t('tab.care')}</h2>
         <button type="button" className={primaryButton} onClick={() => open.reminder(null, petId ?? undefined)} disabled={pets.length === 0}>
-          <Plus size={20} /> Add reminder
+          <Plus size={20} /> {t('care.addReminder')}
         </button>
       </div>
       {pets.length > 1 && <PetChips pets={pets} selected={petId} onSelect={setPetId} />}
-      {pets.length === 0 && <p className={`${cardClass} p-6 text-lg text-muted`}>Add a pet first, on the Pets tab.</p>}
+      {pets.length === 0 && <p className={`${cardClass} p-6 text-lg text-muted`}>{t('care.addPetFirst')}</p>}
       {pets.length > 0 && groups.length === 0 && (
-        <p className={`${cardClass} p-6 text-lg text-muted`}>No reminders yet. Add flea and tick, heartworm, vaccines or a medication, and Pet says when each is due.</p>
+        <p className={`${cardClass} p-6 text-lg text-muted`}>{t('care.empty')}</p>
       )}
       {groups.map((g) => (
-        <section key={g.label} aria-label={g.label}>
-          <h3 className={`${overline} mb-2 ${g.label === 'Overdue' ? 'text-attention!' : ''}`}>
-            {g.label} ({g.items.length})
+        <section key={g.id} aria-label={g.label}>
+          <h3 className={`${overline} mb-2 ${g.id === 'overdue' ? 'text-attention!' : ''}`}>
+            {t('care.groupCount', { label: g.label, count: g.items.length })}
           </h3>
           <ul className={cardClass}>
             {g.items.map((r) => (
@@ -66,6 +69,7 @@ export function ReminderRow({ r, pets, now, onGive, onRestore, onEdit, compact }
   onEdit: () => void;
   compact?: boolean;
 }) {
+  const t = useT();
   const pet = pets.find((p) => p.id === r.petId);
   const state = dueState(r, now);
   const dismissed = state === 'dismissed';
@@ -75,8 +79,8 @@ export function ReminderRow({ r, pets, now, onGive, onRestore, onEdit, compact }
   const meta = [
     compact ? null : pet?.name,
     describeRecurrence(r),
-    compact || state === 'done' ? null : dismissed ? (r.dismissedAt ? `dismissed ${formatDayShort(r.dismissedAt)}` : null) : due !== null ? formatDayShort(due) : null,
-    compact ? null : r.lastDoneAt ? `last given ${formatWhenGiven(r.lastDoneAt, now)}` : null,
+    compact || state === 'done' ? null : dismissed ? (r.dismissedAt ? t('care.dismissedOn', { date: formatDayShort(r.dismissedAt) }) : null) : due !== null ? formatDayShort(due) : null,
+    compact ? null : r.lastDoneAt ? t('care.lastGiven', { when: formatWhenGiven(r.lastDoneAt, now) }) : null,
   ].filter(Boolean);
   return (
     <li className={`flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line last:border-b-0 ${compact ? 'py-3' : 'px-4 py-4 sm:flex-nowrap sm:px-5'}`}>
@@ -90,16 +94,16 @@ export function ReminderRow({ r, pets, now, onGive, onRestore, onEdit, compact }
       </div>
       {!compact && <p className={`mr-auto shrink-0 text-lg font-semibold sm:mr-0 sm:text-right ${dueColour}`}>{dueText(r, now)}</p>}
       {state !== 'done' && !dismissed && (
-        <button type="button" className={urgent || state === 'soon' ? primaryButton : secondaryButton} onClick={onGive} aria-label={`Mark ${r.title} given to ${pet?.name ?? 'the pet'}`}>
-          <Check size={18} /> Given
+        <button type="button" className={urgent || state === 'soon' ? primaryButton : secondaryButton} onClick={onGive} aria-label={pet ? t('care.markGivenTo', { title: r.title, pet: pet.name }) : t('care.markGiven', { title: r.title })}>
+          <Check size={18} /> {t('today.given')}
         </button>
       )}
       {dismissed && onRestore && (
-        <button type="button" className={secondaryButton} onClick={onRestore} aria-label={`Restore ${r.title}${pet ? ` for ${pet.name}` : ''}`}>
-          <RotateCcw size={18} /> Restore
+        <button type="button" className={secondaryButton} onClick={onRestore} aria-label={t('care.restoreName', { name: forPet(r.title, pet?.name) })}>
+          <RotateCcw size={18} /> {t('care.restore')}
         </button>
       )}
-      <button type="button" className={iconButton} onClick={onEdit} aria-label={`Edit ${r.title}${pet ? ` for ${pet.name}` : ''}`}>
+      <button type="button" className={iconButton} onClick={onEdit} aria-label={t('a11y.edit', { name: forPet(r.title, pet?.name) })}>
         <Pencil size={18} />
       </button>
     </li>

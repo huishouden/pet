@@ -17,6 +17,6 @@ test('pets keep the order they were added, and their colour', () => {
 test('names in a sentence', () => {
   expect(petNames(['a'], pets)).toBe('Biscuit');
   expect(petNames(['a', 'b'], pets)).toBe('Biscuit and Miso');
-  expect(petNames(['a', 'b', 'c'], pets)).toBe('Biscuit, Miso and Pip');
+  expect(petNames(['a', 'b', 'c'], pets)).toBe('Biscuit, Miso, and Pip');
   expect(petNames(['gone'], pets)).toBe('');
 });
