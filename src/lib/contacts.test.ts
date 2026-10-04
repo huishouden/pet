@@ -46,11 +46,13 @@ describe('how far an appointment is from home', () => {
     expect(appointmentFromHome('25 Example Street, Springfield', vet, { home, locale: 'en-US' })).toBe('2.3 mi from home');
     expect(appointmentFromHome('25 example street', vet, { home, locale: 'en-US' })).toBe('2.3 mi from home');
     expect(appointmentFromHome('Example Vet Clinic', vet, { home, locale: 'en-US' })).toBe('2.3 mi from home');
+    expect(appointmentFromHome('Example Vet Clinic, room 2', vet, { home, locale: 'en-US' })).toBe('2.3 mi from home');
     expect(appointmentFromHome(undefined, vet, { home, locale: 'nl-NL' })).toBe('3,7 km from home');
   });
 
   test('nothing when it is somewhere else, the contact has no position, or there is no home', () => {
     expect(appointmentFromHome('Springfield Dog Park', vet, { home })).toBeUndefined();
+    expect(appointmentFromHome('Example Vet Clinics United', vet, { home })).toBeUndefined();
     expect(appointmentFromHome(undefined, groomer, { home })).toBeUndefined();
     expect(appointmentFromHome(undefined, undefined, { home })).toBeUndefined();
     expect(appointmentFromHome(undefined, vet, { home: undefined })).toBeUndefined();

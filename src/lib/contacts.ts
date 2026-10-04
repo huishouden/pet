@@ -54,9 +54,9 @@ export function contactForRole(contacts: Contact[], role: KnownRole): Contact | 
 const plain = (text: string | undefined) => (text ?? '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 
 /**
- * Where an appointment is, when that is its contact's place: no other location, or the contact's
- * address (the dialog copies it in, cut to the field's length) or name. Undefined when the contact
- * has no position or the appointment is somewhere else.
+ * Where an appointment is, when that is its contact's place: no other location, the contact's
+ * address (the dialog copies it in, cut to the field's length), or its name ("City Hospital, level
+ * 2"). Undefined when the contact has no position or the appointment is somewhere else.
  */
 export function appointmentPoint(location: string | undefined, contact: Contact | undefined): { lat: number; lng: number } | undefined {
   const point = coordinates(contact);
@@ -64,7 +64,10 @@ export function appointmentPoint(location: string | undefined, contact: Contact 
   const where = plain(location);
   if (!where) return point;
   const address = plain(contact.address);
-  return (address && (address.startsWith(where) || where.includes(address))) || where === plain(contact.name) ? point : undefined;
+  const name = plain(contact.name);
+  const atAddress = !!address && (address.startsWith(where) || where.includes(address));
+  const atName = !!name && (where === name || where.startsWith(`${name} `));
+  return atAddress || atName ? point : undefined;
 }
 
 /** "2.3 mi from home" for an appointment at its contact's place, when the household has a home. */
