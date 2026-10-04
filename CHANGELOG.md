@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.1](https://github.com/huishouden/pet/compare/v1.15.0...v1.15.1) (2026-10-04)
+
+
+### Bug Fixes
+
+* kit v0.74.0 to 0.82.1, contacts' pay details for admins and members only ([#61](https://github.com/huishouden/pet/issues/61)) ([d408b57](https://github.com/huishouden/pet/commit/d408b5762dcec72b6f7b01c8a7d2cd8d45f55653))
+
 ## [1.15.0](https://github.com/huishouden/pet/compare/v1.14.1...v1.15.0) (2026-10-04)
 
 
