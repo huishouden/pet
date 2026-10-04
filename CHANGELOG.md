@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.0](https://github.com/huishouden/pet/compare/v1.13.0...v1.14.0) (2026-10-04)
+
+
+### Features
+
+* Pet in Spanish and Dutch ([#49](https://github.com/huishouden/pet/issues/49)) ([53752e0](https://github.com/huishouden/pet/commit/53752e0a9b6173a082421f1062737c64f8281831))
+
 ## [1.13.0](https://github.com/huishouden/pet/compare/v1.12.0...v1.13.0) (2026-10-03)
 
 
