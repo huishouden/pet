@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Check, Pencil, Plus, RotateCcw } from 'lucide-react';
+import { AddToCalendar } from '@huishouden/pwa-kit/react/calendar';
 import type { Pet, Reminder } from '../lib/model';
 import { describeRecurrence, dueState, dueText, groupByDue } from '../lib/schedule';
 import { formatDayShort, parseYmd } from '@huishouden/pwa-kit/time';
@@ -11,6 +12,7 @@ import { PetAvatar, PetChips } from '../components/PetAvatar';
 import { cardClass, iconButton, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 import { useT } from '../i18n';
 import { forPet } from '../lib/today';
+import { reminderEntry } from '../lib/agenda';
 
 /** Every reminder, grouped by how soon it is due, with one-tap Given. */
 export function Care({ store, pets, open, onGive, onRestore, deviceSettings }: {
@@ -73,6 +75,7 @@ export function ReminderRow({ r, pets, now, onGive, onRestore, onEdit, compact }
   const pet = pets.find((p) => p.id === r.petId);
   const state = dueState(r, now);
   const dismissed = state === 'dismissed';
+  const entry = reminderEntry(r, pets, now);
   const urgent = state === 'overdue' || state === 'today';
   const due = parseYmd(r.due);
   const dueColour = urgent ? 'text-attention' : state === 'done' ? 'text-link' : dismissed ? 'text-muted' : 'text-ink-soft';
@@ -103,6 +106,7 @@ export function ReminderRow({ r, pets, now, onGive, onRestore, onEdit, compact }
           <RotateCcw size={18} /> {t('care.restore')}
         </button>
       )}
+      {!compact && entry && <AddToCalendar entry={entry} compact />}
       <button type="button" className={iconButton} onClick={onEdit} aria-label={t('a11y.edit', { name: forPet(r.title, pet?.name) })}>
         <Pencil size={18} />
       </button>

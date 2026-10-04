@@ -13,10 +13,11 @@ import type { PetStore } from '../data/types';
 import { birthdayQueries, guessWords, isBirthdayOf } from '../lib/birthday';
 import { petInputOf } from '../lib/build';
 import { birthdayMatches, guessSource } from '../components/BirthdayFind';
-import { CalendarHint, CalendarImportDialog, useCalendarSearch } from '@huishouden/pwa-kit/react/calendar';
+import { AddToCalendar, CalendarHint, CalendarImportDialog, useCalendarSearch } from '@huishouden/pwa-kit/react/calendar';
 import { auth } from '../data/firebase';
 import type { Open } from '../PetApp';
 import { PetAvatar, PetChips } from '../components/PetAvatar';
+import { appointmentEntry } from '../lib/agenda';
 import { cardClass, ghostButton, iconButton, linkClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 import { capitalize } from '@huishouden/pwa-kit/i18n';
 import { useT } from '../i18n';
@@ -216,6 +217,7 @@ function Row({ a, now, pets, contacts, first, onEdit }: { a: Appointment; now: n
           </a>
         )}
       </div>
+      <AddToCalendar entry={appointmentEntry(a, pets)} compact />
       <button type="button" className={iconButton} onClick={onEdit} aria-label={t('a11y.edit', { name: a.title })}>
         <Pencil size={18} />
       </button>
