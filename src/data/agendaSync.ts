@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { removeAgenda, replaceAgenda, syncAgenda } from '@huishouden/pwa-kit/agenda';
-import { syncTodos } from '@huishouden/pwa-kit/todos';
+import { localizeAgenda, removeAgenda, replaceAgenda, syncAgenda } from '@huishouden/pwa-kit/agenda';
+import { localizeTodos, syncTodos } from '@huishouden/pwa-kit/todos';
 import { addDays, toYmd } from '@huishouden/pwa-kit/time';
 import { AGENDA_APP, agendaByRef, agendaChanges, type AgendaData } from '../lib/agenda';
 import { todoItems } from '../lib/todos';
@@ -35,13 +35,16 @@ export function useAgendaSync(householdId: string, me: string, data: AgendaData,
       const now = Date.now();
       const today = toYmd(now);
       const wanted = agendaByRef(data, now);
-      syncTodos(db, householdId, AGENDA_APP, todoItems(data, now), { by: me, now, restricted }).catch(warnTodos);
+      // Every language's words (localizeTodos, localizeAgenda), so the portal shows each member their own.
+      localizeTodos(() => todoItems(data, now))
+        .then((todos) => syncTodos(db, householdId, AGENDA_APP, todos, { by: me, now, restricted }))
+        .catch(warnTodos);
 
       if (syncedDay.current !== today) {
         syncedDay.current = today;
         written.current = new Map([...wanted].map(([ref, items]) => [ref, JSON.stringify(items)]));
-        const items = [...wanted].flatMap(([ref, list]) => list.map((i) => ({ ...i, ref })));
-        syncAgenda(db, householdId, AGENDA_APP, items, { by: me, now, restricted }).catch((e) => {
+        const all = () => [...agendaByRef(data, now)].flatMap(([ref, list]) => list.map((i) => ({ ...i, ref })));
+        localizeAgenda(all).then((items) => syncAgenda(db, householdId, AGENDA_APP, items, { by: me, now, restricted })).catch((e) => {
           syncedDay.current = null;
           written.current = new Map();
           warn(e);
@@ -50,12 +53,14 @@ export function useAgendaSync(householdId: string, me: string, data: AgendaData,
       }
 
       const { replace, remove } = agendaChanges(written.current, wanted);
-      for (const [ref, items, signature] of replace) {
+      for (const [ref, , signature] of replace) {
         written.current.set(ref, signature);
-        replaceAgenda(db, householdId, AGENDA_APP, ref, items, { by: me, now, restricted }).catch((e) => {
-          written.current.delete(ref);
-          warn(e);
-        });
+        localizeAgenda(() => agendaByRef(data, now).get(ref) ?? [])
+          .then((items) => replaceAgenda(db, householdId, AGENDA_APP, ref, items, { by: me, now, restricted }))
+          .catch((e) => {
+            written.current.delete(ref);
+            warn(e);
+          });
       }
       for (const ref of remove) {
         written.current.delete(ref);

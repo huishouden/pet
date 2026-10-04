@@ -3,6 +3,7 @@
 
 import { onDay } from '@huishouden/pwa-kit/log';
 import { atTime, isHhmm, startOfDay, toYmd } from '@huishouden/pwa-kit/time';
+import { t } from '../i18n';
 
 export interface MealLike {
   id: string;
@@ -53,11 +54,12 @@ export function mealsOn<M extends MealLike, F extends FeedingLike>(meals: M[], f
 /**
  * The board every pet starts with, like the paper one: AM and PM, each with the time after which it
  * shows "Not fed yet". Stable ids per pet, so two devices adding the same pet can't double them.
+ * Named in the adding person's language: the names are the household's from then on.
  */
 export function defaultMeals(petId: string): (MealLike & { time: string })[] {
   return [
-    { id: `${petId}-am`, petId, name: 'AM', time: '09:00' },
-    { id: `${petId}-pm`, petId, name: 'PM', time: '19:00' },
+    { id: `${petId}-am`, petId, name: t('meal.am'), time: '09:00' },
+    { id: `${petId}-pm`, petId, name: t('meal.pm'), time: '19:00' },
   ];
 }
 

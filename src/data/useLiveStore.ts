@@ -4,6 +4,7 @@ import { commitOps } from '@huishouden/pwa-kit/firestore';
 import { householdContacts, markUnflaggedOpen, watchContacts } from '@huishouden/pwa-kit/contacts';
 import { can, householdRole, isRestricted, type Role } from '@huishouden/pwa-kit/roles';
 import { readError } from '@huishouden/pwa-kit/feedback';
+import { t } from '../i18n';
 import { APP } from '../lib/contacts';
 import { emptyData, type PetHouseholdData } from '../lib/demo';
 import { DAY } from '@huishouden/pwa-kit/time';
@@ -38,9 +39,10 @@ export function useLiveStore(householdId: string, me: string, household: { membe
   const base = `households/${householdId}`;
 
   useEffect(() => {
-    const fail = (what: string) => (e: Error) => errorRef.current(readError(e, `Couldn't load ${what}`));
+    // i18n-dynamic: live.
+    const fail = (key: DataKey | 'contacts') => (e: Error) => errorRef.current(readError(e, t(`live.${key}`)));
     const answer = (key: DataKey) => setAnswered((a) => (a.has(key) ? a : new Set(a).add(key)));
-    const listen = (key: DataKey, q: Query, what: string) =>
+    const listen = (key: DataKey, q: Query) =>
       onSnapshot(
         q,
         (s) => {
@@ -49,23 +51,23 @@ export function useLiveStore(householdId: string, me: string, household: { membe
         },
         (e) => {
           answer(key);
-          fail(what)(e);
+          fail(key)(e);
         },
       );
     const col = (key: DataKey) => collection(db, base, COLLECTIONS[key]);
     const unsubs = [
-      listen('pets', col('pets'), 'the pets'),
-      listen('reminders', col('reminders'), 'the reminders'),
-      listen('doses', query(col('doses'), where('at', '>=', Date.now() - DOSE_HISTORY_DAYS * DAY)), 'the dose history'),
-      listen('appointments', restricted ? query(col('appointments'), where('private', '==', false)) : col('appointments'), 'the appointments'),
-      listen('weights', col('weights'), 'the weights'),
-      listen('records', col('records'), 'the records'),
-      listen('meals', col('meals'), 'the meals'),
-      listen('courses', col('courses'), 'the medicine courses'),
-      listen('photos', col('photos'), "the pets' photos"),
-      listen('medDoses', query(col('medDoses'), where('at', '>=', Date.now() - DOSE_HISTORY_DAYS * DAY)), 'the medicine log'),
-      listen('feedings', query(col('feedings'), where('at', '>=', Date.now() - FEEDING_HISTORY_DAYS * DAY)), 'the feeding log'),
-      watchContacts(db, householdId, (contacts) => setData((d) => ({ ...d, contacts })), { app: APP, restricted, onError: fail('the contacts') }),
+      listen('pets', col('pets')),
+      listen('reminders', col('reminders')),
+      listen('doses', query(col('doses'), where('at', '>=', Date.now() - DOSE_HISTORY_DAYS * DAY))),
+      listen('appointments', restricted ? query(col('appointments'), where('private', '==', false)) : col('appointments')),
+      listen('weights', col('weights')),
+      listen('records', col('records')),
+      listen('meals', col('meals')),
+      listen('courses', col('courses')),
+      listen('photos', col('photos')),
+      listen('medDoses', query(col('medDoses'), where('at', '>=', Date.now() - DOSE_HISTORY_DAYS * DAY))),
+      listen('feedings', query(col('feedings'), where('at', '>=', Date.now() - FEEDING_HISTORY_DAYS * DAY))),
+      watchContacts(db, householdId, (contacts) => setData((d) => ({ ...d, contacts })), { app: APP, restricted, onError: fail('contacts') }), // i18n-ignore: a key, not text
     ];
     return () => unsubs.forEach((u) => u());
   }, [base, householdId, restricted]);
@@ -79,7 +81,7 @@ export function useLiveStore(householdId: string, me: string, household: { membe
   }, [householdId, seesPrivate, data.appointments]);
 
   const actions = useMemo(() => {
-    const report = (p: Promise<unknown>) => void p.catch((e) => errorRef.current(readError(e, "Couldn't save")));
+    const report = (p: Promise<unknown>) => void p.catch((e) => errorRef.current(readError(e, t('live.saveFailed'))));
     const backend: Backend = {
       me,
       now: () => Date.now(),

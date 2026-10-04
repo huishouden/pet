@@ -3,6 +3,8 @@ import type { Pet } from '../lib/model';
 import { WEIGHT_UNITS, parseWeight, type WeightUnit } from '../lib/weight';
 import { parseYmd, startOfDay, toYmd } from '@huishouden/pwa-kit/time';
 import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
+import { useT } from '../i18n';
+import { formatNumber } from '@huishouden/pwa-kit/i18n';
 
 /** Logs one weighing: today by default, in the pet's unit. */
 export function WeightDialog({ pet, now, onSave, onClose }: {
@@ -11,6 +13,7 @@ export function WeightDialog({ pet, now, onSave, onClose }: {
   onSave: (input: { petId: string; at: number; value: number; unit: WeightUnit }) => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const [value, setValue] = useState('');
   const [unit, setUnit] = useState<WeightUnit>(pet?.weightUnit ?? 'lb');
   const [date, setDate] = useState(toYmd(now));
@@ -28,15 +31,15 @@ export function WeightDialog({ pet, now, onSave, onClose }: {
 
   return (
     <Dialog
-      title={pet ? `Weigh ${pet.name}` : 'Log weight'}
+      title={pet ? t('weightDialog.weigh', { name: pet.name }) : t('pets.logWeight')}
       onClose={onClose}
       footer={
         <>
           <button type="button" className={ghostButton} onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="button" className={primaryButton} disabled={!valid} onClick={save}>
-            Save
+            {t('common.save')}
           </button>
         </>
       }
@@ -49,17 +52,17 @@ export function WeightDialog({ pet, now, onSave, onClose }: {
         }}
       >
         <div className="flex items-end gap-3">
-          <Field label="Weight">
+          <Field label={t('pets.weight')}>
             <input
               className={`${inputClass} max-w-40 text-2xl tabular-nums`}
               inputMode="decimal"
               value={value}
               onChange={(e) => setValue(e.target.value.replace(/[^\d.,]/g, '').slice(0, 7))}
-              placeholder="0.0"
+              placeholder={formatNumber(0, undefined, { minimumFractionDigits: 1 })}
               autoComplete="off"
             />
           </Field>
-          <div className="flex gap-2 pb-0.5" role="group" aria-label="Unit">
+          <div className="flex gap-2 pb-0.5" role="group" aria-label={t('weightDialog.unit')}>
             {WEIGHT_UNITS.map((u) => (
               <Chip key={u} active={unit === u} onClick={() => setUnit(u)}>
                 {u}
@@ -67,7 +70,7 @@ export function WeightDialog({ pet, now, onSave, onClose }: {
             ))}
           </div>
         </div>
-        <Field label="Day">
+        <Field label={t('weightDialog.day')}>
           <input className={inputClass} type="date" value={date} max={toYmd(now)} onChange={(e) => setDate(e.target.value)} />
         </Field>
         <button type="submit" hidden />

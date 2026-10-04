@@ -14,6 +14,7 @@ import { fedTodayFor, mealAt, mealsOf } from './feeding';
 import { describeRecurrence, dueState } from './schedule';
 import { appUrl } from '@huishouden/pwa-kit/site';
 import { APP, APP_BASE, APP_ORIGIN } from './notify';
+import { t } from '../i18n';
 
 /** The repo short name the agenda files Pet's items under. */
 export const AGENDA_APP = APP;
@@ -45,7 +46,7 @@ const nameOf = (pets: Pick<Pet, 'id' | 'name'>[], id: string) => pets.find((p) =
 const inWindow = (items: AgendaEntry[], now: number) => items.filter((i) => inAgendaWindow(i, now));
 
 /** "Heartworm prevention for Milo": what to do and for whom, read on its own in the portal. */
-export const forPet = (what: string, who: string | undefined) => (who ? `${what.trim()} for ${who}` : what.trim()).slice(0, AGENDA_LIMITS.title);
+export const forPet = (what: string, who: string | undefined) => (who ? t('today.forPet', { what: what.trim(), name: who }) : what.trim()).slice(0, AGENDA_LIMITS.title);
 
 /** An appointment at its time, at its place, for the pets it is for. */
 export function appointmentAgenda(a: Appointment, pets: Pick<Pet, 'id' | 'name'>[], now: number, origin = APP_ORIGIN): AgendaEntry[] {
@@ -94,7 +95,7 @@ export function reminderAgenda(r: Reminder, pets: Pick<Pet, 'id' | 'name'>[], no
 
 /** "1 tablet, twice a day, with food". */
 export function courseDetail(c: Pick<Course, 'dose' | 'times' | 'timesPerDay' | 'withFood'>): string {
-  return [c.dose.trim(), timesText(c.times.length || c.timesPerDay).toLowerCase(), c.withFood ? 'with food' : ''].filter(Boolean).join(', ');
+  return [c.dose.trim(), timesText(c.times.length || c.timesPerDay).toLowerCase(), c.withFood ? t('course.withFood') : ''].filter(Boolean).join(', ');
 }
 
 /**
@@ -158,7 +159,7 @@ export function birthdayAgenda(pet: Pick<Pet, 'id' | 'name' | 'birthDate' | 'bir
   return [
     {
       kind: 'birthday',
-      title: `${name} turns ${next.turns}`,
+      title: t('agenda.turns', { name, n: next.turns }),
       start: allDayStart(next.date),
       allDay: true,
       url: tabUrl('pets', pet.id, origin),
@@ -180,7 +181,7 @@ export function mealAgenda(pet: Pick<Pet, 'id' | 'name'>, meals: Meal[], feeding
       const detail = [meal.food, meal.portion].map((s) => s?.trim()).filter(Boolean).join(', ');
       const item: AgendaEntry = {
         kind: 'feeding',
-        title: `Feed ${name} · ${meal.name.trim()}`.slice(0, AGENDA_LIMITS.title),
+        title: t('agenda.feed', { name, meal: meal.name.trim() }).slice(0, AGENDA_LIMITS.title),
         start: mealAt(meal.time, day),
         allDay: false,
         ...(detail ? { detail } : {}),

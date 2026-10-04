@@ -2,13 +2,15 @@
 // reminder that is due or past due, most overdue first; what is left later today; and what is coming
 // up (care due soon, visits, birthdays). Pure: every function takes `now`.
 
-import { MINUTE, daysBetween, dueText, formatTime, parseYmd, relativeDay, startOfDay, toYmd } from '@huishouden/pwa-kit/time';
+import { MINUTE, atClock, daysBetween, dueText, formatTime, parseYmd, relativeDay, startOfDay, toHhmm, toYmd } from '@huishouden/pwa-kit/time';
 import type { Appointment, Course, Feeding, Meal, MedDose, Pet, Reminder } from './model';
 import { dosesOn, isHandled } from './courses';
 import { mealsOn } from './feeding';
 import { dueState, headline } from './schedule';
 import { birthdayCountdown, birthdayLine, turnsOn, type BirthdayCountdown } from './birthday';
 import { petNames } from './pets';
+import { t } from '../i18n';
+import { compareText } from '@huishouden/pwa-kit/i18n';
 
 export interface TodayData {
   meals: Meal[];
@@ -33,8 +35,8 @@ interface NeedBase {
   late: boolean;
   /** The moment it became due, for the order. */
   since: number;
-  /** The one-tap action's label. */
-  action: 'Given' | 'Fed' | 'Done';
+  /** The one-tap action: "Given", "Fed" or "Done" (`needActionLabel`). */
+  action: 'given' | 'fed' | 'done';
 }
 
 export type Need =
@@ -44,31 +46,34 @@ export type Need =
 
 /** "just now", "25 min ago", "1 hr ago", "1 hr 30 min ago". */
 export function sinceWords(ms: number): string {
-  if (ms < MINUTE) return 'just now';
-  return `${span(ms)} ago`;
+  if (ms < MINUTE) return t('today.justNow');
+  return t('today.ago', { span: span(ms) });
 }
 
 /** "in 15 min", "in 1 hr 5 min"; "now" under a minute. */
 export function untilWords(ms: number): string {
-  if (ms < MINUTE) return 'now';
-  return `in ${span(ms)}`;
+  if (ms < MINUTE) return t('today.now');
+  return t('today.in', { span: span(ms) });
 }
 
 function span(ms: number): string {
   const total = Math.floor(ms / MINUTE);
   const h = Math.floor(total / 60);
   const m = total % 60;
-  if (h === 0) return `${m} min`;
-  return m ? `${h} hr ${m} min` : `${h} hr`;
+  if (h === 0) return t('today.min', { m });
+  return m ? t('today.hrMin', { h, m }) : t('today.hr', { h });
 }
 
 /** "Due 9:00 AM · 1 hr 30 min ago", or "Due 7:00 PM · in 20 min" just before. */
 export function timedWhen(at: number, now: number): string {
-  return `Due ${formatTime(at)} · ${now >= at ? sinceWords(now - at) : untilWords(at - now)}`;
+  return t('today.timedWhen', { time: formatTime(at), when: now >= at ? sinceWords(now - at) : untilWords(at - now) });
 }
 
 /** "Flea and tick for Biscuit": what to do and for whom. */
-export const forPet = (what: string, name: string | undefined) => (name ? `${what.trim()} for ${name}` : what.trim());
+export const forPet = (what: string, name: string | undefined) => (name ? t('today.forPet', { what: what.trim(), name }) : what.trim());
+
+/** A need's one-tap button in the active language. */
+export const needActionLabel = (action: Need['action']) => t(action === 'fed' ? 'today.fed' : action === 'given' ? 'today.given' : 'common.done');
 
 const nameOf = (pets: Pick<Pet, 'id' | 'name'>[], id: string) => pets.find((p) => p.id === id)?.name;
 
@@ -85,13 +90,13 @@ export function needsDoing(data: TodayData, pets: Pet[], now: number): Need[] {
     for (const c of data.courses.filter((x) => x.petId === pet.id)) {
       for (const { slot, status } of dosesOn(c, data.medDoses, today, now)) {
         if (isHandled(status) || status.at > soon) continue;
-        out.push({ kind: 'dose', key: `dose:${c.id}:${slot}`, petId: pet.id, course: c, slot, title: forPet(c.name, pet.name), when: timedWhen(status.at, now), late: status.state === 'missed', since: status.at, action: 'Given' });
+        out.push({ kind: 'dose', key: `dose:${c.id}:${slot}`, petId: pet.id, course: c, slot, title: forPet(c.name, pet.name), when: timedWhen(status.at, now), late: status.state === 'missed', since: status.at, action: 'given' });
       }
     }
     for (const { meal, status } of mealsOn(data.meals, data.feedings, pet.id, now, now)) {
       if (status.state === 'fed' || status.at > soon) continue;
       const late = status.state === 'late';
-      out.push({ kind: 'meal', key: `meal:${meal.id}`, petId: pet.id, meal, title: late ? `Not fed yet: ${pet.name} ${meal.name}` : `${pet.name}'s ${meal.name} meal`, when: timedWhen(status.at, now), late, since: status.at, action: 'Fed' });
+      out.push({ kind: 'meal', key: `meal:${meal.id}`, petId: pet.id, meal, title: late ? t('today.notFedYet', { pet: pet.name, meal: meal.name }) : t('today.petMeal', { pet: pet.name, meal: meal.name }), when: timedWhen(status.at, now), late, since: status.at, action: 'fed' });
     }
   }
   for (const r of data.reminders) {
@@ -99,9 +104,9 @@ export function needsDoing(data: TodayData, pets: Pet[], now: number): Need[] {
     if (!name) continue;
     const state = dueState(r, now);
     if (state !== 'overdue' && state !== 'today') continue;
-    out.push({ kind: 'care', key: `care:${r.id}`, petId: r.petId, reminder: r, title: forPet(r.title, name), when: dueText(r.due, today), late: state === 'overdue', since: parseYmd(r.due) ?? startOfDay(now), action: r.kind === 'other' ? 'Done' : 'Given' });
+    out.push({ kind: 'care', key: `care:${r.id}`, petId: r.petId, reminder: r, title: forPet(r.title, name), when: dueText(r.due, today), late: state === 'overdue', since: parseYmd(r.due) ?? startOfDay(now), action: r.kind === 'other' ? 'done' : 'given' });
   }
-  return out.sort((a, b) => Number(b.late) - Number(a.late) || a.since - b.since || a.title.localeCompare(b.title));
+  return out.sort((a, b) => Number(b.late) - Number(a.late) || a.since - b.since || compareText(a.title, b.title));
 }
 
 export interface LaterItem {
@@ -141,7 +146,7 @@ export function laterToday(data: TodayData, pets: Pet[], now: number): LaterItem
     }
   }
   for (const [k, g] of meals) {
-    const title = g.petIds.length === 1 ? `${nameOf(pets, g.petIds[0])}'s ${g.name} meal` : `${g.name} meal for ${petNames(g.petIds, pets)}`;
+    const title = g.petIds.length === 1 ? t('today.petMeal', { pet: nameOf(pets, g.petIds[0]) ?? '', meal: g.name }) : t('today.mealFor', { meal: g.name, pets: petNames(g.petIds, pets) });
     out.push({ key: `meal:${k}`, kind: 'meal', at: g.at, time: formatTime(g.at), title, petIds: g.petIds });
   }
   for (const a of data.appointments) {
@@ -149,13 +154,13 @@ export function laterToday(data: TodayData, pets: Pet[], now: number): LaterItem
     const who = petNames(a.petIds, pets);
     out.push({ key: `appointment:${a.id}`, kind: 'appointment', at: a.at, time: formatTime(a.at), title: forPet(a.title, who || undefined), petIds: a.petIds, appointment: a });
   }
-  return out.sort((a, b) => a.at - b.at || a.title.localeCompare(b.title));
+  return out.sort((a, b) => a.at - b.at || compareText(a.title, b.title));
 }
 
 /** "All done for now · next: Biscuit's PM meal at 7:00 PM", or "All done for today". */
 export function allDoneLine(later: LaterItem[]): string {
   const next = later[0];
-  return next ? `All done for now · next: ${next.title} at ${next.time}` : 'All done for today';
+  return next ? t('today.allDoneNext', { title: next.title, at: atClock(toHhmm(next.at)) }) : t('today.allDone');
 }
 
 export interface ComingItem {
@@ -197,7 +202,7 @@ export function comingUp(data: Pick<TodayData, 'reminders' | 'appointments'>, pe
     if (!c || c.days === 0) continue;
     out.push({ key: `birthday:${pet.id}`, kind: 'birthday', day: parseYmd(c.date)!, title: birthdayLine(pet.name, c), detail: turnsOn(c), petIds: [pet.id] });
   }
-  return out.sort((a, b) => a.day - b.day || a.title.localeCompare(b.title));
+  return out.sort((a, b) => a.day - b.day || compareText(a.title, b.title));
 }
 
 /** Pets whose birthday is today, with the age it brings. */
@@ -209,5 +214,5 @@ export function birthdaysToday(pets: Pet[], now: number): { pet: Pet; countdown:
 }
 
 /** "Happy birthday, Biscuit!" and "Biscuit turns 4 today": the one line in the suite allowed an exclamation mark (DESIGN.md, Celebrations). */
-export const celebrationTitle = (name: string) => `Happy birthday, ${name}!`;
-export const celebrationLine = (name: string, turns: number) => `${name} turns ${turns} today`;
+export const celebrationTitle = (name: string) => t('today.happyBirthday', { name });
+export const celebrationLine = (name: string, turns: number) => t('today.turnsToday', { name, n: turns });

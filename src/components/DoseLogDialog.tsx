@@ -5,9 +5,11 @@ import { courseHistory, courseText, progress, slotAt, slotMealName } from '../li
 import { mealsOf } from '../lib/feeding';
 import { formatClock } from '../lib/format';
 import { personName } from '@huishouden/pwa-kit/people';
-import { formatTime, longDate, toYmd, type Ymd, isHhmm, toHhmm } from '@huishouden/pwa-kit/time';
+import { atClock, formatTime, longDate, toYmd, type Ymd, isHhmm, toHhmm } from '@huishouden/pwa-kit/time';
 import { Dialog, ghostButton, inputClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 import { Tile } from './FeedingBoard';
+import { useT } from '../i18n';
+import { capitalize } from '@huishouden/pwa-kit/i18n';
 
 /**
  * A medicine course day by day, from its first day through today: each dose as a toggle like the
@@ -28,38 +30,42 @@ export function DoseLogDialog({ course, pet, meals, medDoses, me, now, onToggle,
   onMove: (dose: MedDose, at: number) => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const [editing, setEditing] = useState<{ dose: MedDose; time: string } | null>(null);
   const history = courseHistory(course, medDoses, now);
   const p = progress(course, medDoses);
   const petMeals = mealsOf(meals, course.petId);
   const who = (email: string) => personName(email, { email: me });
   const today = toYmd(now);
-  const name = pet?.name ?? 'the pet';
+  const name = pet?.name;
+  // "Antibiotic PM today", "Antibiotic PM on Tuesday, May 12"; with the pet's name first for the toggles.
+  const whenOf = (title: string, day: Ymd) => (day === today ? t('doseLog.titleToday', { title }) : t('doseLog.titleOn', { title, date: longDate(day, today) }));
+  const subject = (title: string, day: Ymd) => whenOf(name ? t('toast.petMeal', { pet: name, meal: title }) : title, day);
 
   return (
     <Dialog
-      title={`${course.name}: doses by day`}
+      title={t('doseLog.title', { name: course.name })}
       onClose={onClose}
       footer={
         <button type="button" className={primaryButton} onClick={onClose}>
-          Done
+          {t('common.done')}
         </button>
       }
     >
       <p className="text-base text-ink-soft">
-        <span className="font-semibold text-link">{courseText(course, now)}</span> · {p.given} of {p.total} doses given · {p.daysComplete} of {p.days} days complete
+        <span className="font-semibold text-link">{courseText(course, now)}</span> · {t('doseLog.given', { given: p.given, total: p.total })} · {t('doseLog.complete', { complete: p.daysComplete, days: p.days })}
       </p>
-      {history.length === 0 && <p className="mt-3 text-base text-muted">The course hasn't started yet.</p>}
-      <ol className="mt-3" aria-label="Days">
+      {history.length === 0 && <p className="mt-3 text-base text-muted">{t('doseLog.notStarted')}</p>}
+      <ol className="mt-3" aria-label={t('courseDialog.days')}>
         {history.map(({ day, n, doses, complete }) => {
-          const dayWords = day === today ? 'Today' : longDate(day, today);
+          const dayWords = day === today ? t('board.today') : capitalize(longDate(day, today));
           return (
-            <li key={day} className="border-b border-line py-3 last:border-b-0" aria-label={`Day ${n}, ${dayWords}`}>
+            <li key={day} className="border-b border-line py-3 last:border-b-0" aria-label={t('doseLog.dayLabel', { n, day: dayWords })}>
               <p className="flex items-center gap-2 text-base font-semibold text-ink">
-                Day {n} · {dayWords}
+                {t('doseLog.day', { n, day: dayWords })}
                 {complete && (
                   <span className="flex items-center gap-1 text-sm font-medium text-positive">
-                    <Check size={16} aria-hidden="true" /> All given
+                    <Check size={16} aria-hidden="true" /> {t('doseLog.allGiven')}
                   </span>
                 )}
               </p>
@@ -70,7 +76,6 @@ export function DoseLogDialog({ course, pet, meals, medDoses, me, now, onToggle,
                   const missed = status.state === 'missed';
                   const slotName = slotMealName(time, petMeals) ?? formatClock(time);
                   const title = course.times.length > 1 ? `${course.name} ${slotName}` : course.name;
-                  const when = day === today ? 'today' : `on ${longDate(day, today)}`;
                   return (
                     <div key={slot} className="min-w-0">
                       <Tile
@@ -78,14 +83,16 @@ export function DoseLogDialog({ course, pet, meals, medDoses, me, now, onToggle,
                         late={missed}
                         compact
                         icon={<Pill size={20} className="shrink-0" aria-hidden="true" />}
-                        title={course.times.length > 1 ? slotName : 'Dose'}
-                        detail={given ? `${formatTime(status.at)} · ${who(status.dose.by)}` : skipped ? `Skipped · ${who(status.dose.by)}` : missed ? 'Missed' : `by ${formatTime(status.at)}`}
+                        title={course.times.length > 1 ? slotName : t('courseDialog.dose')}
+                        detail={given ? `${formatTime(status.at)} · ${who(status.dose.by)}` : skipped ? t('board.skippedBy', { who: who(status.dose.by) }) : missed ? t('board.missed') : t('board.byTime', { time: formatTime(status.at) })}
                         label={
                           given
-                            ? `${name} ${title} ${when}: given at ${formatTime(status.at)} by ${who(status.dose.by)}. Tap to undo.`
+                            ? t('board.givenLabel', { what: subject(title, day), at: atClock(toHhmm(status.at)), who: who(status.dose.by) })
                             : skipped
-                              ? `${name} ${title} ${when}: skipped by ${who(status.dose.by)}. Tap to undo.`
-                              : `${name} ${title} ${when}: ${missed ? 'missed' : 'not yet'}. Tap if given.`
+                              ? t('board.skippedLabel', { what: subject(title, day), who: who(status.dose.by) })
+                              : missed
+                                ? t('board.missedYesterdayLabel', { what: subject(title, day) })
+                                : t('doseLog.notYetLabel', { what: subject(title, day) })
                         }
                         onClick={() => {
                           setEditing(null);
@@ -100,9 +107,9 @@ export function DoseLogDialog({ course, pet, meals, medDoses, me, now, onToggle,
                             setEditing(null);
                             onSkip(slot, day);
                           }}
-                          aria-label={`Skip ${title} ${when}`}
+                          aria-label={t('doseLog.skipName', { what: whenOf(title, day) })}
                         >
-                          Skip
+                          {t('todo.skip')}
                         </button>
                       )}
                       {given && editing?.dose.id !== status.dose.id && (
@@ -110,9 +117,9 @@ export function DoseLogDialog({ course, pet, meals, medDoses, me, now, onToggle,
                           type="button"
                           className={`${ghostButton} mt-1 min-h-9 px-2 py-1 text-sm`}
                           onClick={() => setEditing({ dose: status.dose, time: toHhmm(status.at) })}
-                          aria-label={`Change the time of ${title} ${when}`}
+                          aria-label={t('doseLog.changeTimeOf', { what: whenOf(title, day) })}
                         >
-                          Change time
+                          {t('doseLog.changeTime')}
                         </button>
                       )}
                       {given && editing?.dose.id === status.dose.id && (
@@ -130,10 +137,10 @@ export function DoseLogDialog({ course, pet, meals, medDoses, me, now, onToggle,
                             type="time"
                             value={editing.time}
                             onChange={(e) => setEditing({ ...editing, time: e.target.value })}
-                            aria-label={`Time ${title} was given ${when}`}
+                            aria-label={day === today ? t('doseLog.timeGivenToday', { title }) : t('doseLog.timeGivenOn', { title, date: longDate(day, today) })}
                           />
                           <button type="submit" className={secondaryButton}>
-                            Save
+                            {t('common.save')}
                           </button>
                         </form>
                       )}

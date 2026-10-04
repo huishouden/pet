@@ -5,6 +5,7 @@ import type { Meal, Pet } from '../lib/model';
 import { LIMITS } from '../lib/model';
 import type { MealInput } from '../lib/build';
 import { Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
+import { useT } from '../i18n';
 
 /** One meal on a pet's board: its name, when it counts as missed, and optionally what and how much. */
 export function MealDialog({ meal, pet, onSave, onDelete, onClose }: {
@@ -14,6 +15,7 @@ export function MealDialog({ meal, pet, onSave, onDelete, onClose }: {
   onDelete?: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const [name, setName] = useState(meal?.name ?? '');
   const [time, setTime] = useState(meal?.time ?? '12:00');
   const [food, setFood] = useState(meal?.food ?? '');
@@ -29,7 +31,7 @@ export function MealDialog({ meal, pet, onSave, onDelete, onClose }: {
 
   return (
     <Dialog
-      title={meal ? `Edit ${meal.name}` : `New meal${pet ? ` for ${pet.name}` : ''}`}
+      title={meal ? t('a11y.edit', { name: meal.name }) : pet ? t('mealDialog.newFor', { name: pet.name }) : t('mealDialog.new')}
       onClose={onClose}
       footer={
         <>
@@ -42,14 +44,14 @@ export function MealDialog({ meal, pet, onSave, onDelete, onClose }: {
                 onClose();
               }}
             >
-              <Trash2 size={18} /> Remove meal
+              <Trash2 size={18} /> {t('mealDialog.remove')}
             </button>
           )}
           <button type="button" className={ghostButton} onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="button" className={primaryButton} disabled={!valid} onClick={save}>
-            Save
+            {t('common.save')}
           </button>
         </>
       }
@@ -62,23 +64,23 @@ export function MealDialog({ meal, pet, onSave, onDelete, onClose }: {
         }}
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Name">
-            <input className={inputClass} value={name} maxLength={LIMITS.mealName} onChange={(e) => setName(e.target.value)} placeholder="AM" autoComplete="off" />
+          <Field label={t('common.name')}>
+            <input className={inputClass} value={name} maxLength={LIMITS.mealName} onChange={(e) => setName(e.target.value)} placeholder={t('meal.am')} autoComplete="off" />
           </Field>
-          <Field label="Not fed yet after" hint="After this time an unticked meal shows Not fed yet.">
+          <Field label={t('mealDialog.cutoff')} hint={t('mealDialog.cutoffHint')}>
             <input className={inputClass} type="time" value={time} onChange={(e) => setTime(e.target.value)} />
           </Field>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Food (optional)">
-            <input className={inputClass} value={food} maxLength={LIMITS.food} onChange={(e) => setFood(e.target.value)} placeholder="Lamb kibble" />
+          <Field label={t('mealDialog.food')}>
+            <input className={inputClass} value={food} maxLength={LIMITS.food} onChange={(e) => setFood(e.target.value)} placeholder={t('mealDialog.foodPlaceholder')} />
           </Field>
-          <Field label="Portion (optional)">
-            <input className={inputClass} value={portion} maxLength={LIMITS.portion} onChange={(e) => setPortion(e.target.value)} placeholder="1 cup" />
+          <Field label={t('mealDialog.portion')}>
+            <input className={inputClass} value={portion} maxLength={LIMITS.portion} onChange={(e) => setPortion(e.target.value)} placeholder={t('mealDialog.portionPlaceholder')} />
           </Field>
         </div>
-        <Field label="With this meal (optional)">
-          <input className={inputClass} value={note} maxLength={LIMITS.mealNote} onChange={(e) => setNote(e.target.value)} placeholder="Supplement mixed in" />
+        <Field label={t('mealDialog.note')}>
+          <input className={inputClass} value={note} maxLength={LIMITS.mealNote} onChange={(e) => setNote(e.target.value)} placeholder={t('mealDialog.notePlaceholder')} />
         </Field>
         <button type="submit" hidden />
       </form>

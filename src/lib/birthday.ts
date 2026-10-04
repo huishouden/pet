@@ -3,22 +3,31 @@
 
 import type { CalendarMatch } from '@huishouden/pwa-kit/calendar';
 import type { ReminderInput } from '@huishouden/pwa-kit/reminders';
-import { MONTHS, addDays, addMonths, daysBetween, daysInMonth, inDays, toYmd, ymd, ymdParts, type Ymd } from '@huishouden/pwa-kit/time';
+import { addDays, addMonths, daysBetween, daysInMonth, formatYmd, inDays, toYmd, ymd, ymdParts, type Ymd } from '@huishouden/pwa-kit/time';
+import { getLang, type Lang } from '@huishouden/pwa-kit/i18n';
+import { t } from '../i18n';
 
-/** The searches for one pet's birthday: "Biscuit birthday", "Biscuit's birthday", "Biscuit bday". */
-export function birthdayQueries(name: string): string[] {
+/**
+ * The searches for one pet's birthday: "Biscuit birthday", "Biscuit's birthday", "Biscuit bday", and
+ * in the app's language "cumpleaños de Biscuit" or "Biscuit verjaardag" (the calendar may be in either).
+ */
+export function birthdayQueries(name: string, lang: Lang = getLang()): string[] {
   const n = name.trim().toLowerCase();
-  return n ? [`${n} birthday`, `${n}'s birthday`, `${n} bday`] : [];
+  if (!n) return [];
+  const en = [`${n} birthday`, `${n}'s birthday`, `${n} bday`];
+  if (lang === 'es') return [...en, `cumpleaños de ${n}`, `cumple de ${n}`, `${n} cumpleaños`];
+  if (lang === 'nl') return [...en, `${n} verjaardag`, `verjaardag ${n}`, `${n} jarig`];
+  return en;
 }
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/** Whether an event's title is this pet's birthday: the name and "birthday", "bday" or "b-day", in either order. */
+/** Whether an event's title is this pet's birthday: the name and "birthday", "bday", "b-day", "cumpleaños", "cumple", "verjaardag" or "jarig", in either order. */
 export function isBirthdayOf(title: string, name: string): boolean {
   const n = name.trim();
   if (!n) return false;
   const pet = new RegExp(`(^|[^\\p{L}])${escapeRegExp(n)}(['’]s)?($|[^\\p{L}])`, 'iu');
-  return pet.test(title) && /\b(birthday|bday|b-day)\b/i.test(title);
+  return pet.test(title) && /\b(birthday|bday|b-day|cumplea[ñn]os|cumple|verjaardag|jarig)\b/i.test(title);
 }
 
 export interface BirthdayGuess {
@@ -37,9 +46,16 @@ export interface BirthdayGuess {
   from: 'age' | 'year' | null;
 }
 
-/** An age in the title: "turns 5", "5th birthday", "5 years old". */
+/** An age in the title: "turns 5", "5th birthday", "5 years old", "cumple 5", "5 años", "wordt 5", "5 jaar". */
 function ageInTitle(title: string): number | null {
-  const m = /\bturns\s+(\d{1,2})\b/i.exec(title) ?? /\b(\d{1,2})(?:st|nd|rd|th)\s+(?:birthday|bday|b-day)\b/i.exec(title) ?? /\b(\d{1,2})\s+(?:years?|yrs?)\s+old\b/i.exec(title);
+  const m =
+    /\bturns\s+(\d{1,2})\b/i.exec(title) ??
+    /\b(\d{1,2})(?:st|nd|rd|th)\s+(?:birthday|bday|b-day)\b/i.exec(title) ??
+    /\b(\d{1,2})\s+(?:years?|yrs?)\s+old\b/i.exec(title) ??
+    /\bcumple\s+(\d{1,2})\b/i.exec(title) ??
+    /\b(\d{1,2})\s+a[ñn]os\b/i.exec(title) ??
+    /\bwordt\s+(\d{1,2})\b/i.exec(title) ??
+    /\b(\d{1,2})\s+jaar\b/i.exec(title);
   return m ? Number(m[1]) : null;
 }
 
@@ -88,7 +104,7 @@ export function birthDateFromAgeOrYear(text: string, month: number, day: number,
   const thisYear = ymdParts(today)!.y;
   let year: number;
   const yearMatch = /^(\d{4})$/.exec(t);
-  const ageMatch = /^(\d{1,2})(?:\s*(?:years?|yrs?)(?:\s+old)?)?$/.exec(t);
+  const ageMatch = /^(\d{1,2})(?:\s*(?:years?|yrs?|a[ñn]os?|jaar)(?:\s+old|\s+oud)?)?$/.exec(t);
   if (yearMatch) year = Number(yearMatch[1]);
   else if (ageMatch && Number(ageMatch[1]) <= MAX_AGE) {
     const passed = daysBetween(birthdayIn(thisYear, month, day), today) >= 0;
@@ -101,11 +117,10 @@ export function birthDateFromAgeOrYear(text: string, month: number, day: number,
 
 /** "Born March 8, 2019 · turns 7 next", confirming a birth date worked out from an age or year. */
 export function bornWords(date: Ymd, now: number): string {
-  const p = ymdParts(date)!;
-  const born = `Born ${MONTHS[p.m - 1]} ${p.d}, ${p.y}`;
+  const born = t('birthday.born', { date: formatYmd(date, { month: 'long', day: 'numeric', year: 'numeric' }) });
   const next = nextBirthday(date, now);
   if (!next) return born;
-  return `${born} · ${next.days === 0 ? `turns ${next.turns} today` : `turns ${next.turns} next`}`;
+  return `${born} · ${next.days === 0 ? t('birthday.turnsToday', { n: next.turns }) : t('birthday.turnsNext', { n: next.turns })}`;
 }
 
 /**
@@ -130,7 +145,7 @@ export function ageParts(birthDate: string, now: number): { years: number; month
 
 /** "March 8, 2027", or "March 8" when the year isn't known. */
 export function guessWords(g: Pick<BirthdayGuess, 'month' | 'day' | 'year'>): string {
-  return `${MONTHS[g.month - 1]} ${g.day}${g.year ? `, ${g.year}` : ''}`;
+  return formatYmd(ymd(g.year ?? 2000, g.month, g.day), g.year ? { month: 'long', day: 'numeric', year: 'numeric' } : { month: 'long', day: 'numeric' });
 }
 
 /** This pet's birthday this year or next: the day (29 February falls on the 28th in other years) and the age it brings. */
@@ -151,9 +166,8 @@ export function nextBirthday(birthDate: string, now: number): { date: Ymd; turns
 export function birthdayText(birthDate: string | undefined, now: number, approx?: boolean): string | null {
   const next = birthDate && !approx ? nextBirthday(birthDate, now) : null;
   if (!next) return null;
-  if (next.days === 0) return 'Birthday today';
-  const p = ymdParts(next.date)!;
-  return `Turns ${next.turns} on ${MONTHS[p.m - 1]} ${p.d}`;
+  if (next.days === 0) return t('birthday.today');
+  return t('birthday.turnsOn', { n: next.turns, date: monthDay(next.date) });
 }
 
 /** The hour of the morning the birthday notification arrives. */
@@ -175,8 +189,8 @@ export function birthdayReminder(pet: { id: string; name: string; birthDate?: st
   if (!next) return null;
   return {
     app: app.app,
-    title: `${pet.name}'s birthday`,
-    body: `${pet.name} turns ${next.turns} today.`,
+    title: t('birthday.title', { name: pet.name }),
+    body: t('birthday.body', { name: pet.name, n: next.turns }),
     at: at(next.date),
     url: app.url,
     ref: app.ref,
@@ -205,10 +219,12 @@ export function birthdayCountdown(birthDate: string | undefined, now: number, ap
 }
 
 /** "Biscuit's birthday in 3 weeks", "Biscuit's birthday tomorrow"; the day itself is a celebration, not a line. */
-export const birthdayLine = (name: string, c: Pick<BirthdayCountdown, 'when'>) => `${name}'s birthday ${c.when}`;
+export const birthdayLine = (name: string, c: Pick<BirthdayCountdown, 'when'>) => t('birthday.line', { name, when: c.when });
 
 /** "Turns 5 on June 4": the line under a coming birthday. */
 export function turnsOn(c: Pick<BirthdayCountdown, 'turns' | 'date'>): string {
-  const p = ymdParts(c.date)!;
-  return `Turns ${c.turns} on ${MONTHS[p.m - 1]} ${p.d}`;
+  return t('birthday.turnsOn', { n: c.turns, date: monthDay(c.date) });
 }
+
+/** "June 4", "4 de junio", "4 juni". */
+const monthDay = (date: Ymd) => formatYmd(date, { month: 'long', day: 'numeric' });

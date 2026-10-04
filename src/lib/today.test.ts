@@ -18,10 +18,10 @@ describe('needs doing', () => {
   test('the sample morning leads with the overdue flea treatment, then the late dose and meal, then what is due today', () => {
     const list = needsDoing(demo, pets, DEMO_NOW);
     expect(list.map((n) => [n.title, n.when, n.late, n.action])).toEqual([
-      ['Flea and tick for Biscuit', 'Overdue by 2 days', true, 'Given'],
-      ['Antibiotic for Biscuit', `Due ${t('09:00')} · 1 hr 30 min ago`, true, 'Given'],
-      ['Not fed yet: Miso AM', `Due ${t('09:00')} · 1 hr 30 min ago`, true, 'Fed'],
-      ['Kidney supplement for Miso', 'Due today', false, 'Given'],
+      ['Flea and tick for Biscuit', 'Overdue by 2 days', true, 'given'],
+      ['Antibiotic for Biscuit', `Due ${t('09:00')} · 1 hr 30 min ago`, true, 'given'],
+      ['Not fed yet: Miso AM', `Due ${t('09:00')} · 1 hr 30 min ago`, true, 'fed'],
+      ['Kidney supplement for Miso', 'Due today', false, 'given'],
     ]);
   });
 
@@ -44,7 +44,7 @@ describe('needs doing', () => {
 
   test('a reminder for a removed pet is left out; a one-off "other" is Done, not Given', () => {
     const data = { ...demo, reminders: [{ ...demo.reminders[0], petId: 'gone' }, { ...demo.reminders[0], id: 'o', kind: 'other' as const, title: 'Nail trim' }] };
-    expect(needsDoing(data, pets, DEMO_NOW).filter((n) => n.kind === 'care').map((n) => [n.title, n.action])).toEqual([['Nail trim for Biscuit', 'Done']]);
+    expect(needsDoing(data, pets, DEMO_NOW).filter((n) => n.kind === 'care').map((n) => [n.title, n.action])).toEqual([['Nail trim for Biscuit', 'done']]);
   });
 });
 
@@ -67,7 +67,7 @@ describe('later today and coming up', () => {
       [t('19:00'), 'Antibiotic for Biscuit'],
       [t('19:00'), 'PM meal for Biscuit and Miso'],
     ]);
-    expect(allDoneLine(later)).toBe(`All done for now · next: Antibiotic for Biscuit at ${t('19:00')}`);
+    expect(allDoneLine(later)).toBe('All done for now · next: Antibiotic for Biscuit at 7 PM');
     expect(allDoneLine([])).toBe('All done for today');
   });
 

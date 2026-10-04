@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { BellOff, RotateCcw, Trash2 } from 'lucide-react';
 import type { Dose, Pet, Reminder, ReminderKind } from '../lib/model';
 import { LIMITS, REMINDER_KINDS } from '../lib/model';
-import { KIND_LABELS, presetsFor, type Preset } from '../lib/care';
+import { kindLabel, presetsFor, type Preset } from '../lib/care';
 import { UNITS, describeRecurrence, isRecurring, type Unit } from '../lib/schedule';
 import { formatTime, isYmd, toYmd } from '@huishouden/pwa-kit/time';
 import { formatDateShort } from '../lib/format';
@@ -10,6 +10,10 @@ import { personName } from '@huishouden/pwa-kit/people';
 import type { ReminderInput } from '../lib/build';
 import { PetAvatar } from './PetAvatar';
 import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
+import { useT } from '../i18n';
+
+// i18n-dynamic: unit.
+const UNIT_KEYS = { day: 'unit.day', week: 'unit.week', month: 'unit.month', year: 'unit.year' } as const satisfies Record<Unit, string>;
 
 export function ReminderDialog({ reminder, petId: initialPet, pets, doses, members: _members, me, now, onSave, onDismiss, onRestore, onDelete, onClose }: {
   reminder: Reminder | null;
@@ -27,6 +31,7 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
   onDelete?: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const [petId, setPetId] = useState(reminder?.petId ?? initialPet ?? pets[0]?.id ?? '');
   const [kind, setKind] = useState<ReminderKind>(reminder?.kind ?? 'flea-tick');
   const [title, setTitle] = useState(reminder?.title ?? '');
@@ -67,7 +72,7 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
 
   return (
     <Dialog
-      title={reminder ? 'Edit reminder' : 'New reminder'}
+      title={reminder ? t('reminderDialog.edit') : t('reminderDialog.new')}
       onClose={onClose}
       footer={
         <>
@@ -80,14 +85,14 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
                 onClose();
               }}
             >
-              <Trash2 size={18} /> Delete
+              <Trash2 size={18} /> {t('common.delete')}
             </button>
           )}
           <button type="button" className={ghostButton} onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="button" className={primaryButton} disabled={!valid} onClick={save}>
-            Save
+            {t('common.save')}
           </button>
         </>
       }
@@ -101,7 +106,7 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
       >
         {pets.length > 1 && (
           <fieldset>
-            <legend className="mb-1.5 block text-sm font-medium text-ink-soft">For</legend>
+            <legend className="mb-1.5 block text-sm font-medium text-ink-soft">{t('form.for')}</legend>
             <div className="flex flex-wrap gap-2">
               {pets.map((p) => (
                 <Chip key={p.id} active={petId === p.id} onClick={() => setPetId(p.id)}>
@@ -113,7 +118,7 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
         )}
         {!reminder && (
           <fieldset>
-            <legend className="mb-1.5 block text-sm font-medium text-ink-soft">Start from</legend>
+            <legend className="mb-1.5 block text-sm font-medium text-ink-soft">{t('reminderDialog.startFrom')}</legend>
             <div className="flex flex-wrap gap-2">
               {presetsFor(pet?.species).map((p) => (
                 <Chip key={p.title} active={title === p.title} onClick={() => usePreset(p)}>
@@ -121,68 +126,66 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
                 </Chip>
               ))}
             </div>
-            <p className="mt-1.5 text-sm text-muted">Common schedules. Follow your vet's advice and change anything below.</p>
+            <p className="mt-1.5 text-sm text-muted">{t('reminderDialog.presetsHint')}</p>
           </fieldset>
         )}
-        <Field label="What">
-          <input className={inputClass} value={title} maxLength={LIMITS.reminderTitle} onChange={(e) => setTitle(e.target.value)} placeholder="Flea and tick" />
+        <Field label={t('form.what')}>
+          <input className={inputClass} value={title} maxLength={LIMITS.reminderTitle} onChange={(e) => setTitle(e.target.value)} placeholder={t('preset.fleaTick')} />
         </Field>
-        <Field label="Kind">
+        <Field label={t('form.kind')}>
           <select className={inputClass} value={kind} onChange={(e) => setKind(e.target.value as ReminderKind)}>
             {REMINDER_KINDS.map((k) => (
               <option key={k} value={k}>
-                {KIND_LABELS[k]}
+                {kindLabel(k)}
               </option>
             ))}
           </select>
         </Field>
         <fieldset>
-          <legend className="mb-1.5 block text-sm font-medium text-ink-soft">Repeats</legend>
+          <legend className="mb-1.5 block text-sm font-medium text-ink-soft">{t('reminderDialog.repeats')}</legend>
           <div className="flex flex-wrap items-center gap-2">
             <Chip active={!repeats} onClick={() => setRepeats(false)}>
-              Once
+              {t('care.once')}
             </Chip>
             <Chip active={repeats} onClick={() => setRepeats(true)}>
-              Repeats
+              {t('reminderDialog.repeats')}
             </Chip>
             {repeats && (
               <span className="flex items-center gap-2">
-                <span className="text-base text-ink-soft">every</span>
+                <span className="text-base text-ink-soft">{t('reminderDialog.every')}</span>
                 <input
                   className={`${inputClass} max-w-20 text-center tabular-nums`}
                   inputMode="numeric"
                   value={every}
                   onChange={(e) => setEvery(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                  aria-label="Every how many"
+                  aria-label={t('reminderDialog.everyHowMany')}
                 />
-                <select className={`${inputClass} max-w-32`} value={unit} onChange={(e) => setUnit(e.target.value as Unit)} aria-label="Unit">
+                <select className={`${inputClass} max-w-32`} value={unit} onChange={(e) => setUnit(e.target.value as Unit)} aria-label={t('weightDialog.unit')}>
                   {UNITS.map((u) => (
                     <option key={u} value={u}>
-                      {everyN === 1 ? u : `${u}s`}
+                      {t(UNIT_KEYS[u], { count: everyN || 1 })}
                     </option>
                   ))}
                 </select>
               </span>
             )}
           </div>
-          {repeats && <p className="mt-1.5 text-sm text-muted">The next one is due {describeRecurrence({ every: everyN || 1, unit }).toLowerCase()} after each dose, counted from the day it is given.</p>}
+          {repeats && <p className="mt-1.5 text-sm text-muted">{t('reminderDialog.repeatHint', { every: describeRecurrence({ every: everyN || 1, unit }).toLowerCase() })}</p>}
         </fieldset>
-        <Field label={repeats ? 'Next due' : 'Due'}>
+        <Field label={repeats ? t('reminderDialog.nextDue') : t('reminderDialog.due')}>
           <input className={inputClass} type="date" value={due} onChange={(e) => setDue(e.target.value)} />
         </Field>
-        <Field label="Notes (optional)">
-          <textarea className={`${inputClass} min-h-20`} maxLength={LIMITS.reminderNotes} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Dose, brand, with food" />
+        <Field label={t('form.notesOptional')}>
+          <textarea className={`${inputClass} min-h-20`} maxLength={LIMITS.reminderNotes} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('reminderDialog.notesPlaceholder')} />
         </Field>
         {history.length > 0 && (
-          <section aria-label="Given">
-            <h3 className="mb-1 text-sm font-medium text-ink-soft">Given</h3>
+          <section aria-label={t('today.given')}>
+            <h3 className="mb-1 text-sm font-medium text-ink-soft">{t('today.given')}</h3>
             <ul className="rounded-xl border border-line">
               {history.map((d) => (
                 <li key={d.id} className="flex min-h-11 items-center justify-between gap-3 border-b border-line px-3 text-base last:border-b-0">
-                  <span className="text-ink">
-                    {formatDateShort(d.at)}, {formatTime(d.at)}
-                  </span>
-                  <span className="text-muted">by {personName(d.by, { email: me })}</span>
+                  <span className="text-ink">{t('appointments.when', { day: formatDateShort(d.at), time: formatTime(d.at) })}</span>
+                  <span className="text-muted">{t('reminderDialog.by', { name: personName(d.by, { email: me }) })}</span>
                 </li>
               ))}
             </ul>
@@ -198,14 +201,14 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
                 onClose();
               }}
             >
-              <BellOff size={18} /> Dismiss
+              <BellOff size={18} /> {t('todo.dismiss')}
             </button>
-            <p className="min-w-0 flex-1 text-sm text-muted">Stops it coming due. It stays in the care list, to restore.</p>
+            <p className="min-w-0 flex-1 text-sm text-muted">{t('reminderDialog.dismissHint')}</p>
           </div>
         )}
         {reminder && reminder.dismissedAt !== undefined && (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line pt-3">
-            <p className="min-w-0 flex-1 text-base text-ink-soft">Dismissed {formatDateShort(reminder.dismissedAt)}. It doesn't come due.</p>
+            <p className="min-w-0 flex-1 text-base text-ink-soft">{t('reminderDialog.dismissedOn', { date: formatDateShort(reminder.dismissedAt) })}</p>
             {onRestore && (
               <button
                 type="button"
@@ -215,7 +218,7 @@ export function ReminderDialog({ reminder, petId: initialPet, pets, doses, membe
                   onClose();
                 }}
               >
-                <RotateCcw size={18} /> Restore
+                <RotateCcw size={18} /> {t('care.restore')}
               </button>
             )}
           </div>

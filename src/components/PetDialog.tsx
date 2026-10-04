@@ -2,8 +2,9 @@ import { useContext, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import type { Pet, Species } from '../lib/model';
 import { LIMITS, SPECIES } from '../lib/model';
-import { SPECIES_LABELS } from '../lib/care';
-import { MONTHS, daysBetween, toYmd } from '@huishouden/pwa-kit/time';
+import { speciesLabel } from '../lib/care';
+import { daysBetween, formatYmd, toYmd, ymd } from '@huishouden/pwa-kit/time';
+import { useT } from '../i18n';
 import { WEIGHT_UNITS, parseWeight, type WeightUnit } from '../lib/weight';
 import { MAX_AGE, ageParts, approxBirthDate, birthDateFromAgeOrYear, bornWords, type BirthdayGuess } from '../lib/birthday';
 import { BirthdayFind } from './BirthdayFind';
@@ -12,6 +13,7 @@ import { PhotoPicker } from '@huishouden/pwa-kit/react/photo';
 import { age } from '../lib/time';
 import type { PetInput } from '../lib/build';
 import { Chip, Dialog, Field, deleteButton, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
+import { formatNumber } from '@huishouden/pwa-kit/i18n';
 
 export function PetDialog({ pet, pets, now, calendarAvailable, birthday, onSave, onDelete, onClose }: {
   pet: Pet | null;
@@ -25,6 +27,7 @@ export function PetDialog({ pet, pets, now, calendarAvailable, birthday, onSave,
   onDelete?: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const [name, setName] = useState(pet?.name ?? '');
   const savedPhoto = useContext(PetPhotos).get(pet?.id ?? '') ?? null;
   const [photo, setPhoto] = useState<string | null>(savedPhoto);
@@ -58,7 +61,7 @@ export function PetDialog({ pet, pets, now, calendarAvailable, birthday, onSave,
   const finalDate = byAge ? ageDate : shownDate || null;
   const valid = name.trim().length > 0 && targetValid && ageValid;
   const youngDays = picked && !byAge && birthDate ? daysBetween(birthDate, toYmd(now)) : null;
-  const who = name.trim() || 'your pet';
+  const who = name.trim();
 
   const pickBirthday = (g: BirthdayGuess) => {
     setByAge(false);
@@ -84,7 +87,7 @@ export function PetDialog({ pet, pets, now, calendarAvailable, birthday, onSave,
 
   return (
     <Dialog
-      title={pet ? `Edit ${pet.name}` : 'New pet'}
+      title={pet ? t('a11y.edit', { name: pet.name }) : t('petDialog.new')}
       onClose={onClose}
       footer={
         <>
@@ -97,14 +100,14 @@ export function PetDialog({ pet, pets, now, calendarAvailable, birthday, onSave,
                 onClose();
               }}
             >
-              <Trash2 size={18} /> Remove pet
+              <Trash2 size={18} /> {t('petDialog.remove')}
             </button>
           )}
           <button type="button" className={ghostButton} onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="button" className={primaryButton} disabled={!valid} onClick={save}>
-            Save
+            {t('common.save')}
           </button>
         </>
       }
@@ -119,42 +122,42 @@ export function PetDialog({ pet, pets, now, calendarAvailable, birthday, onSave,
         <PhotoPicker
           photo={photo}
           fallback={<PetAvatar pet={pet ? { ...pet, species } : undefined} pets={pets} size={80} plain />}
-          label={`${name.trim() || 'the pet'}'s photo`}
+          label={name.trim() ? t('petDialog.photoOf', { name: name.trim() }) : t('petDialog.photo')}
           size={80}
           onSave={setPhoto}
           onRemove={() => setPhoto(null)}
         />
-        <Field label="Name">
+        <Field label={t('common.name')}>
           <input className={inputClass} value={name} maxLength={LIMITS.petName} onChange={(e) => setName(e.target.value)} autoComplete="off" />
         </Field>
         <fieldset>
-          <legend className="mb-1.5 block text-sm font-medium text-ink-soft">Kind of animal</legend>
+          <legend className="mb-1.5 block text-sm font-medium text-ink-soft">{t('petDialog.species')}</legend>
           <div className="flex flex-wrap gap-2">
             {SPECIES.map((s) => (
               <Chip key={s} active={species === s} onClick={() => setSpecies(s)}>
-                {SPECIES_LABELS[s]}
+                {speciesLabel(s)}
               </Chip>
             ))}
           </div>
         </fieldset>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Breed (optional)">
+          <Field label={t('petDialog.breed')}>
             <input className={inputClass} value={breed} maxLength={LIMITS.breed} onChange={(e) => setBreed(e.target.value)} autoComplete="off" />
           </Field>
           {byAge ? (
             <fieldset>
-              <legend className="mb-1.5 block text-sm font-medium text-ink-soft">Age (optional)</legend>
+              <legend className="mb-1.5 block text-sm font-medium text-ink-soft">{t('petDialog.age')}</legend>
               <div className="grid grid-cols-2 gap-2">
-                <Field label="Years">
+                <Field label={t('petDialog.years')}>
                   <input className={inputClass} inputMode="numeric" maxLength={2} value={years} onChange={(e) => typeAge(setYears)(e.target.value)} placeholder="6" autoComplete="off" />
                 </Field>
-                <Field label="Months">
+                <Field label={t('petDialog.months')}>
                   <input className={inputClass} inputMode="numeric" maxLength={2} value={months} onChange={(e) => typeAge(setMonths)(e.target.value)} placeholder="0" autoComplete="off" />
                 </Field>
               </div>
             </fieldset>
           ) : (
-            <Field label="Birthday (optional)" hint="A guess is fine.">
+            <Field label={t('petDialog.birthday')} hint={t('petDialog.birthdayHint')}>
               <input
                 className={inputClass}
                 type="date"
@@ -171,14 +174,14 @@ export function PetDialog({ pet, pets, now, calendarAvailable, birthday, onSave,
         </div>
         {youngDays !== null && youngDays >= 0 && youngDays < 91 && (
           <p role="status" className="text-base text-muted">
-            That makes {who} {youngDays < 7 ? `${youngDays} day${youngDays === 1 ? '' : 's'}` : `${Math.floor(youngDays / 7)} week${youngDays < 14 ? '' : 's'}`} old — is the year right?
+            {t(who ? 'petDialog.young' : 'petDialog.youngNoName', { name: who, age: youngDays < 7 ? t('age.days', { count: youngDays }) : t('age.weeks', { count: Math.floor(youngDays / 7) }) })}
           </p>
         )}
         {byAge && (
           <p role="status" className="text-base text-muted">
             {!ageValid
-              ? `Years from 0 to ${MAX_AGE}, and months from 0 to 11.`
-              : `${ageDate ? `Shows as "${age(ageDate, now, true)}". ` : ''}No birthday reminder, since the day isn't known.`}
+              ? t('petDialog.ageRange', { max: MAX_AGE })
+              : `${ageDate ? `${t('petDialog.showsAs', { age: age(ageDate, now, true) ?? '' })} ` : ''}${t('petDialog.noReminder')}`}
           </p>
         )}
         {!partial && (
@@ -191,51 +194,51 @@ export function PetDialog({ pet, pets, now, calendarAvailable, birthday, onSave,
               if (byAge) setBirthDate(pet?.birthDateApprox ? '' : birthDate);
             }}
           >
-            {byAge ? 'Know the birthday? Pick the date' : "Don't know the birthday? Enter an age"}
+            {byAge ? t('petDialog.pickDate') : t('petDialog.enterAge')}
           </button>
         )}
         {partial && (
           <div>
             <Field
-              label="Age or year born"
+              label={t('petDialog.ageOrYear')}
               hint={
                 partial.suggestedYear !== undefined
-                  ? `Your calendar entry starts in ${partial.suggestedYear} — use it if that's the year born.`
-                  : `Your calendar has ${MONTHS[partial.month - 1]} ${partial.day} but not the year.`
+                  ? t('petDialog.seriesYear', { year: String(partial.suggestedYear) })
+                  : t('petDialog.noYear', { date: formatYmd(ymd(2000, partial.month, partial.day), { month: 'long', day: 'numeric' }) })
               }
             >
-              <input className={inputClass} inputMode="numeric" maxLength={9} value={ageOrYear} onChange={(e) => setAgeOrYear(e.target.value)} placeholder="6 or 2019" autoComplete="off" />
+              <input className={inputClass} inputMode="numeric" maxLength={9} value={ageOrYear} onChange={(e) => setAgeOrYear(e.target.value)} placeholder={t('petDialog.ageOrYearPlaceholder')} autoComplete="off" />
             </Field>
             {ageOrYear.trim() && (
               <p role="status" className="mt-1 text-base text-ink-soft">
-                {fromAgeOrYear ? bornWords(fromAgeOrYear, now) : 'An age like 6, or a year like 2019.'}
+                {fromAgeOrYear ? bornWords(fromAgeOrYear, now) : t('petDialog.ageOrYearHint')}
               </p>
             )}
           </div>
         )}
         <BirthdayFind name={name} available={calendarAvailable} now={now} onPick={pickBirthday} />
         <fieldset>
-          <legend className="mb-1.5 block text-sm font-medium text-ink-soft">Weigh in</legend>
+          <legend className="mb-1.5 block text-sm font-medium text-ink-soft">{t('petDialog.weighIn')}</legend>
           <div className="flex gap-2">
             {WEIGHT_UNITS.map((u) => (
               <Chip key={u} active={weightUnit === u} onClick={() => setWeightUnit(u)}>
-                {u === 'kg' ? 'Kilograms' : 'Pounds'}
+                {u === 'kg' ? t('petDialog.kilograms') : t('petDialog.pounds')}
               </Chip>
             ))}
           </div>
         </fieldset>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={`Target weight in ${weightUnit} (optional)`} hint={targetValid ? "The vet's goal, to compare each weighing with." : 'A weight above 0, like 24.5.'}>
-            <input className={inputClass} inputMode="decimal" value={target} onChange={(e) => setTarget(e.target.value)} placeholder="24.5" autoComplete="off" />
+          <Field label={t('petDialog.target', { unit: weightUnit })} hint={targetValid ? t('petDialog.targetHint') : t('petDialog.targetBad', { example: formatNumber(24.5) })}>
+            <input className={inputClass} inputMode="decimal" value={target} onChange={(e) => setTarget(e.target.value)} placeholder={formatNumber(24.5)} autoComplete="off" />
           </Field>
-          <Field label="About the target (optional)">
-            <input className={inputClass} value={targetNote} maxLength={LIMITS.targetNote} onChange={(e) => setTargetNote(e.target.value)} placeholder="Vet's goal" autoComplete="off" />
+          <Field label={t('petDialog.targetNote')}>
+            <input className={inputClass} value={targetNote} maxLength={LIMITS.targetNote} onChange={(e) => setTargetNote(e.target.value)} placeholder={t('petDialog.targetNotePlaceholder')} autoComplete="off" />
           </Field>
         </div>
-        <Field label="Care notes (optional)" hint="Diet, allergies, anything a sitter should know.">
+        <Field label={t('petDialog.notes')} hint={t('petDialog.notesHint')}>
           <textarea className={`${inputClass} min-h-24`} value={notes} maxLength={LIMITS.petNotes} onChange={(e) => setNotes(e.target.value)} />
         </Field>
-        {pet && onDelete && <p className="text-base text-muted">Removing {pet.name} also removes their reminders, meals and feeds, medicine, weights and records. You can undo it right after.</p>}
+        {pet && onDelete && <p className="text-base text-muted">{t('petDialog.removeNote', { name: pet.name })}</p>}
         <button type="submit" hidden />
       </form>
     </Dialog>

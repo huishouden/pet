@@ -4,6 +4,8 @@ import { CalendarHint, matchWhen, useCalendarSearch } from '@huishouden/pwa-kit/
 import { ErrorNotice, ghostButton } from '@huishouden/pwa-kit/react/ui';
 import { birthdayFromMatch, birthdayQueries, guessWords, isBirthdayOf, type BirthdayGuess } from '../lib/birthday';
 import { auth } from '../data/firebase';
+import { t as tr } from '../i18n';
+import { useT } from '../i18n';
 
 /** A birthday event found for a pet, with what it says about the birth date. */
 export interface BirthdayMatch {
@@ -28,8 +30,8 @@ export function birthdayMatches(matches: CalendarMatch[], name: string, now: num
 /** The event's title, and what the calendar says about the year. */
 export function guessSource(b: BirthdayMatch): string {
   if (b.guess.from === 'age' || b.guess.from === 'year') return b.match.title;
-  if (b.guess.suggestedYear !== undefined) return `${b.match.title}; yearly in your calendar since ${b.guess.suggestedYear}`;
-  return `${b.match.title}; the calendar doesn't say the year`;
+  if (b.guess.suggestedYear !== undefined) return tr('birthdayFind.since', { title: b.match.title, year: String(b.guess.suggestedYear) });
+  return tr('birthdayFind.noYear', { title: b.match.title });
 }
 
 /**
@@ -37,6 +39,7 @@ export function guessSource(b: BirthdayMatch): string {
  * and offers what each event says. Google asks for calendar access on the first tap.
  */
 export function BirthdayFind({ name, available, now, onPick }: { name: string; available: boolean; now: number; onPick: (g: BirthdayGuess) => void }) {
+  const t = useT();
   const search = useCalendarSearch(auth, 'Pet');
   const n = name.trim();
   const found = search.state.status === 'done' ? birthdayMatches(search.state.matches, n, now) : [];
@@ -48,17 +51,17 @@ export function BirthdayFind({ name, available, now, onPick }: { name: string; a
         disabled={!available || !n || search.state.status === 'searching'}
         onClick={() => void search.run(birthdayQueries(n), { seriesStart: true, limit: 10 })}
       >
-        <CalendarSearch size={18} /> {search.state.status === 'searching' ? 'Searching your calendars' : 'Find birthday in my calendar'}
+        <CalendarSearch size={18} /> {search.state.status === 'searching' ? t('birthdayFind.searching') : t('birthdayFind.find')}
       </button>
-      <CalendarHint app="Pet" available={available} />
+      <CalendarHint app="Pet" name={t('app.name')} available={available} />
       {search.state.status === 'error' && <ErrorNotice message={search.state.message} onRetry={() => void search.run(birthdayQueries(n), { seriesStart: true, limit: 10 })} />}
       {search.state.status === 'done' && found.length === 0 && (
         <p role="status" className="text-base text-muted">
-          No birthday for {n} in your calendars from last week to a year ahead.
+          {t('birthdayFind.none', { name: n })}
         </p>
       )}
       {found.length > 0 && (
-        <ul className="grid gap-1.5" aria-label="Birthdays found">
+        <ul className="grid gap-1.5" aria-label={t('birthdayFind.found')}>
           {found.map((b) => (
             <li key={b.match.id}>
               <button

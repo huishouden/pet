@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { cancelReminders, replaceReminders, type ReminderInput } from '@huishouden/pwa-kit/reminders';
+import { cancelReminders, localizeReminders, replaceReminders, type ReminderInput } from '@huishouden/pwa-kit/reminders';
+import { t } from '../i18n';
 import { birthdayRef, birthdayReminders, courseRef, courseReminders, mealReminders, mealsRef } from '../lib/notify';
 import { toYmd } from '@huishouden/pwa-kit/time';
 import type { PetHouseholdData } from '../lib/demo';
@@ -21,29 +22,33 @@ export function useReminderSync(householdId: string, me: string, data: PetHouseh
     if (!ready) return;
     const id = setTimeout(() => {
       const now = Date.now();
-      const wanted = new Map<string, ReminderInput[]>();
-      for (const c of data.courses) wanted.set(courseRef(c.id), courseReminders(c, data.pets.find((p) => p.id === c.petId), data.medDoses, now));
-      for (const p of data.pets) wanted.set(mealsRef(p.id), mealReminders(p, data.meals, data.feedings, now));
+      // Each ref's builder, run once per language when written (localizeReminders), so every
+      // member's device is notified in its own language.
+      const builders = new Map<string, () => ReminderInput[]>();
+      for (const c of data.courses) builders.set(courseRef(c.id), () => courseReminders(c, data.pets.find((p) => p.id === c.petId), data.medDoses, now));
+      for (const p of data.pets) builders.set(mealsRef(p.id), () => mealReminders(p, data.meals, data.feedings, now));
       // Every pet, so a birthday removed or made approximate since the last open has its reminder cancelled.
-      for (const p of data.pets) wanted.set(birthdayRef(p.id), birthdayReminders(p, now));
+      for (const p of data.pets) builders.set(birthdayRef(p.id), () => birthdayReminders(p, now));
       const jobs: Promise<unknown>[] = [];
-      for (const [ref, list] of wanted) {
-        const signature = JSON.stringify(list.map((r) => [r.id, r.at, r.title, r.body]));
+      for (const [ref, build] of builders) {
+        const signature = JSON.stringify(build().map((r) => [r.id, r.at, r.title, r.body]));
         if (written.current.get(ref) === signature) continue;
         written.current.set(ref, signature);
         jobs.push(
-          replaceReminders(db, householdId, ref, list, me, now, { restricted }).catch((e) => {
-            written.current.delete(ref);
-            throw e;
-          }),
+          localizeReminders(build)
+            .then((list) => replaceReminders(db, householdId, ref, list, me, now, { restricted }))
+            .catch((e) => {
+              written.current.delete(ref);
+              throw e;
+            }),
         );
       }
       for (const ref of [...written.current.keys()]) {
-        if (wanted.has(ref)) continue;
+        if (builders.has(ref)) continue;
         written.current.delete(ref);
         jobs.push(cancelReminders(db, householdId, ref, { restricted }));
       }
-      Promise.all(jobs).catch(() => errorRef.current("Couldn't update the notifications. They will catch up next time Pet opens."));
+      Promise.all(jobs).catch(() => errorRef.current(t('sync.notifications')));
     }, 2000);
     return () => clearTimeout(id);
   }, [householdId, me, restricted, ready, day, data.courses, data.medDoses, data.pets, data.meals, data.feedings]);

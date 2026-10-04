@@ -4,6 +4,7 @@
 
 import { can, mayGive, refusal, type Role } from '@huishouden/pwa-kit/roles';
 import type { Course } from './model';
+import { t } from '../i18n';
 
 export interface PetPermissions {
   role: Role | null;
@@ -21,7 +22,8 @@ export interface PetPermissions {
   courseRefusal(course: Course): string;
 }
 
-export const COURSE_REFUSAL = 'Only admins and members can set up medicine courses.';
+/** Why a helper or kid can't set up a medicine course, in the active language. */
+export const courseRefusalText = () => t('permissions.courses');
 
 export function permissions(role: Role | null, me: string): PetPermissions {
   return {
@@ -31,6 +33,6 @@ export function permissions(role: Role | null, me: string): PetPermissions {
     givesCare: can(role, 'give-medicine'),
     mayGiveCourse: (course) => mayGive(course, role, me),
     seesPrivate: can(role, 'see-private'),
-    courseRefusal: (course) => (can(role, 'give-medicine') ? `Only approved helpers can give ${course.name}.` : refusal('give-medicine')),
+    courseRefusal: (course) => (can(role, 'give-medicine') ? t('permissions.approvedOnly', { name: course.name }) : refusal('give-medicine')),
   };
 }

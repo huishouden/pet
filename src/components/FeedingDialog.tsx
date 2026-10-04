@@ -6,6 +6,7 @@ import { fromLocalInput, toLocalInput } from '@huishouden/pwa-kit/time';
 import { personName } from '@huishouden/pwa-kit/people';
 import type { FeedingInput } from '../lib/build';
 import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
+import { useT } from '../i18n';
 
 /** Logs an extra feed, or fixes one: which meal, the time, the portion. Who fed it stays. */
 export function FeedingDialog({ feeding, pet, meals, me, now, onSave, onDelete, onClose }: {
@@ -18,6 +19,7 @@ export function FeedingDialog({ feeding, pet, meals, me, now, onSave, onDelete, 
   onDelete?: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const [mealId, setMealId] = useState(feeding?.mealId ?? '');
   const [when, setWhen] = useState(toLocalInput(feeding?.at ?? now));
   const [portion, setPortion] = useState(feeding?.portion ?? '');
@@ -33,7 +35,7 @@ export function FeedingDialog({ feeding, pet, meals, me, now, onSave, onDelete, 
 
   return (
     <Dialog
-      title={feeding ? 'Edit feed' : `Log a feed${pet ? ` for ${pet.name}` : ''}`}
+      title={feeding ? t('feedingDialog.edit') : pet ? t('feedingDialog.newFor', { name: pet.name }) : t('feedingDialog.new')}
       onClose={onClose}
       footer={
         <>
@@ -46,14 +48,14 @@ export function FeedingDialog({ feeding, pet, meals, me, now, onSave, onDelete, 
                 onClose();
               }}
             >
-              <Trash2 size={18} /> Delete
+              <Trash2 size={18} /> {t('common.delete')}
             </button>
           )}
           <button type="button" className={ghostButton} onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="button" className={primaryButton} disabled={!valid} onClick={save}>
-            Save
+            {t('common.save')}
           </button>
         </>
       }
@@ -65,9 +67,9 @@ export function FeedingDialog({ feeding, pet, meals, me, now, onSave, onDelete, 
           save();
         }}
       >
-        {feeding && <p className="text-base text-muted">Fed by {personName(feeding.by, { email: me })}.</p>}
+        {feeding && <p className="text-base text-muted">{t('feedingDialog.fedBy', { name: personName(feeding.by, { email: me }) })}</p>}
         <fieldset>
-          <legend className="mb-1.5 block text-sm font-medium text-ink-soft">Meal</legend>
+          <legend className="mb-1.5 block text-sm font-medium text-ink-soft">{t('feedingDialog.meal')}</legend>
           <div className="flex flex-wrap gap-2">
             {meals.map((m) => (
               <Chip key={m.id} active={mealId === m.id} onClick={() => setMealId(m.id)}>
@@ -75,18 +77,18 @@ export function FeedingDialog({ feeding, pet, meals, me, now, onSave, onDelete, 
               </Chip>
             ))}
             <Chip active={!mealId} onClick={() => setMealId('')}>
-              Extra
+              {t('feedingDialog.extra')}
             </Chip>
           </div>
         </fieldset>
-        <Field label="When">
+        <Field label={t('feedingDialog.when')}>
           <input className={inputClass} type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
         </Field>
-        <Field label="Portion (optional)">
-          <input className={inputClass} value={portion} maxLength={LIMITS.portion} onChange={(e) => setPortion(e.target.value)} placeholder="1 cup" />
+        <Field label={t('mealDialog.portion')}>
+          <input className={inputClass} value={portion} maxLength={LIMITS.portion} onChange={(e) => setPortion(e.target.value)} placeholder={t('mealDialog.portionPlaceholder')} />
         </Field>
-        <Field label="Note (optional)">
-          <input className={inputClass} value={note} maxLength={LIMITS.feedingNote} onChange={(e) => setNote(e.target.value)} placeholder="Left half of it" />
+        <Field label={t('feedingDialog.note')}>
+          <input className={inputClass} value={note} maxLength={LIMITS.feedingNote} onChange={(e) => setNote(e.target.value)} placeholder={t('feedingDialog.notePlaceholder')} />
         </Field>
         <button type="submit" hidden />
       </form>

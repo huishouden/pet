@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react';
 import { Bird, Cat, Dog, Fish, PawPrint, Rabbit, Squirrel, Turtle, type LucideIcon } from 'lucide-react';
 import type { Pet, Species } from '../lib/model';
 import { petColour } from '../lib/pets';
+import { useT } from '../i18n';
 
 const ICONS: Record<Species, LucideIcon> = {
   dog: Dog,
@@ -34,24 +35,25 @@ export function PetAvatar({ pet, pets, size = 40, plain }: { pet: Pet | undefine
 }
 
 /** Pet chips for filters and pickers: "All" plus one per pet. */
-export function PetChips({ pets, selected, onSelect, all = true, label = 'Pets' }: {
+export function PetChips({ pets, selected, onSelect, all = true, label }: {
   pets: Pet[];
   selected: string | null;
   onSelect: (id: string | null) => void;
   all?: boolean;
   label?: string;
 }) {
+  const t = useT();
   return (
-    <div className="flex flex-wrap gap-2" role="group" aria-label={label}>
+    <div className="flex flex-wrap gap-2" role="group" aria-label={label ?? t('tab.pets')}>
       {all && (
         <button type="button" aria-pressed={selected === null} onClick={() => onSelect(null)} className={chip(selected === null)}>
-          All pets
+          {t('pets.all')}
         </button>
       )}
       {pets.map((p) => (
         <button key={p.id} type="button" aria-pressed={selected === p.id} onClick={() => onSelect(p.id)} className={chip(selected === p.id)}>
           <PetAvatar pet={p} pets={pets} size={28} />
-          {p.name}
+          <span translate="no">{p.name}</span>
         </button>
       ))}
     </div>
