@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.0](https://github.com/huishouden/pet/compare/v1.12.0...v1.13.0) (2026-10-03)
+
+
+### Features
+
+* dark mode that follows the suite's theme ([#47](https://github.com/huishouden/pet/issues/47)) ([79e1f2a](https://github.com/huishouden/pet/commit/79e1f2a36965e0f503b525ebbf16255db8985c74))
+
 ## [1.12.0](https://github.com/huishouden/pet/compare/v1.11.1...v1.12.0) (2026-10-03)
 
 
