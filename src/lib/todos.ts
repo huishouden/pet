@@ -10,7 +10,7 @@ import type { TodoAction, TodoInput } from '@huishouden/pwa-kit/todos';
 import { formatTime, parseYmd, toYmd } from '@huishouden/pwa-kit/time';
 import type { Course, MedDose, Pet, Reminder } from './model';
 import { LIMITS } from './model';
-import { dosesOn, slotAt } from './courses';
+import { dosesOn, slotAt, todoMedDoseId } from './courses';
 import { dueState, isRecurring, type Unit } from './schedule';
 import { forPet, reminderRef, doseRef, tabUrl, type AgendaData } from './agenda';
 import { APP_ORIGIN } from './notify';
@@ -27,8 +27,7 @@ const UNIT_LETTER: Record<Unit, string> = { day: 'd', week: 'w', month: 'm', yea
 
 /** The id of the dose a to-do's Given logs: one per reminder and due day, so running it twice writes one dose. */
 export const todoDoseId = (reminderId: string, due: string) => `todo-${reminderId}-${due}`;
-/** The id of the medicine dose a to-do's Given or Skip logs: one per course, day and slot. */
-export const todoMedDoseId = (courseId: string, day: string, slot: number) => `todo-${courseId}-${day}-${slot}`;
+export { todoMedDoseId } from './courses';
 
 /**
  * Given on a care reminder, as `giveDose` writes it: a dose logged now by whoever taps, and the

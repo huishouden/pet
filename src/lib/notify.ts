@@ -3,13 +3,14 @@
 // Pure: the live store writes these with replaceReminders; the sample never does.
 
 import { appUrl, SUITE_ORIGIN } from '@huishouden/pwa-kit/site';
-import { remindersForCourse, type ReminderInput } from '@huishouden/pwa-kit/reminders';
+import { remindersForCourse, type ReminderInput, type ReminderSource } from '@huishouden/pwa-kit/reminders';
 import type { Course, Feeding, Meal, MedDose, Pet } from './model';
-import { courseState } from './courses';
+import { courseState, slotAt, todoMedDoseId } from './courses';
 import { fedTodayFor, mealAt, mealsOf } from './feeding';
-import { addDays, startOfDay } from '@huishouden/pwa-kit/time';
+import { addDays, startOfDay, toYmd } from '@huishouden/pwa-kit/time';
 import { birthdayReminder } from './birthday';
 import { t } from '../i18n';
+import { COLLECTIONS } from '../data/types';
 
 export const APP = 'pet';
 /** Pet's path on the suite's one site (pwa-kit docs/one-site.md); bun tests have no Vite env. */
@@ -27,8 +28,30 @@ export const birthdayRef = (petId: string) => `${APP}:birthday:${petId}`;
 export const petUrl = (petId: string) => appUrl(APP_BASE, `?tab=pets&pet=${encodeURIComponent(petId)}`, APP_ORIGIN);
 
 /**
+ * What a dose reminder is about, for the shared sender to check before sending: the course, still
+ * there, and the dose the portal's To-do list logs for that slot (`todoMedDoseId`), not yet written.
+ * Given or skipped from the portal, or the course removed, the reminder is deleted unsent.
+ */
+export function doseSource(course: Pick<Course, 'id' | 'times'>, at: number): ReminderSource {
+  const day = toYmd(at);
+  const slot = course.times.findIndex((time) => slotAt(time, day) === at);
+  return {
+    checks: [{ doc: `${COLLECTIONS.courses}/${course.id}` }, ...(slot >= 0 ? [{ doc: `${COLLECTIONS.medDoses}/${todoMedDoseId(course.id, day, slot)}`, absent: true as const }] : [])],
+  };
+}
+
+/** What a meal reminder is about: the meal, still on the pet's schedule. */
+export const mealSource = (mealId: string): ReminderSource => ({ checks: [{ doc: `${COLLECTIONS.meals}/${mealId}` }] });
+
+/** What a birthday reminder is about: the pet, with that exact birth date. */
+export const birthdaySource = (pet: Pick<Pet, 'id' | 'birthDate'>): ReminderSource => ({
+  checks: [{ doc: `${COLLECTIONS.pets}/${pet.id}`, due: [{ field: 'birthDate', in: [pet.birthDate ?? null] }, { field: 'birthDateApprox', notIn: [true] }] }],
+});
+
+/**
  * Every remaining dose of a running or upcoming course, except doses already ticked today (given
- * early, so nobody needs the nudge). Finished courses have none.
+ * early, so nobody needs the nudge). Finished courses have none. Each names its course and dose as
+ * `source` (`doseSource`).
  */
 export function courseReminders(course: Course, pet: Pick<Pet, 'name'> | undefined, medDoses: MedDose[], now: number): ReminderInput[] {
   if (courseState(course, now) === 'finished') return [];
@@ -40,7 +63,9 @@ export function courseReminders(course: Course, pet: Pick<Pet, 'name'> | undefin
   return remindersForCourse(
     { ...course, notes: course.notes ?? '' },
     { app: APP, url: petUrl(course.petId), ref: courseRef(course.id), forWhom: pet?.name, now },
-  ).filter((r) => !ticked.has(r.at));
+  )
+    .filter((r) => !ticked.has(r.at))
+    .map((r) => ({ ...r, source: doseSource(course, r.at) }));
 }
 
 /**
@@ -62,6 +87,7 @@ export function mealReminders(pet: Pick<Pet, 'id' | 'name'>, meals: Meal[], feed
         at,
         url: APP_URL,
         ref: mealsRef(pet.id),
+        source: mealSource(meal.id),
       });
     }
   }
@@ -71,5 +97,5 @@ export function mealReminders(pet: Pick<Pet, 'id' | 'name'>, meals: Meal[], feed
 /** The pet's next birthday, at 9:00 on the day; none without a birth date or when it is approximate. */
 export function birthdayReminders(pet: Pick<Pet, 'id' | 'name' | 'birthDate' | 'birthDateApprox'>, now: number): ReminderInput[] {
   const r = birthdayReminder(pet, now, { app: APP, url: petUrl(pet.id), ref: birthdayRef(pet.id) });
-  return r ? [r] : [];
+  return r ? [{ ...r, source: birthdaySource(pet) }] : [];
 }

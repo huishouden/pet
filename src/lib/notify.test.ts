@@ -2,6 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { reminderDoc } from '@huishouden/pwa-kit/reminders';
 import { DEMO_NOW, demoData } from './demo';
 import { birthdayReminders, courseRef, courseReminders, mealReminders, mealsRef, petUrl } from './notify';
+import { readSource, sourceAllowed, stillDue } from '@huishouden/pwa-kit/reminder-source';
+import { doseTodos } from './todos';
 import { mealAt } from './feeding';
 
 const d = demoData();
@@ -57,4 +59,40 @@ test('a pet with a birthday gets one notification for the next one, linked to it
   expect(r.url).toContain('pet=p1');
   expect(birthdayReminders({ id: 'p2', name: 'Pip' }, now)).toEqual([]);
   expect(birthdayReminders({ id: 'p3', name: 'Rex', birthDate: '2025-03-08', birthDateApprox: true }, now)).toEqual([]);
+});
+
+describe('the sender drops a reminder once it is done elsewhere', () => {
+  const stored = (r: Parameters<typeof reminderDoc>[0]) => readSource('pet', reminderDoc(r, 'helen@example.com', DEMO_NOW).source)!;
+
+  test("a dose given or skipped from the portal's To-do list, or its course removed", () => {
+    const [next] = courseReminders(antibiotic, biscuit, d.medDoses, DEMO_NOW);
+    const source = stored(next);
+    expect(sourceAllowed('pet', source, 'helen@example.com', 'helper', new Map())).toBe(true);
+    // The to-do for that dose logs exactly the record the source waits for.
+    const todo = doseTodos(antibiotic, d.medDoses, d.pets, next.at - 60_000).find((t) => t.due === next.at)!;
+    const logged = todo.done!.ops[0];
+    expect(todo.cancel!.ops[0].id).toBe(logged.id);
+    const course = `petMedCourses/${antibiotic.id}`;
+    const dose = `petMedDoses/${logged.id}`;
+    expect(source.checks.map((c) => c.doc)).toEqual([course, dose]);
+    expect(stillDue(source, new Map([[course, {}], [dose, null]]))).toBe(true);
+    expect(stillDue(source, new Map([[course, {}], [dose, { skipped: true }]]))).toBe(false);
+    expect(stillDue(source, new Map([[course, null], [dose, null]]))).toBe(false);
+    // Every dose of the course names its own slot's record.
+    const all = courseReminders(antibiotic, biscuit, d.medDoses, DEMO_NOW);
+    expect(new Set(all.map((r) => stored(r).checks[1]?.doc)).size).toBe(all.length);
+  });
+
+  test('a meal removed, or a birthday changed', () => {
+    const [meal] = mealReminders(biscuit, d.meals, d.feedings, DEMO_NOW);
+    const ms = stored(meal);
+    expect(stillDue(ms, new Map([[ms.checks[0].doc, {}]]))).toBe(true);
+    expect(stillDue(ms, new Map([[ms.checks[0].doc, null]]))).toBe(false);
+    const pet = { id: 'p1', name: 'Biscuit', birthDate: '2027-03-08' };
+    const [birthday] = birthdayReminders(pet, Date.UTC(2031, 0, 1));
+    const bs = stored(birthday);
+    expect(stillDue(bs, new Map([['petProfiles/p1', pet]]))).toBe(true);
+    expect(stillDue(bs, new Map([['petProfiles/p1', { ...pet, birthDate: '2027-04-08' }]]))).toBe(false);
+    expect(stillDue(bs, new Map([['petProfiles/p1', { ...pet, birthDateApprox: true }]]))).toBe(false);
+  });
 });
