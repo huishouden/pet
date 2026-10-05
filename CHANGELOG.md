@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.16.3](https://github.com/huishouden/pet/compare/v1.16.2...v1.16.3) (2026-10-05)
+
+### Tests
+
+* signed-in tests on a household of the run's own; all but the portal To-do round trip run on the emulators (`bun run e2e:emulator`) ([#57](https://github.com/huishouden/pet/issues/57))
+
 ## [1.16.2](https://github.com/huishouden/pet/compare/v1.16.1...v1.16.2) (2026-10-05)
 
 ### Other
