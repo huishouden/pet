@@ -175,7 +175,7 @@ test('a helper’s refused dose', ({ page }) =>
     path: './?as=helper',
     fixedTime,
     prepare: async (p) => {
-      await p.getByRole('button', { name: /^Biscuit Antibiotic/ }).first().click();
+      await p.getByRole('button', { name: /^Give Biscuit Antibiotic/ }).first().click();
       await expect(p.getByText('Only approved helpers can give Antibiotic.')).toBeVisible();
     },
   }));

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Check, Pencil, Plus, RotateCcw } from 'lucide-react';
+import { Pencil, Plus, RotateCcw } from 'lucide-react';
 import { AddToCalendar } from '@huishouden/pwa-kit/react/calendar';
 import type { Pet, Reminder } from '../lib/model';
 import { describeRecurrence, dueState, dueText, groupByDue } from '../lib/schedule';
@@ -9,12 +9,12 @@ import { useClock } from '@huishouden/pwa-kit/react/clock';
 import type { PetStore } from '../data/types';
 import type { Open } from '../PetApp';
 import { PetAvatar, PetChips } from '../components/PetAvatar';
-import { cardClass, iconButton, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
+import { CompleteButton, DoneBadge, cardClass, iconButton, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 import { useT } from '../i18n';
 import { forPet } from '../lib/today';
 import { reminderEntry } from '../lib/agenda';
 
-/** Every reminder, grouped by how soon it is due, with one-tap Given. */
+/** Every reminder, grouped by how soon it is due, with one-tap Give (DESIGN.md "Completion"). */
 export function Care({ store, pets, open, onGive, onRestore, deviceSettings }: {
   store: PetStore;
   pets: Pet[];
@@ -87,9 +87,9 @@ export function ReminderRow({ r, pets, now, onGive, onRestore, onEdit, compact }
   ].filter(Boolean);
   return (
     <li className={`flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line last:border-b-0 ${compact ? 'py-3' : 'px-4 py-4 sm:flex-nowrap sm:px-5'}`}>
-      {!compact && <PetAvatar pet={pet} pets={pets} size={40} />}
+      {state === 'done' ? <DoneBadge /> : !compact && <PetAvatar pet={pet} pets={pets} size={40} />}
       <div className={`min-w-0 flex-1 ${compact ? '' : 'basis-[calc(100%-4rem)] sm:basis-auto'}`}>
-        <p className={`${compact ? 'text-lg' : 'text-xl'} font-semibold text-ink`}>{r.title}</p>
+        <p className={`${compact ? 'text-lg' : 'text-xl'} font-semibold ${state === 'done' ? 'text-muted' : 'text-ink'}`}>{r.title}</p>
         <p className="text-base text-muted">
           {compact && <span className={`font-semibold ${dueColour}`}>{dueText(r, now)} · </span>}
           {meta.join(' · ')}
@@ -97,9 +97,13 @@ export function ReminderRow({ r, pets, now, onGive, onRestore, onEdit, compact }
       </div>
       {!compact && <p className={`mr-auto shrink-0 text-lg font-semibold sm:mr-0 sm:text-right ${dueColour}`}>{dueText(r, now)}</p>}
       {state !== 'done' && !dismissed && (
-        <button type="button" className={urgent || state === 'soon' ? primaryButton : secondaryButton} onClick={onGive} aria-label={pet ? t('care.markGivenTo', { title: r.title, pet: pet.name }) : t('care.markGiven', { title: r.title })}>
-          <Check size={18} /> {t('today.given')}
-        </button>
+        <CompleteButton
+          done={false}
+          name={forPet(r.title, pet?.name)}
+          verb={r.kind === 'other' ? undefined : t('done.give')}
+          label={r.kind === 'other' ? undefined : pet ? t('care.markGivenTo', { title: r.title, pet: pet.name }) : t('care.markGiven', { title: r.title })}
+          onDone={onGive}
+        />
       )}
       {dismissed && onRestore && (
         <button type="button" className={secondaryButton} onClick={onRestore} aria-label={t('care.restoreName', { name: forPet(r.title, pet?.name) })}>

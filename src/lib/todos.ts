@@ -86,7 +86,7 @@ export function reminderTodo(r: Reminder, pets: Pick<Pet, 'id' | 'name'>[], now:
     who: pet.name.trim(),
     url: tabUrl('care', r.petId, origin),
     owner: r.by,
-    done: { label: r.kind === 'other' ? t('common.done') : t('today.given'), ops: reminderDoneOps(r), roles: GIVERS },
+    done: { label: r.kind === 'other' ? t('done.markDone') : t('done.give'), ops: reminderDoneOps(r), roles: GIVERS },
     cancel: { label: t('todo.dismiss'), ops: reminderDismissOps(r), roles: STAFF, owner: true },
   };
 }
@@ -110,7 +110,7 @@ export function doseTodos(c: Course, medDoses: MedDose[], pets: Pick<Pet, 'id' |
         who: pet.name.trim(),
         url: tabUrl('today', undefined, origin),
         owner: c.by,
-        done: { label: t('today.given'), ops: medDoseOps(c, day, slot), ...rights },
+        done: { label: t('done.give'), ops: medDoseOps(c, day, slot), ...rights },
         cancel: { label: t('todo.skip'), ops: medDoseOps(c, day, slot, true), ...rights },
       };
     });
