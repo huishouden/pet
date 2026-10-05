@@ -3,12 +3,11 @@ import { Pill, Plus, Utensils } from 'lucide-react';
 import type { Course, Feeding, Meal, MedDose, Pet } from '../lib/model';
 import { mealsOf, mealsOn } from '../lib/feeding';
 import { courseText, dosesOn, slotMealName } from '../lib/courses';
-import { personName } from '@huishouden/pwa-kit/people';
 import { addDays, formatDayLong, formatTime, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
 import { useT } from '../i18n';
-import { formatClock } from '../lib/format';
+import { doneBy, formatClock } from '../lib/format';
 import { PetAvatar } from './PetAvatar';
-import { Chip, CompleteButton, DoneBadge, doneLine, ghostButton, overline } from '@huishouden/pwa-kit/react/ui';
+import { Chip, CompleteButton, DoneBadge, ghostButton, overline } from '@huishouden/pwa-kit/react/ui';
 
 /**
  * The paper board, compact, for every pet at once: one small row per pet (photo and name), one
@@ -37,7 +36,6 @@ export function FeedingBoard({ pets, meals, feedings, courses, medDoses, me, now
   // A moment on the shown day: now, or the same time yesterday.
   const day = yesterday ? addDays(now, -1) : now;
   const dayYmd = toYmd(day);
-  const who = (email: string) => personName(email, { email: me });
   const dosesOf = (c: Course) => dosesOn(c, medDoses, dayYmd, now);
   const tilesOf = (pet: Pet) => mealsOf(meals, pet.id).length + courses.filter((c) => c.petId === pet.id).reduce((n, c) => n + dosesOf(c).length, 0);
   // One column count for the whole board, so AM sits above AM like on the paper one.
@@ -88,7 +86,7 @@ export function FeedingBoard({ pets, meals, feedings, courses, medDoses, me, now
                         state={fed ? 'done' : late ? 'late' : 'open'}
                         title={meal.name}
                         verb={t('done.feed')}
-                        detail={fed ? t('done.fedByAt', { name: who(status.feeding.by), at: formatTime(status.at) }) : late ? (yesterday ? t('board.notFed') : t('board.notFedYet')) : t('board.byTime', { time: formatTime(status.at) })}
+                        detail={fed ? doneBy('fed', status.feeding.by, me, status.at) : late ? (yesterday ? t('board.notFed') : t('board.notFedYet')) : t('board.byTime', { time: formatTime(status.at) })}
                         label={t('done.feedName', { name: subject(pet.name, meal.name) })}
                         undoLabel={t('done.undoFed', { name: subject(pet.name, meal.name) })}
                         onDo={() => onToggleMeal(pet, meal, day)}
@@ -111,7 +109,7 @@ export function FeedingBoard({ pets, meals, feedings, courses, medDoses, me, now
                         compact
                         title={title}
                         verb={t('done.give')}
-                        detail={given ? t('done.givenByAt', { name: who(status.dose.by), at: formatTime(status.at) }) : skipped ? doneLine({ by: who(status.dose.by), at: formatTime(status.at), skipped: true }) : missed ? t('board.missed') : courseText(course, now)}
+                        detail={given ? doneBy('given', status.dose.by, me, status.at) : skipped ? doneBy('skipped', status.dose.by, me, status.at) : missed ? t('board.missed') : courseText(course, now)}
                         label={t('done.giveName', { name: subject(pet.name, `${course.name} ${slotName}`) })}
                         undoLabel={t(skipped ? 'done.undoSkipped' : 'done.undoGiven', { name: subject(pet.name, `${course.name} ${slotName}`) })}
                         onDo={() => onToggleDose(pet, course, slot, dayYmd)}

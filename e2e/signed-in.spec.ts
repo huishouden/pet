@@ -47,7 +47,7 @@ test('the morning feed one member ticks shows as fed for the other', async ({ pa
   await am(page).click();
   await expect(amDone(page)).toBeVisible();
   await expect(am(page)).toHaveCount(0);
-  await expect(board(page)).toContainText(/Fed by You · /);
+  await expect(board(page)).toContainText(/Fed by you · /);
 
   // Saved in the household, not just on this screen: the other member's own browser shows it fed.
   const other = await browser.newContext({ baseURL: test.info().project.use.baseURL });
@@ -56,7 +56,7 @@ test('the morning feed one member ticks shows as fed for the other', async ({ pa
     await signInTestUser(theirs, { email: 'test-b@example.com' });
     await openBoard(theirs);
     await expect(amDone(theirs)).toBeVisible({ timeout: 20_000 });
-    await expect(board(theirs).locator('[data-completion=done]').filter({ hasText: /Fed by .* · / }).first()).not.toContainText('by You');
+    await expect(board(theirs).locator('[data-completion=done]').filter({ hasText: /Fed by .* · / }).first()).not.toContainText('by you');
   } finally {
     await other.close();
   }

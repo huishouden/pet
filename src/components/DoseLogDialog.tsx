@@ -3,10 +3,9 @@ import { Check, Pill } from 'lucide-react';
 import type { Course, Meal, MedDose, Pet } from '../lib/model';
 import { courseHistory, courseText, progress, slotAt, slotMealName } from '../lib/courses';
 import { mealsOf } from '../lib/feeding';
-import { formatClock } from '../lib/format';
-import { personName } from '@huishouden/pwa-kit/people';
+import { doneBy, formatClock } from '../lib/format';
 import { formatTime, longDate, toYmd, type Ymd, isHhmm, toHhmm } from '@huishouden/pwa-kit/time';
-import { Dialog, doneLine, ghostButton, inputClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
+import { Dialog, ghostButton, inputClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 import { Tile } from './FeedingBoard';
 import { useT } from '../i18n';
 import { capitalize } from '@huishouden/pwa-kit/i18n';
@@ -35,7 +34,6 @@ export function DoseLogDialog({ course, pet, meals, medDoses, me, now, onToggle,
   const history = courseHistory(course, medDoses, now);
   const p = progress(course, medDoses);
   const petMeals = mealsOf(meals, course.petId);
-  const who = (email: string) => personName(email, { email: me });
   const today = toYmd(now);
   const name = pet?.name;
   // "Antibiotic PM today", "Antibiotic PM on Tuesday, May 12"; with the pet's name first for the toggles.
@@ -84,7 +82,7 @@ export function DoseLogDialog({ course, pet, meals, medDoses, me, now, onToggle,
                         icon={<Pill size={20} className="shrink-0 text-link" aria-hidden="true" />}
                         title={course.times.length > 1 ? slotName : t('courseDialog.dose')}
                         verb={t('done.give')}
-                        detail={given ? t('done.givenByAt', { name: who(status.dose.by), at: formatTime(status.at) }) : skipped ? doneLine({ by: who(status.dose.by), at: formatTime(status.at), skipped: true }) : missed ? t('board.missed') : t('board.byTime', { time: formatTime(status.at) })}
+                        detail={given ? doneBy('given', status.dose.by, me, status.at) : skipped ? doneBy('skipped', status.dose.by, me, status.at) : missed ? t('board.missed') : t('board.byTime', { time: formatTime(status.at) })}
                         label={t('done.giveName', { name: subject(title, day) })}
                         undoLabel={t(skipped ? 'done.undoSkipped' : 'done.undoGiven', { name: subject(title, day) })}
                         onDo={() => {

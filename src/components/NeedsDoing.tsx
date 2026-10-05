@@ -1,11 +1,10 @@
 import { Fragment } from 'react';
 import { Check, Pill, Utensils, Syringe } from 'lucide-react';
-import { personName } from '@huishouden/pwa-kit/people';
-import { formatTime } from '@huishouden/pwa-kit/time';
-import { CompletionList, CompletionRow, canUndoDone, cardClass, doneLine } from '@huishouden/pwa-kit/react/ui';
+import { CompletionList, CompletionRow, canUndoDone, cardClass } from '@huishouden/pwa-kit/react/ui';
 import type { Pet } from '../lib/model';
 import { needActionLabel, type Need } from '../lib/today';
 import { useT } from '../i18n';
+import { doneBy } from '../lib/format';
 import { PetAvatar } from './PetAvatar';
 
 const KIND_ICON = { dose: Pill, meal: Utensils, care: Syringe } as const;
@@ -70,17 +69,7 @@ function NeedRow({ need, pet, pets, me, now, onDo, onUndo, onOpen }: { need: Nee
   const Icon = need.kind === 'care' && need.reminder.kind === 'medication' ? Pill : KIND_ICON[need.kind];
   const verb = needActionLabel(need.action);
   const done = need.done;
-  const by = done ? personName(done.by, { email: me }) : '';
-  const at = done ? formatTime(done.at) : '';
-  const status = !done
-    ? undefined
-    : done.skipped
-      ? doneLine({ by, at, skipped: true })
-      : need.action === 'fed'
-        ? t('done.fedByAt', { name: by, at })
-        : need.action === 'given'
-          ? t('done.givenByAt', { name: by, at })
-          : doneLine({ by, at });
+  const status = !done ? undefined : doneBy(done.skipped ? 'skipped' : need.action === 'fed' ? 'fed' : need.action === 'given' ? 'given' : 'done', done.by, me, done.at);
   const undoLabel = !done || done.skipped ? undefined : need.action === 'fed' ? t('done.undoFed', { name: need.title }) : need.action === 'given' ? t('done.undoGiven', { name: need.title }) : undefined;
   return (
     <CompletionRow

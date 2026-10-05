@@ -14,7 +14,7 @@ test('Today leads with what is overdue, and Give moves it on with an undo', asyn
   await give.click();
   await expect(page.getByText(/Flea and tick given to Biscuit\. Next due .*Jun 14/)).toBeVisible();
   await expect(give).toHaveCount(0);
-  await expect(needs.locator('li[data-completion=done]').filter({ hasText: 'Flea and tick for Biscuit' })).toContainText('Given by You · 10:30 AM');
+  await expect(needs.locator('li[data-completion=done]').filter({ hasText: 'Flea and tick for Biscuit' })).toContainText('Given by you · 10:30 AM');
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(give).toBeVisible();
   await expect(needs.locator('li[data-completion=done]').filter({ hasText: 'Flea and tick' })).toHaveCount(0);
@@ -80,7 +80,7 @@ test('a skipped dose is handled, not given, and its Undo undoes the skip', async
   await expect(page.getByText('Biscuit Antibiotic: skipped')).toBeVisible();
   const am = log.getByRole('button', { name: 'Undo skip for Biscuit Antibiotic AM today' });
   await expect(am).toBeVisible();
-  await expect(log).toContainText('Skipped by You · 10:30 AM');
+  await expect(log).toContainText('Skipped by you · 10:30 AM');
   await expect(log).toContainText('4 of 14 doses given');
   await am.click();
   await expect(page.getByText('Biscuit Antibiotic: not skipped')).toBeVisible();

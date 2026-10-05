@@ -414,5 +414,7 @@
   "done.fedByAt": "Gevoerd door {name} · {at}",
   "done.undoGiven": "Gegeven ongedaan maken voor {name}",
   "done.undoFed": "Gevoerd ongedaan maken voor {name}",
-  "done.undoSkipped": "Overslaan ongedaan maken voor {name}"
+  "done.undoSkipped": "Overslaan ongedaan maken voor {name}",
+  "done.givenByYouAt": "Gegeven door jou · {at}",
+  "done.fedByYouAt": "Gevoerd door jou · {at}"
 }

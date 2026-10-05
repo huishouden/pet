@@ -15,7 +15,7 @@ test('Needs doing comes first, most overdue first, the late dose saying how late
   // Four to do, then Biscuit's breakfast, done at 7:04, after them.
   await expect(rows).toHaveCount(5);
   await expect(rows.nth(4)).toHaveAttribute('data-completion', 'done');
-  await expect(rows.nth(4)).toContainText('Fed by You · 7:04 AM');
+  await expect(rows.nth(4)).toContainText('Fed by you · 7:04 AM');
   await expect(rows.nth(0)).toContainText('Flea and tick for Biscuit');
   await expect(rows.nth(1)).toContainText('Antibiotic for Biscuit');
   await expect(rows.nth(1)).toContainText('Due 9:00 AM · 1 hr 30 min ago');
@@ -38,7 +38,7 @@ test('one tap gives the late dose from the top, Undo puts it back', async ({ pag
   const done = needs.locator('li[data-completion=done]').filter({ hasText: 'Antibiotic for Biscuit' });
   await expect(done).toHaveCount(1);
   await expect(done).toContainText('Antibiotic for Biscuit');
-  await expect(done).toContainText('Given by You · 10:30 AM');
+  await expect(done).toContainText('Given by you · 10:30 AM');
   // The three still open lead; both done rows follow.
   await expect(needs.getByRole('listitem').nth(2)).toHaveAttribute('data-completion', 'open');
   await expect(needs.getByRole('listitem').nth(3)).toHaveAttribute('data-completion', 'done');

@@ -414,5 +414,7 @@
   "done.fedByAt": "Alimentado por {name} · {at}",
   "done.undoGiven": "Desmarcar dado: {name}",
   "done.undoFed": "Desmarcar alimentado: {name}",
-  "done.undoSkipped": "Desmarcar omitido: {name}"
+  "done.undoSkipped": "Desmarcar omitido: {name}",
+  "done.givenByYouAt": "Dado por ti · {at}",
+  "done.fedByYouAt": "Alimentado por ti · {at}"
 }

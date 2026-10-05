@@ -414,5 +414,7 @@
   "done.fedByAt": "Fed by {name} · {at}",
   "done.undoGiven": "Undo given for {name}",
   "done.undoFed": "Undo fed for {name}",
-  "done.undoSkipped": "Undo skip for {name}"
+  "done.undoSkipped": "Undo skip for {name}",
+  "done.givenByYouAt": "Given by you · {at}",
+  "done.fedByYouAt": "Fed by you · {at}"
 }
