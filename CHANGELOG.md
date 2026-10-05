@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.19.0](https://github.com/huishouden/pet/compare/v1.18.0...v1.19.0) (2026-10-05)
+
+### Features
+
+* hashed assets from the suite's asset CDN (pwa-kit 0.100.0) ([816baa5](https://github.com/huishouden/pet/commit/816baa58d21323a6734ce1a6dfd0a8eaebb78485))
+
 ## [1.18.0](https://github.com/huishouden/pet/compare/v1.17.0...v1.18.0) (2026-10-05)
 
 ### Features
