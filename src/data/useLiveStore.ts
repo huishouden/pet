@@ -67,7 +67,7 @@ export function useLiveStore(householdId: string, me: string, household: { membe
       listen('photos', col('photos')),
       listen('medDoses', query(col('medDoses'), where('at', '>=', Date.now() - DOSE_HISTORY_DAYS * DAY))),
       listen('feedings', query(col('feedings'), where('at', '>=', Date.now() - FEEDING_HISTORY_DAYS * DAY))),
-      watchContacts(db, householdId, (contacts) => setData((d) => ({ ...d, contacts })), { app: APP, restricted, onError: fail('contacts') }), // i18n-ignore: a key, not text
+      watchContacts(db, householdId, (contacts) => setData((d) => ({ ...d, contacts })), { app: APP, restricted, backfillPositions: true, onError: fail('contacts') }), // i18n-ignore: a key, not text
     ];
     return () => unsubs.forEach((u) => u());
   }, [base, householdId, restricted]);
