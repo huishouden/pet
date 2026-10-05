@@ -1,6 +1,7 @@
 import { CalendarDays, Contact as ContactIcon, PawPrint, Pill, Sun } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { User } from 'firebase/auth';
+import { clearSharedImages, readSharedImages } from '@huishouden/pwa-kit/shared-images';
 import { clearSharedContact, readSharedContact, type Contact, type ParsedContact } from '@huishouden/pwa-kit/contacts';
 import type { Appointment, Course, Feeding, Meal, Pet, PetRecord, Reminder } from './lib/model';
 import { fedTodayFor, mealAt, mealsOf } from './lib/feeding';
@@ -107,7 +108,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   const [shownPet, setShownPet] = useState<string | null>(() => new URLSearchParams(location.search).get('pet'));
   const [meal, setMeal] = useState<{ meal: Meal | null; petId: string } | null>(null);
   const [feeding, setFeeding] = useState<{ feeding: Feeding | null; petId: string } | null>(null);
-  const [course, setCourse] = useState<{ course: Course | null; petId: string } | null>(null);
+  const [course, setCourse] = useState<{ course: Course | null; petId: string; images?: File[] } | null>(null);
   const [doseLog, setDoseLog] = useState<string | null>(null);
   // A course saved with a start date in the past: offer to mark the doses already given.
   const [backfill, setBackfill] = useState<string | null>(null);
@@ -148,6 +149,26 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
       setContact({ contact: null, shared: cards });
     });
   }, []);
+
+  // Opened from the Share menu with a photo (Gallery → Share → Pet): Scan the label in a new course for the pet on screen.
+  const [sharedImages, setSharedImages] = useState<File[] | null>(null);
+  useEffect(() => {
+    void readSharedImages().then((files) => {
+      if (!files) return;
+      clearSharedImages();
+      if (files.length) setSharedImages(files);
+    });
+  }, []);
+  useEffect(() => {
+    if (!sharedImages) return;
+    const pet = pets.find((p) => p.id === shownPet) ?? pets[0];
+    if (!pet) return;
+    setSharedImages(null);
+    if (!perms.managesCourses) return notify(courseRefusalText());
+    chooseTab('pets');
+    setShownPet(pet.id);
+    setCourse({ course: null, petId: pet.id, images: sharedImages });
+  }, [sharedImages, pets, shownPet, perms.managesCourses]);
 
   useEffect(() => {
     if (!shared) return;
@@ -498,6 +519,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           pet={pets.find((p) => p.id === course.petId)}
           meals={store.data.meals}
           now={now}
+          images={course.images}
           helpers={helpersOf(store.household)}
           nameOf={(email) => personName(email)}
           onClose={() => setCourse(null)}

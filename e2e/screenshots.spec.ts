@@ -135,6 +135,20 @@ test('scan the label', async ({ page }) => {
   });
 });
 
+test('phone: scan the label offers a photo from the camera or the library', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await captureScreenshot(page, 'phone-scan-label', {
+    path: './?tab=pets&pet=demo-pet-miso',
+    fixedTime,
+    prepare: async (p) => {
+      await p.getByRole('region', { name: "Miso's medicine" }).getByRole('button', { name: 'Add course' }).click();
+      const dialog = p.getByRole('dialog', { name: 'Medicine course for Miso' });
+      await expect(dialog.getByRole('button', { name: 'Take a photo' })).toBeVisible();
+      await expect(dialog.getByRole('button', { name: 'Choose photos' })).toBeVisible();
+    },
+  });
+});
+
 // Roles: the sample seen by its admin (who chooses who may give a course, and what is private) and
 // by Jo, its helper (`?as=helper`): no course set-up, no deleting what others logged, and a dose
 // only approved helpers may give refused in words.

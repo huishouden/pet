@@ -102,7 +102,9 @@ test('Scan the label fills the course from the photo and lists what it did not u
   await page.goto('./?tab=pets&pet=demo-pet-miso');
   await page.getByRole('region', { name: "Miso's medicine" }).getByRole('button', { name: 'Add course' }).click();
   const dialog = page.getByRole('dialog', { name: 'Medicine course for Miso' });
-  await expect(dialog.getByRole('button', { name: 'Scan the label' })).toBeVisible();
+  await expect(dialog.getByText('Scan the label', { exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Choose photos' })).toBeVisible();
+  await expect(dialog.locator('input[type=file]:not([capture])')).toHaveCount(1);
   await dialog.getByLabel('Label photo').setInputFiles({ name: 'label.jpg', mimeType: 'image/jpeg', buffer: Buffer.from('not a real photo') });
   await expect(dialog.getByText('Filled in from the label. Check each field before saving.')).toBeVisible();
   await expect(dialog.getByLabel('Medicine')).toHaveValue('Amoxicillin 50 mg');
@@ -116,6 +118,48 @@ test('Scan the label fills the course from the photo and lists what it did not u
   await expect(dialog.getByRole('list', { name: 'Not used' })).toContainText('zq7 smudge');
   await dialog.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('region', { name: "Miso's medicine" })).toContainText('Day 1 of 10');
+});
+
+test('Scan the label takes two photos chosen together, and a photo pasted with Ctrl+V', async ({ page }) => {
+  const label = readFileSync(new URL('./fixtures/label.txt', import.meta.url), 'utf8');
+  // The reader asks the mock for its text twice per photo (is there one, then take it): count them.
+  await page.addInitScript((text) => {
+    const w = window as unknown as { __mockLabelText: string; __labelReads: number };
+    w.__labelReads = 0;
+    Object.defineProperty(w, '__mockLabelText', { get: () => (w.__labelReads++, text) });
+  }, label);
+  await page.goto('./?tab=pets&pet=demo-pet-miso');
+  await page.getByRole('region', { name: "Miso's medicine" }).getByRole('button', { name: 'Add course' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Medicine course for Miso' });
+  await dialog.getByLabel('Label photo').setInputFiles([
+    { name: 'front.jpg', mimeType: 'image/jpeg', buffer: Buffer.from('front') },
+    { name: 'back.jpg', mimeType: 'image/jpeg', buffer: Buffer.from('back') },
+  ]);
+  await expect(dialog.getByLabel('Medicine')).toHaveValue('Amoxicillin 50 mg');
+  expect(await page.evaluate(() => (window as unknown as { __labelReads: number }).__labelReads)).toBe(4);
+  await dialog.getByLabel('Medicine').fill('');
+  await page.evaluate(() => {
+    const data = new DataTransfer();
+    data.items.add(new File(['photo'], 'pasted.png', { type: 'image/png' }));
+    document.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+  });
+  await expect(dialog.getByLabel('Medicine')).toHaveValue('Amoxicillin 50 mg');
+});
+
+test('Share → Pet with a label photo opens Scan the label in a new course', async ({ page }) => {
+  const label = readFileSync(new URL('./fixtures/label.txt', import.meta.url), 'utf8');
+  await page.addInitScript((text) => {
+    (window as unknown as { __mockLabelText: string }).__mockLabelText = text;
+  }, label);
+  // What the service worker keeps for a photo shared from the gallery.
+  await page.evaluate(async () => {
+    const cache = await caches.open('hh-share-images');
+    await cache.put(new URL('hh-shared-image-0', location.href).href, new Response('photo', { headers: { 'Content-Type': 'image/jpeg', 'X-File-Name': 'label.jpg' } }));
+  });
+  await page.goto('./?share=image');
+  const dialog = page.getByRole('dialog', { name: /^Medicine course for / });
+  await expect(dialog.getByRole('region', { name: 'Filled in from the label' })).toContainText('MedicineAmoxicillin 50 mg');
+  await expect(page).not.toHaveURL(/share=image/);
 });
 
 test('a course that started yesterday: mark yesterday’s doses as given, at their times', async ({ page }) => {

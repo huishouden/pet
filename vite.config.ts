@@ -26,7 +26,7 @@ export default defineConfig({
       push: true,
       ocr: true,
       // Google Maps places and contact cards from the Share menu (Android, installed).
-      shareTarget: { contacts: true },
+      shareTarget: { contacts: true, images: true },
       themeColor: '#1b4332',
       backgroundColor: '#faf9f5',
       includeAssets: ['icon.svg', 'apple-touch-icon.png', 'og.png'],

@@ -18,11 +18,13 @@ import { courseEntry } from '../lib/agenda';
 
 
 /** A short medicine course: what, how much, how often, from when and for how long. */
-export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (e) => e, onSave, onDelete, onClose }: {
+export function CourseDialog({ course, pet, meals, now, images, helpers = [], nameOf = (e) => e, onSave, onDelete, onClose }: {
   course: Course | null;
   pet: Pet | undefined;
   meals: Meal[];
   now: number;
+  /** Label photos shared into the app, read as soon as the dialog opens. */
+  images?: File[];
   /** The household's helpers, who the course can be restricted to. */
   helpers?: string[];
   nameOf?: (email: string) => string;
@@ -120,7 +122,7 @@ export function CourseDialog({ course, pet, meals, now, helpers = [], nameOf = (
           save();
         }}
       >
-        <LabelScan onRead={readLabelInto} intro={t('courseDialog.scanIntro')} />
+        <LabelScan onRead={readLabelInto} images={images} intro={t('courseDialog.scanIntro')} />
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t('courseDialog.medicine')}>
             <input className={inputClass} value={name} maxLength={LIMITS.courseName} onChange={(e) => setName(e.target.value)} placeholder={t('courseDialog.medicinePlaceholder')} autoComplete="off" />

@@ -350,7 +350,7 @@
   "courseDialog.withFood": "Con comida",
   "courseDialog.newFor": "Tratamiento para {name}",
   "courseDialog.new": "Tratamiento",
-  "courseDialog.scanIntro": "Toma una foto de la etiqueta de la farmacia o del veterinario. Se lee en este dispositivo y no se guarda.",
+  "courseDialog.scanIntro": "Toma una foto de la etiqueta de la farmacia o del veterinario, o elige una que ya tengas. Si la caja tiene frente y reverso, elige las dos fotos a la vez. Se lee en este dispositivo y no se guarda.",
   "courseDialog.medicinePlaceholder": "Antibiótico",
   "courseDialog.dosePlaceholder": "1 tableta",
   "courseDialog.howOften": "Con qué frecuencia",

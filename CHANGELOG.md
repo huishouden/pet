@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.18.0](https://github.com/huishouden/pet/compare/v1.17.0...v1.18.0) (2026-10-05)
+
+### Features
+
+* **scan:** Scan the label takes a photo, a chosen photo, paste, drop and several; Share to Pet (kit 0.99.0) ([a6a7e9e](https://github.com/huishouden/pet/commit/a6a7e9e32c24574813a895e1ed6e50b41a5ac155))
+
 ## [1.17.0](https://github.com/huishouden/pet/compare/v1.16.3...v1.17.0) (2026-10-05)
 
 ### Features

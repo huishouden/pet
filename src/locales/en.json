@@ -350,7 +350,7 @@
   "courseDialog.withFood": "With food",
   "courseDialog.newFor": "Medicine course for {name}",
   "courseDialog.new": "Medicine course",
-  "courseDialog.scanIntro": "Take a photo of the pharmacy or vet label. It is read on this device and not kept.",
+  "courseDialog.scanIntro": "Take a photo of the pharmacy or vet label, or choose one you already have. A box with a front and a back: choose both photos at once. It is read on this device and not kept.",
   "courseDialog.medicinePlaceholder": "Antibiotic",
   "courseDialog.dosePlaceholder": "1 tablet",
   "courseDialog.howOften": "How often",
