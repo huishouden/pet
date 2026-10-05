@@ -1,7 +1,7 @@
 import type { Contact, ContactInput } from '@huishouden/pwa-kit/contacts';
 import type { Role } from '@huishouden/pwa-kit/roles';
-import type { Appointment, Course, Dose, Feeding, Meal, MedDose, Pet, PetPhoto, PetRecord, Reminder, Weight } from '../lib/model';
-import type { AppointmentInput, CourseInput, FeedingInput, MealInput, PetInput, RecordInput, ReminderInput } from '../lib/build';
+import type { Appointment, Course, Dose, Feeding, Meal, MedDose, Outing, OutingPlan, Pet, PetPhoto, PetRecord, Reminder, Weight } from '../lib/model';
+import type { AppointmentInput, CourseInput, FeedingInput, MealInput, OutingInput, OutingPlanInput, PetInput, RecordInput, ReminderInput } from '../lib/build';
 import type { PetHouseholdData } from '../lib/demo';
 import type { WeightUnit } from '../lib/weight';
 
@@ -20,6 +20,8 @@ export const COLLECTIONS = {
   courses: 'petMedCourses',
   medDoses: 'petMedDoses',
   photos: 'petPhotos',
+  outingPlans: 'petOutingPlans',
+  outings: 'petOutings',
 } as const;
 export type DataKey = keyof typeof COLLECTIONS;
 
@@ -35,6 +37,8 @@ export interface PetBundle {
   courses: Course[];
   medDoses: MedDose[];
   photo?: PetPhoto;
+  outingPlan?: OutingPlan;
+  outings: Outing[];
   /** Appointments as they were: those only for this pet are deleted, shared ones lose this pet. */
   appointments: Appointment[];
 }
@@ -91,6 +95,15 @@ export interface PetActions {
   moveMedDose(d: MedDose, at: number): void;
   deleteMedDoses(list: MedDose[]): void;
   restoreMedDoses(list: MedDose[]): void;
+  /** Sets a pet's outing plan; returns the one it replaced, for Undo (`restoreOutingPlan`). */
+  saveOutingPlan(petId: string, input: OutingPlanInput): OutingPlan | undefined;
+  restoreOutingPlan(petId: string, before: OutingPlan | undefined): void;
+  /** Logs an outing by the signed-in member; one for a scheduled outing gets that outing's id (`outingId`). Undo is deleteOutings. */
+  logOuting(input: OutingInput): Outing;
+  /** Changes the time, what happened, the walk or the note; who logged it stays. */
+  updateOuting(o: Outing, input: OutingInput): void;
+  deleteOutings(list: Outing[]): void;
+  restoreOutings(list: Outing[]): void;
   saveContact(id: string | null, input: ContactInput): void;
   deleteContact(c: Contact): void;
   /** Puts a deleted contact back under its old id, so appointments that point at it still do. */

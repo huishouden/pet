@@ -4,7 +4,9 @@
 
 import { appUrl, SUITE_ORIGIN } from '@huishouden/pwa-kit/site';
 import { remindersForCourse, type ReminderInput, type ReminderSource } from '@huishouden/pwa-kit/reminders';
-import type { Course, Feeding, Meal, MedDose, Pet } from './model';
+import type { Course, Feeding, Meal, MedDose, Outing, OutingPlan, Pet } from './model';
+import { outingFor, outingId, slotsOf, takeOut } from './outings';
+import { atTime } from '@huishouden/pwa-kit/time';
 import { courseState, slotAt, todoMedDoseId } from './courses';
 import { fedTodayFor, mealAt, mealsOf } from './feeding';
 import { addDays, startOfDay, toYmd } from '@huishouden/pwa-kit/time';
@@ -23,6 +25,7 @@ export const APP_URL = appUrl(APP_BASE, '', APP_ORIGIN);
 export const courseRef = (courseId: string) => `${APP}:course:${courseId}`;
 export const mealsRef = (petId: string) => `${APP}:meals:${petId}`;
 export const birthdayRef = (petId: string) => `${APP}:birthday:${petId}`;
+export const outingsRef = (petId: string) => `${APP}:outings:${petId}`;
 
 /** A link that opens Pet on one pet's page. */
 export const petUrl = (petId: string) => appUrl(APP_BASE, `?tab=pets&pet=${encodeURIComponent(petId)}`, APP_ORIGIN);
@@ -98,4 +101,44 @@ export function mealReminders(pet: Pick<Pet, 'id' | 'name'>, meals: Meal[], feed
 export function birthdayReminders(pet: Pick<Pet, 'id' | 'name' | 'birthDate' | 'birthDateApprox'>, now: number): ReminderInput[] {
   const r = birthdayReminder(pet, now, { app: APP, url: petUrl(pet.id), ref: birthdayRef(pet.id) });
   return r ? [{ ...r, source: birthdaySource(pet) }] : [];
+}
+
+/**
+ * What an outing reminder is about: the pet's plan, still on, and the outing for that slot and day
+ * (`outingId`), not yet logged. Logged anywhere (here, the portal's To-do list, the assistant) or the
+ * plan turned off, the sender deletes the reminder unsent.
+ */
+export const outingSource = (petId: string, day: string, slot: string): ReminderSource => ({
+  checks: [
+    { doc: `${COLLECTIONS.outingPlans}/${petId}`, due: [{ field: 'on', in: [true] }] },
+    { doc: `${COLLECTIONS.outings}/${outingId(petId, day, slot)}`, absent: true },
+  ],
+});
+
+/**
+ * With reminders on in the pet's plan, a nudge at each scheduled outing today and tomorrow that is
+ * still to come and not logged, to `recipients` (the admins, members and helpers: whoever may be the
+ * one taking the pet out). Walks never remind.
+ */
+export function outingReminders(pet: Pick<Pet, 'id' | 'name'>, plan: OutingPlan | undefined, meals: Meal[], outings: Outing[], now: number, recipients: string[] | 'all' = 'all', days = 2): ReminderInput[] {
+  if (!plan?.on || !plan.remind) return [];
+  const out: ReminderInput[] = [];
+  for (let d = 0; d < days; d++) {
+    const day = toYmd(addDays(now, d));
+    for (const slot of slotsOf(plan, meals)) {
+      const at = atTime(day, slot.time);
+      if (at <= now || outingFor(outings, pet.id, slot.key, day)) continue;
+      out.push({
+        app: APP,
+        title: takeOut(pet.name, slot),
+        body: t('notify.outingBody'),
+        at,
+        url: APP_URL,
+        ref: outingsRef(pet.id),
+        recipients,
+        source: outingSource(pet.id, day, slot.key),
+      });
+    }
+  }
+  return out;
 }

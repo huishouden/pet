@@ -8,7 +8,7 @@ import { db } from './firebase';
 import type { DataKey } from './types';
 
 /** The lists the agenda is built from; all must have loaded before anything is published. */
-export const AGENDA_SOURCES: readonly DataKey[] = ['pets', 'appointments', 'reminders', 'courses', 'medDoses', 'meals', 'feedings'];
+export const AGENDA_SOURCES: readonly DataKey[] = ['pets', 'appointments', 'reminders', 'courses', 'medDoses', 'meals', 'feedings', 'outingPlans', 'outings'];
 
 const warn = (e: unknown) => console.warn("Couldn't update the household agenda", e);
 const warnTodos = (e: unknown) => console.warn("Couldn't update the household to-do list", e);
@@ -68,7 +68,7 @@ export function useAgendaSync(householdId: string, me: string, data: AgendaData,
       }
     }, 2000);
     return () => clearTimeout(id);
-  }, [householdId, me, restricted, ready, day, data.pets, data.appointments, data.reminders, data.courses, data.medDoses, data.meals, data.feedings]);
+  }, [householdId, me, restricted, ready, day, data.pets, data.appointments, data.reminders, data.courses, data.medDoses, data.meals, data.feedings, data.outingPlans, data.outings]);
 }
 
 /** Today's date, changing at midnight and when the app comes back into view on a later day. */

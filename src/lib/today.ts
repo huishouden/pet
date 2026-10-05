@@ -3,7 +3,8 @@
 // up (care due soon, visits, birthdays). Pure: every function takes `now`.
 
 import { MINUTE, atClock, daysBetween, dueText, formatTime, parseYmd, relativeDay, startOfDay, toHhmm, toYmd } from '@huishouden/pwa-kit/time';
-import type { Appointment, Course, Dose, Feeding, Meal, MedDose, Pet, Reminder } from './model';
+import type { Appointment, Course, Dose, Feeding, Meal, MedDose, Outing, OutingPlan, Pet, Reminder } from './model';
+import { slotsOn, takeOut } from './outings';
 import { dosesOn, isHandled, slotAt } from './courses';
 import { mealAt, mealsOn } from './feeding';
 import { dueState, headline } from './schedule';
@@ -21,6 +22,9 @@ export interface TodayData {
   appointments: Appointment[];
   /** Care doses given (who gave a reminder's dose today); optional for callers without them. */
   doses?: Pick<Dose, 'reminderId' | 'at' | 'by'>[];
+  /** Outing plans and outings; optional for callers without them. */
+  outingPlans?: OutingPlan[];
+  outings?: Outing[];
 }
 
 /** A dose or meal this close to its time is already "needs doing". */
@@ -147,7 +151,7 @@ export function doneNow(data: TodayData, pets: Pet[], now: number): Need[] {
 
 export interface LaterItem {
   key: string;
-  kind: 'dose' | 'meal' | 'appointment';
+  kind: 'dose' | 'meal' | 'appointment' | 'outing';
   at: number;
   /** "6:00 PM". */
   time: string;
@@ -179,6 +183,13 @@ export function laterToday(data: TodayData, pets: Pet[], now: number): LaterItem
       const group = meals.get(k);
       if (group) group.petIds.push(pet.id);
       else meals.set(k, { at: status.at, name: meal.name.trim(), petIds: [pet.id] });
+    }
+  }
+  for (const pet of pets) {
+    const plan = data.outingPlans?.find((p) => p.id === pet.id);
+    for (const { slot, status } of slotsOn(plan, data.meals, data.outings ?? [], now, now)) {
+      if (status.state !== 'due' || status.at <= soon) continue;
+      out.push({ key: `outing:${pet.id}:${slot.key}`, kind: 'outing', at: status.at, time: formatTime(status.at), title: takeOut(pet.name, slot), petIds: [pet.id] });
     }
   }
   for (const [k, g] of meals) {

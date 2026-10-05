@@ -67,6 +67,8 @@ export function useLiveStore(householdId: string, me: string, household: { membe
       listen('photos', col('photos')),
       listen('medDoses', query(col('medDoses'), where('at', '>=', Date.now() - DOSE_HISTORY_DAYS * DAY))),
       listen('feedings', query(col('feedings'), where('at', '>=', Date.now() - FEEDING_HISTORY_DAYS * DAY))),
+      listen('outingPlans', col('outingPlans')),
+      listen('outings', query(col('outings'), where('at', '>=', Date.now() - FEEDING_HISTORY_DAYS * DAY))),
       watchContacts(db, householdId, (contacts) => setData((d) => ({ ...d, contacts })), { app: APP, restricted, backfillPositions: true, onError: fail('contacts') }), // i18n-ignore: a key, not text
     ];
     return () => unsubs.forEach((u) => u());
@@ -95,7 +97,7 @@ export function useLiveStore(householdId: string, me: string, household: { membe
 
   const ready = answered.has('pets') && answered.has('reminders');
   // Push notifications for doses and meal cut-offs, delivered by the household's shared sender.
-  useReminderSync(householdId, me, data, ready, onError, restricted);
+  useReminderSync(householdId, me, data, ready, onError, restricted, household);
   // The household agenda (the portal's calendar and Today) waits for every list it is built from:
   // publishing before one has loaded would delete that list's items.
   useAgendaSync(householdId, me, data, AGENDA_SOURCES.every((k) => answered.has(k)), restricted);

@@ -73,6 +73,7 @@ describe('later today and coming up', () => {
     expect(later.map((l) => [l.time, l.title])).toEqual([
       [t('19:00'), 'Antibiotic for Biscuit'],
       [t('19:00'), 'PM meal for Biscuit and Miso'],
+      [t('19:00'), 'Take Biscuit out · PM'],
     ]);
     expect(allDoneLine(later)).toBe('All done for now · next: Antibiotic for Biscuit at 7 PM');
     expect(allDoneLine([])).toBe('All done for today');
@@ -80,7 +81,7 @@ describe('later today and coming up', () => {
 
   test("one pet's meal reads as theirs; an appointment later today is listed with its pets", () => {
     const data = { ...demo, feedings: [...demo.feedings, { id: 'z', petId: 'demo-pet-miso', mealId: 'demo-pet-miso-pm', at: DEMO_NOW, by: 'sam@example.com', createdAt: DEMO_NOW }], appointments: [{ ...demo.appointments[0], at: at('16:15') }] };
-    expect(laterToday(data, pets, DEMO_NOW).map((l) => l.title)).toEqual(['Yearly check-up for Biscuit', 'Antibiotic for Biscuit', "Biscuit's PM meal"]);
+    expect(laterToday(data, pets, DEMO_NOW).map((l) => l.title)).toEqual(['Yearly check-up for Biscuit', 'Antibiotic for Biscuit', "Biscuit's PM meal", 'Take Biscuit out · PM']);
   });
 
   test('care due soon, visits in the next two weeks and the birthday three weeks away, soonest first', () => {

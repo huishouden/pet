@@ -8,7 +8,9 @@ import { AGENDA_LIMITS, allDayStart, inAgendaWindow, type AgendaEdit, type Agend
 import type { CalendarEntry } from '@huishouden/pwa-kit/calendar-export';
 import type { Role } from '@huishouden/pwa-kit/roles';
 import { addDays, parseYmd, toYmd } from '@huishouden/pwa-kit/time';
-import type { Appointment, Course, Feeding, Meal, MedDose, Pet, Reminder } from './model';
+import type { Appointment, Course, Feeding, Meal, MedDose, Outing, OutingPlan, Pet, Reminder } from './model';
+import { outingFor, outingWhat, slotsOf, takeOut } from './outings';
+import { atTime } from '@huishouden/pwa-kit/time';
 import type { PetHouseholdData } from './demo';
 import { nextBirthday } from './birthday';
 import { dosesOn, isHandled, lastDay, slotAt, timesText } from './courses';
@@ -29,6 +31,7 @@ export const courseAgendaRef = (id: string) => `course:${id}`;
 export const birthdayAgendaRef = (petId: string) => `birthday:${petId}`;
 export const mealRef = (mealId: string, day: string) => `meal:${mealId}:${day}`;
 export const doseRef = (courseId: string, day: string, slot: number) => `dose:${courseId}:${day}:${slot}`;
+export const outingRef = (petId: string, slot: string, day: string) => `outing:${petId}:${slot}:${day}`;
 
 /** How far ahead a birthday is published. */
 export const BIRTHDAY_AHEAD_DAYS = 180;
@@ -235,7 +238,32 @@ export function mealAgenda(pet: Pick<Pet, 'id' | 'name'>, meals: Meal[], feeding
   );
 }
 
-export type AgendaData = Pick<PetHouseholdData, 'pets' | 'appointments' | 'reminders' | 'courses' | 'medDoses' | 'meals' | 'feedings'>;
+/**
+ * Today's and tomorrow's scheduled outings for a pet with a plan ("Take Biscuit out · AM"), at their
+ * times: done once logged (how, as the detail: "Pooped"), otherwise upcoming (the kit reads it as
+ * overdue once its time has passed). Walks on their own are not scheduled, so never published.
+ */
+export function outingAgenda(pet: Pick<Pet, 'id' | 'name'>, plan: OutingPlan | undefined, meals: Meal[], outings: Outing[], now: number, origin = APP_ORIGIN): { ref: string; items: AgendaEntry[] }[] {
+  const name = pet.name.trim();
+  return [toYmd(now), toYmd(addDays(now, 1))].flatMap((day) =>
+    slotsOf(plan, meals).map((slot) => {
+      const done = outingFor(outings, pet.id, slot.key, day);
+      const item: AgendaEntry = {
+        kind: 'task',
+        title: takeOut(name, slot).slice(0, AGENDA_LIMITS.title),
+        start: atTime(day, slot.time),
+        allDay: false,
+        ...(done ? { detail: outingWhat(done) } : {}),
+        url: tabUrl('today', undefined, origin),
+        who: name,
+        status: done ? 'done' : 'upcoming',
+      };
+      return { ref: outingRef(pet.id, slot.key, day), items: [item] };
+    }),
+  );
+}
+
+export type AgendaData = Pick<PetHouseholdData, 'pets' | 'appointments' | 'reminders' | 'courses' | 'medDoses' | 'meals' | 'feedings' | 'outingPlans' | 'outings'>;
 
 /** Every record's items by ref, refs with nothing to publish included (empty), for per-ref writes. */
 export function agendaByRef(data: AgendaData, now: number, origin = APP_ORIGIN): Map<string, AgendaEntry[]> {
@@ -249,6 +277,7 @@ export function agendaByRef(data: AgendaData, now: number, origin = APP_ORIGIN):
   for (const p of data.pets) {
     out.set(birthdayAgendaRef(p.id), birthdayAgenda(p, now, origin));
     for (const { ref, items } of mealAgenda(p, data.meals, data.feedings, now, origin)) out.set(ref, items);
+    for (const { ref, items } of outingAgenda(p, data.outingPlans.find((x) => x.id === p.id), data.meals, data.outings, now, origin)) out.set(ref, items);
   }
   return out;
 }

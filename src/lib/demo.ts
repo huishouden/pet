@@ -1,6 +1,6 @@
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import type { HouseholdHome } from '@huishouden/pwa-kit/home';
-import type { Appointment, Course, Dose, Feeding, Meal, MedDose, Pet, PetPhoto, PetRecord, Reminder, Weight } from './model';
+import type { Appointment, Course, Dose, Feeding, Meal, MedDose, Outing, OutingPlan, Pet, PetPhoto, PetRecord, Reminder, Weight } from './model';
 import { DEMO_PHOTOS } from './demoPhotos';
 import { toYmd } from '@huishouden/pwa-kit/time';
 
@@ -38,9 +38,12 @@ export interface PetHouseholdData {
   photos: PetPhoto[];
   /** The household's contacts shown in Pet. */
   contacts: Contact[];
+  /** Each pet's outing plan, by pet id. */
+  outingPlans: OutingPlan[];
+  outings: Outing[];
 }
 
-export const emptyData = (): PetHouseholdData => ({ pets: [], reminders: [], doses: [], appointments: [], weights: [], records: [], meals: [], feedings: [], courses: [], medDoses: [], photos: [], contacts: [] });
+export const emptyData = (): PetHouseholdData => ({ pets: [], reminders: [], doses: [], appointments: [], weights: [], records: [], meals: [], feedings: [], courses: [], medDoses: [], photos: [], contacts: [], outingPlans: [], outings: [] });
 
 /** Local time on a 2031 day: month 1–12. */
 const on = (month: number, day: number, hhmm = '12:00', year = 2031) => {
@@ -291,6 +294,33 @@ function medDoses(): MedDose[] {
   return out;
 }
 
+/**
+ * Biscuit goes out with his meals and should poop at least twice a day, with a 30-minute walk goal.
+ * Two weeks of outings: most days twice with a poop each time, yesterday only once (so Today shows
+ * the gentle flag), walks some days. This morning he is out already: pooped, and a 20-minute walk.
+ */
+function outingPlans(): OutingPlan[] {
+  return [{ id: BISCUIT, on: true, mode: 'meals', poopMin: 2, flagDays: 3, remind: true, walkGoal: 30, createdAt: CREATED, by: SAM }];
+}
+
+function outings(): Outing[] {
+  const out: Outing[] = [];
+  for (let offset = -13; offset <= 0; offset++) {
+    const day = new Date(DEMO_NOW);
+    day.setDate(day.getDate() + offset);
+    const ymdOf = toYmd(day.getTime());
+    for (const [slot, h, m] of [['am', 7, 20], ['pm', 18, 10]] as const) {
+      if (offset === 0 && slot === 'pm') continue;
+      const at = new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m + (((offset + 13) * 7) % 25)).getTime();
+      const poop = !((offset === -1 || offset === -8) && slot === 'pm');
+      const walkMin = slot === 'am' && offset % 3 === 0 ? 20 : slot === 'pm' && offset % 4 === 0 ? 30 : undefined;
+      const key = `meal-${BISCUIT}-${slot}`;
+      out.push({ id: `out-${BISCUIT}-${ymdOf}-${key}`, petId: BISCUIT, slot: key, at, pee: true, poop, ...(walkMin ? { walkMin } : {}), by: (offset + (slot === 'am' ? 0 : 1)) % 2 ? ALEX : SAM, createdAt: at });
+    }
+  }
+  return out;
+}
+
 /** Invented businesses on invented streets; 555-01xx numbers are reserved for fiction. */
 function contacts(): Contact[] {
   const base = { apps: ['pet'], createdAt: CREATED, by: SAM };
@@ -359,5 +389,7 @@ export function demoData(): PetHouseholdData {
     medDoses: medDoses(),
     photos: Object.entries(DEMO_PHOTOS).map(([id, data]) => ({ id, data, updatedAt: CREATED, by: SAM })),
     contacts: contacts(),
+    outingPlans: outingPlans(),
+    outings: outings(),
   };
 }

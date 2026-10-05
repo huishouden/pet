@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
-import { Cake, CalendarDays, ChevronRight, PawPrint, Pill, Plus, Syringe, Utensils } from 'lucide-react';
-import type { Course, Meal, Pet, Reminder } from '../lib/model';
+import { Cake, CalendarDays, ChevronRight, DoorOpen, PawPrint, Pill, Plus, Syringe, Utensils } from 'lucide-react';
+import type { Course, Meal, Outing, Pet, Reminder } from '../lib/model';
+import type { OutingSlot } from '../lib/outings';
+import { OutingsBoard } from '../components/OutingsBoard';
 import { toYmd, type Ymd } from '@huishouden/pwa-kit/time';
 import { allDoneLine, birthdaysToday, comingUp, doneNow, laterToday, needsDoing, type ComingItem, type LaterItem, type Need } from '../lib/today';
 import { useClock } from '@huishouden/pwa-kit/react/clock';
@@ -19,13 +21,15 @@ const COMING_SHOWN = 5;
  * "What needs doing for the pets right now?": what is due or late at the top, with its one tap; then
  * the rest of today and what is coming up; then the day's board and the pets, each a tap from its page.
  */
-export function Today({ store, pets, open, onGive, onToggleMeal, onToggleDose, afterNeeds }: {
+export function Today({ store, pets, open, onGive, onToggleMeal, onToggleDose, onLogOuting, onUndoOuting, afterNeeds }: {
   store: PetStore;
   pets: Pet[];
   open: Open;
   onGive: (r: Reminder) => void;
   onToggleMeal: (pet: Pet, meal: Meal, day: number) => void;
   onToggleDose: (pet: Pet, course: Course, slot: number, day: Ymd) => void;
+  onLogOuting: (pet: Pet, slot: OutingSlot, poop: boolean) => void;
+  onUndoOuting: (o: Outing) => void;
   /** Shown just below Needs doing (calendar suggestions). */
   afterNeeds?: ReactNode;
 }) {
@@ -67,6 +71,18 @@ export function Today({ store, pets, open, onGive, onToggleMeal, onToggleDose, a
   return (
     <div className="flex flex-col gap-5 lg:h-full lg:overflow-y-auto [&>*]:shrink-0">
       <NeedsDoing needs={needs} done={done} pets={pets} me={store.me} now={now} allDone={allDoneLine(later)} onDo={doNeed} onUndo={doNeed} onOpen={openNeed} />
+      <OutingsBoard
+        pets={pets}
+        plans={data.outingPlans}
+        meals={data.meals}
+        outings={data.outings}
+        me={store.me}
+        now={now}
+        onLog={onLogOuting}
+        onUndo={onUndoOuting}
+        onEdit={(o) => open.outing(o, o.petId)}
+        onAdd={(petId) => open.outing(null, petId)}
+      />
       {afterNeeds}
       {parties.map(({ pet, countdown }) => (
         <BirthdayCard key={pet.id} pet={pet} pets={pets} turns={countdown.turns} onOpen={() => open.showPet(pet.id)} />
@@ -123,7 +139,7 @@ function openComing(c: ComingItem, open: Open) {
   else open.showPet(c.petIds[0]);
 }
 
-const LATER_ICON = { dose: Pill, meal: Utensils, appointment: CalendarDays } as const;
+const LATER_ICON = { dose: Pill, meal: Utensils, appointment: CalendarDays, outing: DoorOpen } as const;
 
 function LaterRow({ item, onOpen }: { item: LaterItem; onOpen?: () => void }) {
   const Icon = LATER_ICON[item.kind];

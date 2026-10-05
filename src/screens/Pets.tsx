@@ -14,6 +14,7 @@ import type { Open } from '../PetApp';
 import { PetAvatar, PetChips } from '../components/PetAvatar';
 import { WeightChart } from '../components/WeightChart';
 import { FeedingCard, MedicineCard } from '../components/PetFeedingCards';
+import { OutingsCard } from '../components/OutingsCard';
 import { permissions } from '../lib/permissions';
 import { ReminderRow } from './Care';
 import { cardClass, ghostButton, iconButton, overline, primaryButton } from '@huishouden/pwa-kit/react/ui';
@@ -116,6 +117,18 @@ function PetDetail({ pet, pets, store, open, now, onGive, onRestore, notify }: {
           {pet.notes && <p className="mt-4 rounded-xl bg-page px-4 py-3 text-lg whitespace-pre-line text-ink-soft">{pet.notes}</p>}
         </section>
         <FeedingCard pet={pet} meals={store.data.meals} feedings={store.data.feedings} me={store.me} now={now} open={open} />
+        <OutingsCard
+          pet={pet}
+          plan={store.data.outingPlans.find((p) => p.id === pet.id)}
+          meals={store.data.meals}
+          outings={store.data.outings}
+          me={store.me}
+          now={now}
+          managesPlan={perms.managesPlans}
+          onPlan={() => open.outingPlan(pet.id)}
+          onAdd={() => open.outing(null, pet.id)}
+          onEdit={(o) => open.outing(o, pet.id)}
+        />
         <section className={`${cardClass} p-6`} aria-label={t('pets.recordsOf', { name: pet.name })}>
           <div className="flex items-center justify-between gap-4">
             <h3 className={overline}>{t('pets.records')}</h3>

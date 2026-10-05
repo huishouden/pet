@@ -3,7 +3,10 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import { clearSharedImages, readSharedImages } from '@huishouden/pwa-kit/shared-images';
 import { clearSharedContact, readSharedContact, type Contact, type ParsedContact } from '@huishouden/pwa-kit/contacts';
-import type { Appointment, Course, Feeding, Meal, Pet, PetRecord, Reminder } from './lib/model';
+import type { Appointment, Course, Feeding, Meal, Outing, Pet, PetRecord, Reminder } from './lib/model';
+import { outingWhat, type OutingSlot } from './lib/outings';
+import { OutingDialog } from './components/OutingDialog';
+import { OutingPlanDialog } from './components/OutingPlanDialog';
 import { fedTodayFor, mealAt, mealsOf } from './lib/feeding';
 import { givenOnFor, slotAt } from './lib/courses';
 import { sortPets } from './lib/pets';
@@ -86,6 +89,10 @@ export interface Open {
   course: (course: Course | null, petId: string) => void;
   /** A course's doses day by day, to tick earlier days. */
   doseLog: (course: Course) => void;
+  /** Logs an extra outing or a walk (`null`), or fixes one. */
+  outing: (outing: Outing | null, petId: string) => void;
+  /** A pet's outing plan: admins and members. */
+  outingPlan: (petId: string) => void;
   /** Shows one pet on the Pets tab. */
   showPet: (petId: string) => void;
 }
@@ -110,6 +117,8 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   const [feeding, setFeeding] = useState<{ feeding: Feeding | null; petId: string } | null>(null);
   const [course, setCourse] = useState<{ course: Course | null; petId: string; images?: File[] } | null>(null);
   const [doseLog, setDoseLog] = useState<string | null>(null);
+  const [outing, setOuting] = useState<{ outing: Outing | null; petId: string } | null>(null);
+  const [planFor, setPlanFor] = useState<string | null>(null);
   // A course saved with a start date in the past: offer to mark the doses already given.
   const [backfill, setBackfill] = useState<string | null>(null);
   const pets = useMemo(() => sortPets(store.data.pets), [store.data.pets]);
@@ -199,10 +208,24 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
       setBackfill(null);
       setDoseLog(c.id);
     },
+    outing: (o, petId) => editable(o, () => setOuting({ outing: o, petId })),
+    outingPlan: (petId) => (perms.managesPlans ? setPlanFor(petId) : notify(refusal('change-settings'))),
     showPet: (petId) => {
       setShownPet(petId);
       chooseTab('pets');
     },
+  };
+
+  // An outing's two taps: Pooped or Pee only, now, by me, for that scheduled outing. Undo removes it.
+  const logOuting = (pet: Pet, slot: OutingSlot, poop: boolean) => {
+    const o = actions.logOuting({ petId: pet.id, slot: slot.key, at: read(), pee: true, poop });
+    notify(t('toast.outing', { what: t('toast.petMeal', { pet: pet.name, meal: slot.label }), how: outingWhat(o), at: atTimeOf(o.at) }), () => actions.deleteOutings([o]));
+  };
+  const undoOuting = (o: Outing) => {
+    if (!perms.mayChange(o)) return notify(refusal('edit-others'));
+    const pet = pets.find((p) => p.id === o.petId);
+    actions.deleteOutings([o]);
+    notify(t('toast.outingRemoved', { name: pet?.name ?? '' }), () => actions.restoreOutings([o]));
   };
 
   const give = (r: Reminder) => {
@@ -297,6 +320,8 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
         onGive={give}
         onToggleMeal={toggleMeal}
         onToggleDose={(pet, c, slot, day) => toggleDose(pet, c, slot, day)}
+        onLogOuting={logOuting}
+        onUndoOuting={undoOuting}
         afterNeeds={<CalendarSuggestions suggestions={suggested.suggestions} now={now} onAdd={(m) => importEvents([m])} onDismiss={suggested.dismiss} />}
       />
     );
@@ -511,6 +536,43 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
                 }
               : undefined
           }
+        />
+      )}
+      {outing && (
+        <OutingDialog
+          outing={outing.outing}
+          pet={pets.find((p) => p.id === outing.petId)}
+          now={now}
+          onClose={() => setOuting(null)}
+          onSave={(input) => {
+            if (outing.outing) actions.updateOuting(outing.outing, input);
+            else {
+              const o = actions.logOuting(input);
+              notify(t('toast.outingLogged', { how: outingWhat(o), at: atTimeOf(o.at) }), () => actions.deleteOutings([o]));
+            }
+          }}
+          onDelete={
+            outing.outing
+              ? () => {
+                  const gone = outing.outing!;
+                  actions.deleteOutings([gone]);
+                  notify(t('toast.outingDeleted', { at: atTimeOf(gone.at) }), () => actions.restoreOutings([gone]));
+                }
+              : undefined
+          }
+        />
+      )}
+      {planFor && pets.some((p) => p.id === planFor) && (
+        <OutingPlanDialog
+          plan={store.data.outingPlans.find((p) => p.id === planFor)}
+          pet={pets.find((p) => p.id === planFor)!}
+          meals={store.data.meals}
+          onClose={() => setPlanFor(null)}
+          onSave={(input) => {
+            const pet = pets.find((p) => p.id === planFor)!;
+            const before = actions.saveOutingPlan(planFor, input);
+            notify(input.on ? t('toast.planSaved', { name: pet.name }) : t('toast.planOff', { name: pet.name }), () => actions.restoreOutingPlan(planFor, before));
+          }}
         />
       )}
       {course && (

@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { cancelReminders, localizeReminders, replaceReminders, type ReminderInput } from '@huishouden/pwa-kit/reminders';
 import { t } from '../i18n';
-import { birthdayRef, birthdayReminders, courseRef, courseReminders, mealReminders, mealsRef } from '../lib/notify';
+import { birthdayRef, birthdayReminders, courseRef, courseReminders, mealReminders, mealsRef, outingReminders, outingsRef } from '../lib/notify';
+import { householdRole, type Role } from '@huishouden/pwa-kit/roles';
 import { toYmd } from '@huishouden/pwa-kit/time';
 import type { PetHouseholdData } from '../lib/demo';
 import { db } from './firebase';
@@ -12,7 +13,18 @@ import { db } from './firebase';
  * day turns. Only refs whose reminders changed since the last write are rewritten, and refs whose
  * course or pet disappeared are cancelled.
  */
-export function useReminderSync(householdId: string, me: string, data: PetHouseholdData, ready: boolean, onError: (message: string) => void, restricted = false) {
+export function useReminderSync(
+  householdId: string,
+  me: string,
+  data: PetHouseholdData,
+  ready: boolean,
+  onError: (message: string) => void,
+  restricted = false,
+  household: { members: string[]; roles?: Record<string, Role> } = { members: [] },
+) {
+  // Outing reminders go to whoever may take a pet out: everyone but kids.
+  const outers = household.members.map((m) => m.toLowerCase()).filter((m) => householdRole(household, m) !== 'kid');
+  const outersKey = outers.join(',');
   const written = useRef(new Map<string, string>());
   const errorRef = useRef(onError);
   errorRef.current = onError;
@@ -29,9 +41,11 @@ export function useReminderSync(householdId: string, me: string, data: PetHouseh
       for (const p of data.pets) builders.set(mealsRef(p.id), () => mealReminders(p, data.meals, data.feedings, now));
       // Every pet, so a birthday removed or made approximate since the last open has its reminder cancelled.
       for (const p of data.pets) builders.set(birthdayRef(p.id), () => birthdayReminders(p, now));
+      for (const p of data.pets)
+        builders.set(outingsRef(p.id), () => outingReminders(p, data.outingPlans.find((x) => x.id === p.id), data.meals, data.outings, now, outers.length ? outers : 'all'));
       const jobs: Promise<unknown>[] = [];
       for (const [ref, build] of builders) {
-        const signature = JSON.stringify(build().map((r) => [r.id, r.at, r.title, r.body]));
+        const signature = JSON.stringify(build().map((r) => [r.id, r.at, r.title, r.body, r.recipients]));
         if (written.current.get(ref) === signature) continue;
         written.current.set(ref, signature);
         jobs.push(
@@ -51,5 +65,5 @@ export function useReminderSync(householdId: string, me: string, data: PetHouseh
       Promise.all(jobs).catch(() => errorRef.current(t('sync.notifications')));
     }, 2000);
     return () => clearTimeout(id);
-  }, [householdId, me, restricted, ready, day, data.courses, data.medDoses, data.pets, data.meals, data.feedings]);
+  }, [householdId, me, restricted, ready, day, data.courses, data.medDoses, data.pets, data.meals, data.feedings, data.outingPlans, data.outings, outersKey]);
 }
