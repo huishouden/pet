@@ -72,6 +72,9 @@ export type DoseStatus<D> =
 /** Whether a slot is handled: given, or skipped on purpose. Either way nothing more is due for it. */
 export const isHandled = (s: { state: string }) => s.state === 'given' || s.state === 'skipped';
 
+/** The id of the medicine dose a to-do's Given or Skip logs: one per course, day and slot. */
+export const todoMedDoseId = (courseId: string, day: string, slot: number) => `todo-${courseId}-${day}-${slot}`;
+
 /** The moment of a dose time ('HH:MM') on a day. */
 export function slotAt(time: string, day: Ymd): number {
   return mealAt(time, ymdToTime(day));
