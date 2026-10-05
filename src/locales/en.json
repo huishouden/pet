@@ -510,5 +510,6 @@
   "toast.outingDeleted": "Outing at {at} deleted",
   "toast.outingRemoved": "{name}'s outing undone",
   "toast.planSaved": "Outings saved for {name}",
-  "toast.planOff": "Outings off for {name}"
+  "toast.planOff": "Outings off for {name}",
+  "outings.underMin": "under the minimum"
 }

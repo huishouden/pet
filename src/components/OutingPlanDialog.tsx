@@ -10,6 +10,15 @@ import { isHhmm } from '@huishouden/pwa-kit/time';
 import { Checkbox, Chip, Dialog, Field, ghostButton, iconButton, inputClass, primaryButton, selectClass } from '@huishouden/pwa-kit/react/ui';
 import { useT } from '../i18n';
 
+/** The first whole hour from noon on (wrapping) not already in the list, for "Add a time". */
+function nextFreeHour(times: string[]): string {
+  for (let i = 0; i < 24; i++) {
+    const t = `${String((12 + i) % 24).padStart(2, '0')}:00`;
+    if (!times.includes(t)) return t;
+  }
+  return '12:00';
+}
+
 /**
  * A pet's outings: on or off; when (with its meals, at set times, or every few hours while the
  * household is up); the poops a day to expect and how many short days in a row before the vet hint;
@@ -40,11 +49,12 @@ export function OutingPlanDialog({ plan, pet, meals, onSave, onClose }: {
   const goal = walkGoal === '' ? 0 : Number(walkGoal);
   const validTimes = times.filter(isHhmm);
   const valid =
-    Number.isInteger(min) && min >= 0 && min <= OUTING_LIMITS.poopMin &&
+    !on || (Number.isInteger(min) && min >= 0 && min <= OUTING_LIMITS.poopMin &&
     Number.isInteger(days) && days >= 1 && days <= OUTING_LIMITS.flagDays &&
     Number.isInteger(goal) && goal >= 0 && goal <= OUTING_LIMITS.walkMin &&
     (mode !== 'times' || validTimes.length > 0) &&
-    (mode !== 'every' || (isHhmm(from) && isHhmm(to) && from < to));
+    (mode !== 'every' || (isHhmm(from) && isHhmm(to) && from < to)) &&
+    new Set(validTimes).size === validTimes.length);
 
   const save = () => {
     if (!valid) return;
@@ -118,7 +128,7 @@ export function OutingPlanDialog({ plan, pet, meals, onSave, onClose }: {
                   </div>
                 ))}
                 {times.length < OUTING_LIMITS.times && (
-                  <button type="button" className={`${ghostButton} -ml-2`} onClick={() => setTimes([...times, '12:00'])}>
+                  <button type="button" className={`${ghostButton} -ml-2`} onClick={() => setTimes([...times, nextFreeHour(times)])}>
                     <Plus size={18} /> {t('planDialog.addTime')}
                   </button>
                 )}

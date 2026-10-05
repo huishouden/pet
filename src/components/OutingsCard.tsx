@@ -89,9 +89,10 @@ export function OutingsCard({ pet, plan, meals, outings, me, now, managesPlan, o
               const under = i < days.length - 1 && underMinimum(d, plan?.poopMin);
               const met = !!plan?.poopMin && d.poops >= plan.poopMin;
               const tone = d.outings === 0 ? 'border border-dashed border-line text-muted' : under ? 'bg-attention-tint text-attention font-semibold' : met ? 'bg-primary text-on-primary font-semibold' : 'bg-tint text-link font-semibold';
-              const words = [formatDayShort(at), d.outings ? t('outings.poopsDay', { count: d.poops }) : t('outings.nothingLogged'), d.walkMin ? t('outings.walked', { minutes: d.walkMin }) : ''].filter(Boolean).join(', ');
+              const words = [formatDayShort(at), d.outings ? t('outings.poopsDay', { count: d.poops }) : t('outings.nothingLogged'), under ? t('outings.underMin') : '', d.walkMin ? t('outings.walked', { minutes: d.walkMin }) : ''].filter(Boolean).join(', ');
               return (
-                <li key={d.day} className="flex flex-col items-center gap-0.5" aria-label={words} title={words}>
+                <li key={d.day} className="flex flex-col items-center gap-0.5" title={words}>
+                  <span className="sr-only">{words}</span>
                   <span className="text-xs text-muted" aria-hidden="true">
                     {weekdayShort(at).slice(0, 2)}
                   </span>

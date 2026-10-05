@@ -120,7 +120,7 @@ export const outingSource = (petId: string, day: string, slot: string): Reminder
  * still to come and not logged, to `recipients` (the admins, members and helpers: whoever may be the
  * one taking the pet out). Walks never remind.
  */
-export function outingReminders(pet: Pick<Pet, 'id' | 'name'>, plan: OutingPlan | undefined, meals: Meal[], outings: Outing[], now: number, recipients: string[] | 'all' = 'all', days = 2): ReminderInput[] {
+export function outingReminders(pet: Pick<Pet, 'id' | 'name'>, plan: OutingPlan | undefined, meals: Meal[], outings: Outing[], now: number, recipients: string[] | 'all', days = 2): ReminderInput[] {
   if (!plan?.on || !plan.remind) return [];
   const out: ReminderInput[] = [];
   for (let d = 0; d < days; d++) {

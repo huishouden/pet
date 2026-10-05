@@ -491,7 +491,7 @@
   "planDialog.mealsHint": "Na elke maaltijd: {list}",
   "planDialog.noMeals": "{name} heeft nog geen maaltijden. Voeg ze toe bij Voeren, of kies vaste tijden.",
   "planDialog.timeN": "Tijd {n}",
-  "planDialog.removeTime": "Tijd {n} verwijderen",
+  "planDialog.removeTime": "Tijd {n} weghalen",
   "planDialog.addTime": "Tijd toevoegen",
   "planDialog.every": "Elke",
   "planDialog.hours": "{count, plural, one {# uur} other {# uur}}",
@@ -510,5 +510,6 @@
   "toast.outingDeleted": "Uitlaten van {at} verwijderd",
   "toast.outingRemoved": "Uitlaten van {name} ongedaan gemaakt",
   "toast.planSaved": "Uitlaten opgeslagen voor {name}",
-  "toast.planOff": "Uitlaten uit voor {name}"
+  "toast.planOff": "Uitlaten uit voor {name}",
+  "outings.underMin": "onder het minimum"
 }

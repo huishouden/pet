@@ -140,7 +140,7 @@ describe('what goes out of the app', () => {
         { doc: `petOutings/out-theo-${TODAY}-meal-theo-pm`, absent: true },
       ],
     });
-    expect(outingReminders(theo, { ...plan, remind: false }, meals, [], NOW)).toEqual([]);
+    expect(outingReminders(theo, { ...plan, remind: false }, meals, [], NOW, 'all')).toEqual([]);
   });
 
   test('agenda: today and tomorrow, done with how once logged', () => {
