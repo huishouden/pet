@@ -350,7 +350,7 @@
   "courseDialog.withFood": "Bij het eten",
   "courseDialog.newFor": "Kuur voor {name}",
   "courseDialog.new": "Kuur",
-  "courseDialog.scanIntro": "Maak een foto van het etiket van de apotheek of dierenarts. Het wordt op dit apparaat gelezen en niet bewaard.",
+  "courseDialog.scanIntro": "Maak een foto van het etiket van de apotheek of dierenarts, of kies een foto die je al hebt. Heeft het doosje een voor- en achterkant, kies dan beide foto’s tegelijk. Het wordt op dit apparaat gelezen en niet bewaard.",
   "courseDialog.medicinePlaceholder": "Antibioticum",
   "courseDialog.dosePlaceholder": "1 tablet",
   "courseDialog.howOften": "Hoe vaak",
