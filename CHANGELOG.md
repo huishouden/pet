@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.16.0](https://github.com/huishouden/pet/compare/v1.15.1...v1.16.0) (2026-10-04)
+
+
+### Features
+
+* **contacts:** the vet's distance from home on its card and appointments (kit 0.84.0) ([#63](https://github.com/huishouden/pet/issues/63)) ([f3cc077](https://github.com/huishouden/pet/commit/f3cc077699d0236ad215e9a7c8dd51be6641f20d))
+
 ## [1.15.1](https://github.com/huishouden/pet/compare/v1.15.0...v1.15.1) (2026-10-04)
 
 
