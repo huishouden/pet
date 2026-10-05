@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.19.3](https://github.com/huishouden/pet/compare/v1.19.2...v1.19.3) (2026-10-05)
+
+### Bug Fixes
+
+* Rebuild against the re-tagged kit ([b7d013c](https://github.com/huishouden/pet/commit/b7d013c3195e65cb0648e2e9d229e05405e27401))
+
 ## [1.19.2](https://github.com/huishouden/pet/compare/v1.19.1...v1.19.2) (2026-10-05)
 
 ### Changes
