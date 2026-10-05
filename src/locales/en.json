@@ -511,5 +511,6 @@
   "toast.outingRemoved": "{name}'s outing undone",
   "toast.planSaved": "Outings saved for {name}",
   "toast.planOff": "Outings off for {name}",
-  "outings.underMin": "under the minimum"
+  "outings.underMin": "under the minimum",
+  "planDialog.duplicateTime": "Two times are the same. Change or remove one."
 }

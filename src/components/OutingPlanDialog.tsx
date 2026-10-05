@@ -48,13 +48,14 @@ export function OutingPlanDialog({ plan, pet, meals, onSave, onClose }: {
   const days = Number(flagDays);
   const goal = walkGoal === '' ? 0 : Number(walkGoal);
   const validTimes = times.filter(isHhmm);
+  const duplicate = new Set(validTimes).size !== validTimes.length;
   const valid =
     !on || (Number.isInteger(min) && min >= 0 && min <= OUTING_LIMITS.poopMin &&
     Number.isInteger(days) && days >= 1 && days <= OUTING_LIMITS.flagDays &&
     Number.isInteger(goal) && goal >= 0 && goal <= OUTING_LIMITS.walkMin &&
     (mode !== 'times' || validTimes.length > 0) &&
     (mode !== 'every' || (isHhmm(from) && isHhmm(to) && from < to)) &&
-    new Set(validTimes).size === validTimes.length);
+    !duplicate);
 
   const save = () => {
     if (!valid) return;
@@ -118,6 +119,8 @@ export function OutingPlanDialog({ plan, pet, meals, onSave, onClose }: {
                       type="time"
                       value={time}
                       aria-label={t('planDialog.timeN', { n: i + 1 })}
+                      aria-invalid={duplicate && times.indexOf(time) !== i ? true : undefined}
+                      aria-describedby={duplicate ? 'outing-times-error' : undefined}
                       onChange={(e) => setTimes(times.map((x, j) => (j === i ? e.target.value : x)))}
                     />
                     {times.length > 1 && (
@@ -127,6 +130,11 @@ export function OutingPlanDialog({ plan, pet, meals, onSave, onClose }: {
                     )}
                   </div>
                 ))}
+                {duplicate && (
+                  <p id="outing-times-error" className="text-base text-error" role="alert">
+                    {t('planDialog.duplicateTime')}
+                  </p>
+                )}
                 {times.length < OUTING_LIMITS.times && (
                   <button type="button" className={`${ghostButton} -ml-2`} onClick={() => setTimes([...times, nextFreeHour(times)])}>
                     <Plus size={18} /> {t('planDialog.addTime')}

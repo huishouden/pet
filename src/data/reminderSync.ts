@@ -42,7 +42,7 @@ export function useReminderSync(
       // Every pet, so a birthday removed or made approximate since the last open has its reminder cancelled.
       for (const p of data.pets) builders.set(birthdayRef(p.id), () => birthdayReminders(p, now));
       for (const p of data.pets)
-        builders.set(outingsRef(p.id), () => outingReminders(p, data.outingPlans.find((x) => x.id === p.id), data.meals, data.outings, now, outers.length ? outers : 'all'));
+        builders.set(outingsRef(p.id), () => (outers.length ? outingReminders(p, data.outingPlans.find((x) => x.id === p.id), data.meals, data.outings, now, outers) : []));
       const jobs: Promise<unknown>[] = [];
       for (const [ref, build] of builders) {
         const signature = JSON.stringify(build().map((r) => [r.id, r.at, r.title, r.body, r.recipients]));

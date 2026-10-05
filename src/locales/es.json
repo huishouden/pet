@@ -511,5 +511,6 @@
   "toast.outingRemoved": "Salida de {name} deshecha",
   "toast.planSaved": "Salidas guardadas para {name}",
   "toast.planOff": "Salidas desactivadas para {name}",
-  "outings.underMin": "por debajo del mínimo"
+  "outings.underMin": "por debajo del mínimo",
+  "planDialog.duplicateTime": "Hay dos horas iguales. Cambia o quita una."
 }

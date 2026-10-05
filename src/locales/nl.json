@@ -511,5 +511,6 @@
   "toast.outingRemoved": "Uitlaten van {name} ongedaan gemaakt",
   "toast.planSaved": "Uitlaten opgeslagen voor {name}",
   "toast.planOff": "Uitlaten uit voor {name}",
-  "outings.underMin": "onder het minimum"
+  "outings.underMin": "onder het minimum",
+  "planDialog.duplicateTime": "Twee tijden zijn hetzelfde. Wijzig of haal er een weg."
 }
