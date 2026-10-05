@@ -143,7 +143,7 @@ test('an admin turns outings on; a helper logs the AM outing, and the admin sees
       await dialog.getByRole('button', { name: 'Save' }).click();
     }
     await expect(card).toContainText('at least 2 poops a day');
-    await admin.getByRole('button', { name: 'Today', exact: true }).click();
+    await admin.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Today' }).click();
   }
   await expect(outings(admin)).toBeVisible({ timeout: 20_000 });
 
@@ -161,7 +161,7 @@ test('an admin turns outings on; a helper logs the AM outing, and the admin sees
   await openPet(helper);
   await expect(helper.getByRole('button', { name: `Outing settings for ${PET}` })).toHaveCount(0);
 
-  await admin.getByRole('button', { name: 'Today', exact: true }).click();
+  await admin.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Today' }).click();
   await expect(outings(admin).locator('[data-completion=done]').first()).toContainText('Pooped', { timeout: 20_000 });
   await expect(outings(admin).locator('[data-completion=done]').first()).not.toContainText('You');
 });
