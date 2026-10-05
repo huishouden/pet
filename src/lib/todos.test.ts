@@ -76,7 +76,7 @@ describe('what Pet publishes', () => {
 
   test('Given for admins, members and helpers; never kids (a dose log). Dismiss for admins, members and whoever added it', () => {
     const flea = refs.get('reminder:demo-rem-1')!;
-    expect(flea.done).toMatchObject({ label: 'Given', roles: ['admin', 'member', 'helper'] });
+    expect(flea.done).toMatchObject({ label: 'Give', roles: ['admin', 'member', 'helper'] });
     expect(flea.cancel).toMatchObject({ label: 'Dismiss', roles: ['admin', 'member'], owner: true });
     const item = stored(flea);
     expect(canDo(item, 'done', 'helper', ME)).toBe(true);
@@ -86,16 +86,16 @@ describe('what Pet publishes', () => {
     expect(canDo(item, 'cancel', 'member', ME)).toBe(true);
   });
 
-  test('an "Other" reminder says Done', () => {
+  test('an "Other" reminder says Mark done', () => {
     const r: Reminder = { ...data.reminders[0], id: 'r-walk', kind: 'other', title: 'Nail trim', due: TODAY };
-    expect(reminderTodo(r, data.pets, DEMO_NOW, ORIGIN)?.done?.label).toBe('Done');
+    expect(reminderTodo(r, data.pets, DEMO_NOW, ORIGIN)?.done?.label).toBe('Mark done');
   });
 
   test('a dose: "Antibiotic for Biscuit", the dose and its time, due at its time, added with the course', () => {
     const course = data.courses.find((c) => c.id === 'demo-course-1')!;
     const morning = refs.get(`dose:demo-course-1:${TODAY}:0`)!;
     expect(morning).toMatchObject({ title: 'Antibiotic for Biscuit', detail: '1 tablet · 9:00 AM', who: 'Biscuit', createdAt: course.createdAt, due: slotAt('09:00', TODAY) });
-    expect(morning.done?.label).toBe('Given');
+    expect(morning.done?.label).toBe('Give');
     expect(morning.cancel?.label).toBe('Skip');
   });
 

@@ -5,17 +5,17 @@ import { courseHistory, courseText, progress, slotAt, slotMealName } from '../li
 import { mealsOf } from '../lib/feeding';
 import { formatClock } from '../lib/format';
 import { personName } from '@huishouden/pwa-kit/people';
-import { atClock, formatTime, longDate, toYmd, type Ymd, isHhmm, toHhmm } from '@huishouden/pwa-kit/time';
-import { Dialog, ghostButton, inputClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
+import { formatTime, longDate, toYmd, type Ymd, isHhmm, toHhmm } from '@huishouden/pwa-kit/time';
+import { Dialog, doneLine, ghostButton, inputClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 import { Tile } from './FeedingBoard';
 import { useT } from '../i18n';
 import { capitalize } from '@huishouden/pwa-kit/i18n';
 
 /**
- * A medicine course day by day, from its first day through today: each dose as a toggle like the
- * board's. Earlier days can be ticked (logged at the dose's time that day) and a given dose's time
+ * A medicine course day by day, from its first day through today: each dose as a tile like the
+ * board's (Give while open; who and when, with Undo, once given). Earlier days can be ticked (logged at the dose's time that day) and a given dose's time
  * changed; doses not given on earlier days say "Missed". A dose can be skipped instead (handled,
- * not given: "Skipped"); a tap on a skipped one undoes the skip.
+ * not given: "Skipped"); its Undo undoes the skip.
  */
 export function DoseLogDialog({ course, pet, meals, medDoses, me, now, onToggle, onSkip, onMove, onClose }: {
   course: Course;
@@ -79,22 +79,19 @@ export function DoseLogDialog({ course, pet, meals, medDoses, me, now, onToggle,
                   return (
                     <div key={slot} className="min-w-0">
                       <Tile
-                        done={given}
-                        late={missed}
+                        state={given ? 'done' : skipped ? 'skipped' : missed ? 'late' : 'open'}
                         compact
-                        icon={<Pill size={20} className="shrink-0" aria-hidden="true" />}
+                        icon={<Pill size={20} className="shrink-0 text-link" aria-hidden="true" />}
                         title={course.times.length > 1 ? slotName : t('courseDialog.dose')}
-                        detail={given ? `${formatTime(status.at)} · ${who(status.dose.by)}` : skipped ? t('board.skippedBy', { who: who(status.dose.by) }) : missed ? t('board.missed') : t('board.byTime', { time: formatTime(status.at) })}
-                        label={
-                          given
-                            ? t('board.givenLabel', { what: subject(title, day), at: atClock(toHhmm(status.at)), who: who(status.dose.by) })
-                            : skipped
-                              ? t('board.skippedLabel', { what: subject(title, day), who: who(status.dose.by) })
-                              : missed
-                                ? t('board.missedYesterdayLabel', { what: subject(title, day) })
-                                : t('doseLog.notYetLabel', { what: subject(title, day) })
-                        }
-                        onClick={() => {
+                        verb={t('done.give')}
+                        detail={given ? t('done.givenByAt', { name: who(status.dose.by), at: formatTime(status.at) }) : skipped ? doneLine({ by: who(status.dose.by), at: formatTime(status.at), skipped: true }) : missed ? t('board.missed') : t('board.byTime', { time: formatTime(status.at) })}
+                        label={t('done.giveName', { name: subject(title, day) })}
+                        undoLabel={t(skipped ? 'done.undoSkipped' : 'done.undoGiven', { name: subject(title, day) })}
+                        onDo={() => {
+                          setEditing(null);
+                          onToggle(slot, day);
+                        }}
+                        onUndo={() => {
                           setEditing(null);
                           onToggle(slot, day);
                         }}

@@ -4,17 +4,20 @@ test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime('2031-05-14T10:30:00');
 });
 
-test('Today leads with what is overdue, and Given moves it on with an undo', async ({ page }) => {
+test('Today leads with what is overdue, and Give moves it on with an undo', async ({ page }) => {
   await page.goto('./');
   const needs = page.getByRole('region', { name: 'Needs doing' });
   await expect(needs.getByRole('listitem').first()).toContainText('Flea and tick for Biscuit');
   await expect(needs.getByRole('listitem').first()).toContainText('Overdue by 2 days');
   await expect(page.getByRole('region', { name: 'Coming up' }).getByText('Heartworm prevention due in 3 days')).toBeVisible();
-  await needs.getByRole('button', { name: 'Given: Flea and tick for Biscuit' }).click();
+  const give = needs.getByRole('button', { name: 'Give: Flea and tick for Biscuit' });
+  await give.click();
   await expect(page.getByText(/Flea and tick given to Biscuit\. Next due .*Jun 14/)).toBeVisible();
-  await expect(needs.getByText('Flea and tick for Biscuit')).toHaveCount(0);
+  await expect(give).toHaveCount(0);
+  await expect(needs.locator('li[data-completion=done]').filter({ hasText: 'Flea and tick for Biscuit' })).toContainText('Given by You · 10:30 AM');
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await expect(needs.getByText('Flea and tick for Biscuit')).toBeVisible();
+  await expect(give).toBeVisible();
+  await expect(needs.locator('li[data-completion=done]').filter({ hasText: 'Flea and tick' })).toHaveCount(0);
 });
 
 test('Care groups reminders by when they are due, filtered by pet', async ({ page }) => {
@@ -69,18 +72,19 @@ test('a dismissed reminder stops being due, shows as Dismissed in Care, and Rest
   await expect(page.getByRole('region', { name: 'Overdue' })).toContainText('Flea and tick');
 });
 
-test('a skipped dose is handled, not given, and a tap undoes the skip', async ({ page }) => {
+test('a skipped dose is handled, not given, and its Undo undoes the skip', async ({ page }) => {
   await page.goto('./');
   await page.getByRole('region', { name: 'Needs doing' }).getByRole('button', { name: /^Antibiotic for Biscuit, .*Open$/ }).click();
   const log = page.getByRole('dialog', { name: 'Antibiotic: doses by day' });
   await log.getByRole('button', { name: 'Skip Antibiotic AM today' }).click();
   await expect(page.getByText('Biscuit Antibiotic: skipped')).toBeVisible();
-  const am = log.getByRole('button', { name: /^Biscuit Antibiotic AM today: skipped by You/ });
+  const am = log.getByRole('button', { name: 'Undo skip for Biscuit Antibiotic AM today' });
   await expect(am).toBeVisible();
+  await expect(log).toContainText('Skipped by You · 10:30 AM');
   await expect(log).toContainText('4 of 14 doses given');
   await am.click();
   await expect(page.getByText('Biscuit Antibiotic: not skipped')).toBeVisible();
-  await expect(log.getByRole('button', { name: /^Biscuit Antibiotic AM today: (not yet|missed)/ })).toBeVisible();
+  await expect(log.getByRole('button', { name: 'Give Biscuit Antibiotic AM today' })).toBeVisible();
   await log.getByRole('button', { name: 'Skip Antibiotic AM today' }).click();
   await log.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByRole('region', { name: 'Needs doing' }).getByRole('button', { name: /^Antibiotic for Biscuit, .*Open$/ })).toHaveCount(0);

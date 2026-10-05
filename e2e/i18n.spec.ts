@@ -6,7 +6,7 @@ import nl from '../src/locales/nl.json' with { type: 'json' };
 // The signed-out sample pets in Spanish and Dutch: Pet's own chrome and the kit's, no English left.
 // Pet, reminder, medicine and meal names are sample data and stay as entered.
 const fixedTime = '2031-05-14T10:30:00';
-const ENGLISH = ['Needs doing', 'Later today', 'Coming up', 'Feeding and medicine', 'Yesterday', 'Appointments', 'Care', 'Contacts', 'past due', 'Not fed yet', 'Given', 'Fed'];
+const ENGLISH = ['Needs doing', 'Later today', 'Coming up', 'Feeding and medicine', 'Yesterday', 'Appointments', 'Care', 'Contacts', 'past due', 'Not fed yet', 'Give', 'Feed', 'Mark done', 'Undo'];
 
 for (const [lang, messages] of [
   ['es', es],
@@ -35,6 +35,6 @@ test('a dose given from Needs doing says the time the Dutch way', async ({ page 
   await useLanguage(page, 'nl');
   await page.goto('./', { waitUntil: 'networkidle' });
   const needs = page.getByRole('region', { name: nl['needs.title'] });
-  await needs.getByRole('button', { name: /^Gegeven: Antibiotic/ }).click();
+  await needs.getByRole('button', { name: /^Geven: Antibiotic/ }).click();
   await expect(page.getByText(/gegeven om 10:30/i).first()).toBeVisible();
 });

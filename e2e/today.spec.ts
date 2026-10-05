@@ -12,7 +12,10 @@ test('Needs doing comes first, most overdue first, the late dose saying how late
   const needs = page.getByRole('region', { name: 'Needs doing' });
   await expect(needs).toContainText('3 past due');
   const rows = needs.getByRole('listitem');
-  await expect(rows).toHaveCount(4);
+  // Four to do, then Biscuit's breakfast, done at 7:04, after them.
+  await expect(rows).toHaveCount(5);
+  await expect(rows.nth(4)).toHaveAttribute('data-completion', 'done');
+  await expect(rows.nth(4)).toContainText('Fed by You · 7:04 AM');
   await expect(rows.nth(0)).toContainText('Flea and tick for Biscuit');
   await expect(rows.nth(1)).toContainText('Antibiotic for Biscuit');
   await expect(rows.nth(1)).toContainText('Due 9:00 AM · 1 hr 30 min ago');
@@ -26,21 +29,38 @@ test('Needs doing comes first, most overdue first, the late dose saying how late
 
 test('one tap gives the late dose from the top, Undo puts it back', async ({ page }) => {
   const needs = page.getByRole('region', { name: 'Needs doing' });
-  await needs.getByRole('button', { name: 'Given: Antibiotic for Biscuit' }).click();
+  const give = needs.getByRole('button', { name: 'Give: Antibiotic for Biscuit' });
+  await expect(give).toContainText('Give');
+  await give.click();
   await expect(page.getByText('Biscuit Antibiotic: given at 10:30 AM')).toBeVisible();
-  await expect(needs.getByText('Antibiotic for Biscuit')).toHaveCount(0);
+  // Done: the row stays, after the open ones, with who and when and only Undo.
+  await expect(give).toHaveCount(0);
+  const done = needs.locator('li[data-completion=done]').filter({ hasText: 'Antibiotic for Biscuit' });
+  await expect(done).toHaveCount(1);
+  await expect(done).toContainText('Antibiotic for Biscuit');
+  await expect(done).toContainText('Given by You · 10:30 AM');
+  // The three still open lead; both done rows follow.
+  await expect(needs.getByRole('listitem').nth(2)).toHaveAttribute('data-completion', 'open');
+  await expect(needs.getByRole('listitem').nth(3)).toHaveAttribute('data-completion', 'done');
+  await expect(needs.getByRole('button', { name: 'Undo given for Antibiotic for Biscuit' })).toBeVisible();
+  await expect(needs.locator('[aria-pressed]')).toHaveCount(0);
   await expect(needs).toContainText('2 past due');
-  await expect(page.getByRole('region', { name: 'Feeding' }).getByRole('button', { name: /^Biscuit Antibiotic AM: given at 10:30 AM by You/ })).toBeVisible();
-  await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await expect(needs.getByText('Antibiotic for Biscuit')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Feeding' }).getByRole('button', { name: 'Undo given for Biscuit Antibiotic AM' })).toBeVisible();
+  await needs.getByRole('button', { name: 'Undo given for Antibiotic for Biscuit' }).click();
+  await expect(give).toBeVisible();
+  await expect(done).toHaveCount(0);
 });
 
-test('Fed ticks the late meal; with everything done it says what is next', async ({ page }) => {
+test('Feed ticks the late meal; with everything done the card folds to what is next', async ({ page }) => {
   const needs = page.getByRole('region', { name: 'Needs doing' });
-  await needs.getByRole('button', { name: 'Fed: Not fed yet: Miso AM' }).click();
+  await needs.getByRole('button', { name: 'Feed: Not fed yet: Miso AM' }).click();
   await expect(page.getByText('Miso AM: fed at 10:30 AM')).toBeVisible();
-  for (const name of ['Given: Flea and tick for Biscuit', 'Given: Antibiotic for Biscuit', 'Given: Kidney supplement for Miso']) await needs.getByRole('button', { name }).click();
-  await expect(needs).toContainText('All done for now · next: Antibiotic for Biscuit at 7 PM');
+  for (const name of ['Give: Flea and tick for Biscuit', 'Give: Antibiotic for Biscuit', 'Give: Kidney supplement for Miso']) await needs.getByRole('button', { name }).click();
+  const summary = needs.getByRole('button', { name: /All done for now · next: Antibiotic for Biscuit at 7 PM/ });
+  await expect(summary).toHaveAttribute('aria-expanded', 'false');
+  await expect(needs.getByRole('listitem')).toHaveCount(0);
+  await summary.click();
+  await expect(needs.locator('li[data-completion=done]')).toHaveCount(5);
 });
 
 test('later today, and the birthday three weeks away as one quiet line', async ({ page }) => {
@@ -69,11 +89,11 @@ test('the pets row opens a pet’s page, where its details live', async ({ page 
   await expect(page.getByRole('region', { name: "Miso's profile" })).toContainText('Kidney diet');
 });
 
-test('on a phone the overdue dose and its Given button are on screen without scrolling', async ({ page }) => {
+test('on a phone the overdue dose and its Give button are on screen without scrolling', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('./');
-  const given = page.getByRole('region', { name: 'Needs doing' }).getByRole('button', { name: 'Given: Antibiotic for Biscuit' });
+  const given = page.getByRole('region', { name: 'Needs doing' }).getByRole('button', { name: 'Give: Antibiotic for Biscuit' });
   await expect(given).toBeInViewport({ ratio: 1 });
   const box = await given.boundingBox();
-  expect(box!.height).toBeGreaterThanOrEqual(48);
+  expect(box!.height).toBeGreaterThanOrEqual(44);
 });

@@ -3,9 +3,9 @@
 // up (care due soon, visits, birthdays). Pure: every function takes `now`.
 
 import { MINUTE, atClock, daysBetween, dueText, formatTime, parseYmd, relativeDay, startOfDay, toHhmm, toYmd } from '@huishouden/pwa-kit/time';
-import type { Appointment, Course, Feeding, Meal, MedDose, Pet, Reminder } from './model';
-import { dosesOn, isHandled } from './courses';
-import { mealsOn } from './feeding';
+import type { Appointment, Course, Dose, Feeding, Meal, MedDose, Pet, Reminder } from './model';
+import { dosesOn, isHandled, slotAt } from './courses';
+import { mealAt, mealsOn } from './feeding';
 import { dueState, headline } from './schedule';
 import { birthdayCountdown, birthdayLine, turnsOn, type BirthdayCountdown } from './birthday';
 import { petNames } from './pets';
@@ -19,6 +19,8 @@ export interface TodayData {
   medDoses: MedDose[];
   reminders: Reminder[];
   appointments: Appointment[];
+  /** Care doses given (who gave a reminder's dose today); optional for callers without them. */
+  doses?: Pick<Dose, 'reminderId' | 'at' | 'by'>[];
 }
 
 /** A dose or meal this close to its time is already "needs doing". */
@@ -35,8 +37,10 @@ interface NeedBase {
   late: boolean;
   /** The moment it became due, for the order. */
   since: number;
-  /** The one-tap action: "Given", "Fed" or "Done" (`needActionLabel`). */
+  /** The one-tap action: "Give", "Feed" or "Mark done" (`needActionLabel`). */
   action: 'given' | 'fed' | 'done';
+  /** Done today: who and when (`doneNow`); absent while it still needs doing. */
+  done?: { by: string; at: number; skipped?: boolean };
 }
 
 export type Need =
@@ -72,8 +76,8 @@ export function timedWhen(at: number, now: number): string {
 /** "Flea and tick for Biscuit": what to do and for whom. */
 export const forPet = (what: string, name: string | undefined) => (name ? t('today.forPet', { what: what.trim(), name }) : what.trim());
 
-/** A need's one-tap button in the active language. */
-export const needActionLabel = (action: Need['action']) => t(action === 'fed' ? 'today.fed' : action === 'given' ? 'today.given' : 'common.done');
+/** A need's one-tap verb in the active language: "Give", "Feed"; `undefined` for the kit's "Mark done". */
+export const needActionLabel = (action: Need['action']): string | undefined => (action === 'fed' ? t('done.feed') : action === 'given' ? t('done.give') : undefined);
 
 const nameOf = (pets: Pick<Pet, 'id' | 'name'>[], id: string) => pets.find((p) => p.id === id)?.name;
 
@@ -107,6 +111,38 @@ export function needsDoing(data: TodayData, pets: Pet[], now: number): Need[] {
     out.push({ kind: 'care', key: `care:${r.id}`, petId: r.petId, reminder: r, title: forPet(r.title, name), when: dueText(r.due, today), late: state === 'overdue', since: parseYmd(r.due) ?? startOfDay(now), action: r.kind === 'other' ? 'done' : 'given' });
   }
   return out.sort((a, b) => Number(b.late) - Number(a.late) || a.since - b.since || compareText(a.title, b.title));
+}
+
+/**
+ * What was done today of the things "Needs doing" lists: doses given or skipped and meals fed whose
+ * time has come (as `needsDoing` would have shown them), and care reminders given today. Each carries
+ * who did it and when, for the done rows that sort after the open ones. Oldest first.
+ */
+export function doneNow(data: TodayData, pets: Pet[], now: number): Need[] {
+  const today = toYmd(now);
+  const soon = now + DUE_NOW_MINUTES * MINUTE;
+  const out: Need[] = [];
+  for (const pet of pets) {
+    for (const c of data.courses.filter((x) => x.petId === pet.id)) {
+      for (const { slot, time, status } of dosesOn(c, data.medDoses, today, now)) {
+        if ((status.state !== 'given' && status.state !== 'skipped') || slotAt(time, today) > soon) continue;
+        const since = slotAt(time, today);
+        out.push({ kind: 'dose', key: `dose:${c.id}:${slot}`, petId: pet.id, course: c, slot, title: forPet(c.name, pet.name), when: formatTime(since), late: false, since, action: 'given', done: { by: status.dose.by, at: status.at, skipped: status.state === 'skipped' } });
+      }
+    }
+    for (const { meal, status } of mealsOn(data.meals, data.feedings, pet.id, now, now)) {
+      const since = mealAt(meal.time, now);
+      if (status.state !== 'fed' || since > soon) continue;
+      out.push({ kind: 'meal', key: `meal:${meal.id}`, petId: pet.id, meal, title: t('today.petMeal', { pet: pet.name, meal: meal.name }), when: formatTime(since), late: false, since, action: 'fed', done: { by: status.feeding.by, at: status.at } });
+    }
+  }
+  for (const r of data.reminders) {
+    const name = nameOf(pets, r.petId);
+    if (!name || r.lastDoneAt === undefined || toYmd(r.lastDoneAt) !== today) continue;
+    const dose = (data.doses ?? []).filter((d) => d.reminderId === r.id && toYmd(d.at) === today).sort((a, b) => b.at - a.at)[0];
+    out.push({ kind: 'care', key: `care:${r.id}`, petId: r.petId, reminder: r, title: forPet(r.title, name), when: '', late: false, since: r.lastDoneAt, action: r.kind === 'other' ? 'done' : 'given', done: { by: dose?.by ?? r.by, at: dose?.at ?? r.lastDoneAt } });
+  }
+  return out.sort((a, b) => a.since - b.since || compareText(a.title, b.title));
 }
 
 export interface LaterItem {

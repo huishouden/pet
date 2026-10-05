@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { formatTime } from '@huishouden/pwa-kit/time';
 import { DEMO_NOW, demoData } from './demo';
 import { sortPets } from './pets';
-import { allDoneLine, birthdaysToday, celebrationLine, celebrationTitle, comingUp, laterToday, needsDoing, sinceWords, timedWhen, untilWords, type TodayData } from './today';
+import { allDoneLine, birthdaysToday, celebrationLine, celebrationTitle, comingUp, doneNow, laterToday, needsDoing, sinceWords, timedWhen, untilWords, type TodayData } from './today';
 import type { Pet } from './model';
 
 // The sample morning: Wednesday 14 May 2031, 10:30.
@@ -40,6 +40,13 @@ describe('needs doing', () => {
       reminders: demo.reminders.map((r) => (r.id === 'demo-rem-1' ? { ...r, due: '2031-06-14', lastDoneAt: DEMO_NOW } : r)),
     };
     expect(needsDoing(data, pets, DEMO_NOW).map((n) => n.title)).toEqual(['Kidney supplement for Miso']);
+    const done = doneNow({ ...data, doses: [{ reminderId: 'demo-rem-1', at: DEMO_NOW, by: 'jo@example.com' }] }, pets, DEMO_NOW);
+    const byKey = Object.fromEntries(done.map((n) => [n.key, [n.title, n.done?.by]]));
+    expect(byKey['dose:demo-course-1:0']).toEqual(['Antibiotic for Biscuit', 'sam@example.com']);
+    expect(byKey['meal:demo-pet-miso-am']).toEqual([expect.not.stringContaining('Not fed yet'), 'sam@example.com']);
+    expect(byKey['care:demo-rem-1']).toEqual(['Flea and tick for Biscuit', 'jo@example.com']);
+    expect(done.every((n) => n.done && !n.late)).toBe(true);
+    expect(done.some((n) => n.title.startsWith('Not fed yet'))).toBe(false);
   });
 
   test('a reminder for a removed pet is left out; a one-off "other" is Done, not Given', () => {

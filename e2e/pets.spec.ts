@@ -33,8 +33,8 @@ test('adding a pet gives it an AM and PM board; removing it can be undone', asyn
   await dialog.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('region', { name: "Pip's profile" })).toContainText('Rabbit');
   await page.getByRole('button', { name: 'Today', exact: true }).click();
-  await expect(page.getByRole('button', { name: /^Pip AM: not fed yet/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: /^Pip PM: not yet/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Feed Pip AM' })).toContainText('Not fed yet');
+  await expect(page.getByRole('button', { name: 'Feed Pip PM' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Pets', exact: true }).click();
   await page.getByRole('button', { name: 'Miso', exact: true }).click();
