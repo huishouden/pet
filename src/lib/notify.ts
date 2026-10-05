@@ -10,6 +10,7 @@ import { fedTodayFor, mealAt, mealsOf } from './feeding';
 import { addDays, startOfDay, toYmd } from '@huishouden/pwa-kit/time';
 import { birthdayReminder } from './birthday';
 import { t } from '../i18n';
+import { COLLECTIONS } from '../data/types';
 
 export const APP = 'pet';
 /** Pet's path on the suite's one site (pwa-kit docs/one-site.md); bun tests have no Vite env. */
@@ -35,16 +36,16 @@ export function doseSource(course: Pick<Course, 'id' | 'times'>, at: number): Re
   const day = toYmd(at);
   const slot = course.times.findIndex((time) => slotAt(time, day) === at);
   return {
-    checks: [{ doc: `petMedCourses/${course.id}` }, ...(slot >= 0 ? [{ doc: `petMedDoses/${todoMedDoseId(course.id, day, slot)}`, absent: true as const }] : [])],
+    checks: [{ doc: `${COLLECTIONS.courses}/${course.id}` }, ...(slot >= 0 ? [{ doc: `${COLLECTIONS.medDoses}/${todoMedDoseId(course.id, day, slot)}`, absent: true as const }] : [])],
   };
 }
 
 /** What a meal reminder is about: the meal, still on the pet's schedule. */
-export const mealSource = (mealId: string): ReminderSource => ({ checks: [{ doc: `petMeals/${mealId}` }] });
+export const mealSource = (mealId: string): ReminderSource => ({ checks: [{ doc: `${COLLECTIONS.meals}/${mealId}` }] });
 
 /** What a birthday reminder is about: the pet, with that exact birth date. */
 export const birthdaySource = (pet: Pick<Pet, 'id' | 'birthDate'>): ReminderSource => ({
-  checks: [{ doc: `petProfiles/${pet.id}`, due: [{ field: 'birthDate', in: [pet.birthDate ?? null] }, { field: 'birthDateApprox', notIn: [true] }] }],
+  checks: [{ doc: `${COLLECTIONS.pets}/${pet.id}`, due: [{ field: 'birthDate', in: [pet.birthDate ?? null] }, { field: 'birthDateApprox', notIn: [true] }] }],
 });
 
 /**
