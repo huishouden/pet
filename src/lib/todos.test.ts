@@ -49,7 +49,7 @@ describe('what Pet publishes', () => {
 
   test('care due today or overdue, and today’s doses not yet given; nothing coming up later, given, finished or dismissed', () => {
     expect([...refs.keys()].sort()).toEqual(
-      ['dose:demo-course-1:' + TODAY + ':0', 'dose:demo-course-1:' + TODAY + ':1', 'reminder:demo-rem-1', 'reminder:demo-rem-3'].sort(),
+      ['dose:demo-course-1:' + TODAY + ':0', 'dose:demo-course-1:' + TODAY + ':1', 'reminder:demo-rem-1', 'reminder:demo-rem-3', 'outing:demo-pet-biscuit:meal-demo-pet-biscuit-pm:' + TODAY].sort(),
     );
     // Heartworm is due in 3 days, the ear drops (a one-off) were given, brushing was dismissed.
     for (const id of ['demo-rem-2', 'demo-rem-9', 'demo-rem-10']) expect(refs.has(`reminder:${id}`)).toBe(false);

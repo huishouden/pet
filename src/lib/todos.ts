@@ -8,16 +8,17 @@ import type { Role } from '@huishouden/pwa-kit/roles';
 import type { Op } from '@huishouden/pwa-kit/store';
 import type { TodoAction, TodoInput } from '@huishouden/pwa-kit/todos';
 import { formatTime, parseYmd, toYmd } from '@huishouden/pwa-kit/time';
-import type { Course, MedDose, Pet, Reminder } from './model';
+import type { Course, Meal, MedDose, Outing, OutingPlan, Pet, Reminder } from './model';
+import { outingId, slotsOn, takeOut, type OutingSlot } from './outings';
 import { LIMITS } from './model';
 import { dosesOn, slotAt, todoMedDoseId } from './courses';
 import { dueState, isRecurring, type Unit } from './schedule';
-import { forPet, reminderRef, doseRef, tabUrl, type AgendaData } from './agenda';
+import { forPet, reminderRef, doseRef, outingRef, tabUrl, type AgendaData } from './agenda';
 import { APP_ORIGIN } from './notify';
 import { COLLECTIONS } from '../data/types';
 import { t } from '../i18n';
 
-export type TodoData = Pick<AgendaData, 'pets' | 'reminders' | 'courses' | 'medDoses'>;
+export type TodoData = Pick<AgendaData, 'pets' | 'reminders' | 'courses' | 'medDoses' | 'outingPlans' | 'outings' | 'meals'>;
 
 const STAFF: Role[] = ['admin', 'member'];
 // Given logs a dose in petDoses, which the rules never let a kid write, whatever the reminder's kind
@@ -115,6 +116,37 @@ export function doseTodos(c: Course, medDoses: MedDose[], pets: Pick<Pet, 'id' |
     });
 }
 
+/** Anyone in the household may take a pet out and log it, kids too (the rules let them add their own). */
+const OUTERS: Role[] = ['admin', 'member', 'helper', 'kid'];
+
+/**
+ * Logging a scheduled outing from the to-do list, as Pet's own buttons: the outing for that slot and
+ * day (`outingId`, so the reminder for it is cancelled and a second tap writes the same one), now,
+ * by whoever taps. Done is "Pooped", Cancel "Pee only".
+ */
+export function outingOps(petId: string, day: string, slot: OutingSlot, poop: boolean): Op[] {
+  return [{ col: COLLECTIONS.outings, id: outingId(petId, day, slot.key), data: { petId, slot: slot.key, at: '$now', pee: true, poop, by: '$me', createdAt: '$now' } }];
+}
+
+/** Today's scheduled outings for a pet not yet logged, each with Pooped and Pee only. */
+export function outingTodos(pet: Pick<Pet, 'id' | 'name'>, plan: OutingPlan | undefined, meals: Meal[], outings: Outing[], now: number, origin = APP_ORIGIN): TodoInput[] {
+  if (!plan?.on) return [];
+  const day = toYmd(now);
+  return slotsOn(plan, meals, outings, now, now)
+    .filter(({ status }) => status.state !== 'done')
+    .map(({ slot, status }) => ({
+      ref: outingRef(pet.id, slot.key, day),
+      title: takeOut(pet.name, slot),
+      detail: formatTime(status.at),
+      createdAt: plan.createdAt,
+      due: status.at,
+      who: pet.name.trim(),
+      url: tabUrl('today', undefined, origin),
+      done: { label: t('outings.pooped'), ops: outingOps(pet.id, day, slot, true), roles: OUTERS },
+      cancel: { label: t('outings.peeOnly'), ops: outingOps(pet.id, day, slot, false), roles: OUTERS },
+    }));
+}
+
 /** Everything Pet publishes to the to-do list, for `syncTodos`. */
 export function todoItems(data: TodoData, now: number, origin = APP_ORIGIN): TodoInput[] {
   const out: TodoInput[] = [];
@@ -123,5 +155,6 @@ export function todoItems(data: TodoData, now: number, origin = APP_ORIGIN): Tod
     if (item) out.push(item);
   }
   for (const c of data.courses) out.push(...doseTodos(c, data.medDoses, data.pets, now, origin));
+  for (const p of data.pets) out.push(...outingTodos(p, data.outingPlans.find((x) => x.id === p.id), data.meals, data.outings, now, origin));
   return out;
 }

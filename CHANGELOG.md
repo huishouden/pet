@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.20.0](https://github.com/huishouden/pet/compare/v1.19.3...v1.20.0) (2026-10-05)
+
+### Features
+
+* **outings:** bathroom breaks per pet. A pet's page sets its outings (admins and members): with its meals, at set times, or every few hours while the household is up; at least how many poops a day; after how many short days in a row to suggest the vet; reminders at each outing; an optional walk goal (off by default). Today shows each pet's scheduled outings with Pooped and Pee only, the poops so far against the minimum, a note when yesterday ended short and a vet hint when several days in a row did, and "+ Outing" for an extra one or a walk. Walks can always be logged (a small Walk chip on any outing, or Walk as its own kind) and show under each day of the pet's 14-day strip. Outings are on the household agenda ("Take Biscuit out · PM") and the To-do list (Pooped / Pee only, for anyone in the household, helpers and kids included); a logged outing cancels its reminder wherever it was logged. New collections `petOutingPlans` and `petOutings` (huishouden/rules 1.3.0); slots and ids from pwa-kit 0.105.0 `./pet-outings` (kit 0.103.0 → 0.105.0).
+
 ## [1.19.3](https://github.com/huishouden/pet/compare/v1.19.2...v1.19.3) (2026-10-05)
 
 ### Bug Fixes

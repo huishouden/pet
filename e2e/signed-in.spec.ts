@@ -127,3 +127,41 @@ test('care due today, done from the portal’s To-do list, moves on to its next 
   await expect(row).toContainText('Due in 7 days', { timeout: 20_000 });
   await expect(row).toContainText('last given today');
 });
+
+test('an admin turns outings on; a helper logs the AM outing, and the admin sees it as theirs', async ({ browser }) => {
+  const admin = await hh.open(browser, 'admin');
+  await openBoard(admin);
+  const outings = (page: Page) => page.getByRole('region', { name: 'Outings', exact: true });
+  if ((await outings(admin).count()) === 0) {
+    await openPet(admin);
+    const card = admin.getByRole('region', { name: `${PET}'s outings` });
+    const setUp = card.getByRole('button', { name: 'Set up outings' });
+    if (await setUp.isVisible()) {
+      await setUp.click();
+      const dialog = admin.getByRole('dialog', { name: `Outings for ${PET}` });
+      await dialog.getByLabel('Poops a day, at least').fill('2');
+      await dialog.getByRole('button', { name: 'Save' }).click();
+    }
+    await expect(card).toContainText('at least 2 poops a day');
+    await admin.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Today' }).click();
+  }
+  await expect(outings(admin)).toBeVisible({ timeout: 20_000 });
+
+  const helper = await hh.open(browser, 'helper');
+  await openBoard(helper);
+  const pooped = outings(helper).getByRole('button', { name: `Take ${PET} out · AM: pooped` });
+  const done = outings(helper).getByRole('button', { name: `Undo Take ${PET} out · AM` });
+  await expect(pooped.or(done).first()).toBeVisible({ timeout: 20_000 });
+  if (await pooped.isVisible()) await pooped.click();
+  await expect(done).toBeVisible();
+  await expect(outings(helper).getByTestId('poop-count')).toContainText(/[12] of 2 poops today/);
+  await helper.waitForTimeout(3000);
+  await expect(helper.getByText(/only admins and members can do that/)).toHaveCount(0);
+  // The plan is the household's setup: a helper sees no Settings.
+  await openPet(helper);
+  await expect(helper.getByRole('button', { name: `Outing settings for ${PET}` })).toHaveCount(0);
+
+  await admin.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Today' }).click();
+  await expect(outings(admin).locator('[data-completion=done]').first()).toContainText('Pooped', { timeout: 20_000 });
+  await expect(outings(admin).locator('[data-completion=done]').first()).not.toContainText('You');
+});

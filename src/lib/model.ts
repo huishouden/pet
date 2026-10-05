@@ -208,6 +208,63 @@ export interface MedDose extends MedDoseData {
   id: string;
 }
 
+export const OUTING_MODES = ['meals', 'times', 'every'] as const;
+export type OutingMode = (typeof OUTING_MODES)[number];
+
+/**
+ * petOutingPlans/{petId}: whether and when a pet goes out for the bathroom (with its meals, at set
+ * times, or every few hours while the household is up), its daily poop minimum and an optional walk
+ * goal. Kept apart from the profile, so an older device saving the profile never drops it.
+ */
+export interface OutingPlanData {
+  on: boolean;
+  mode: OutingMode;
+  /** 'HH:MM' per outing (`mode: 'times'`). */
+  times?: string[];
+  /** Hours between outings (`mode: 'every'`), from `from` while not after `to`. */
+  every?: number;
+  from?: string;
+  to?: string;
+  /** Poops a day at least; absent for no minimum. */
+  poopMin?: number;
+  /** Days in a row under the minimum before the vet hint (default 2). */
+  flagDays?: number;
+  /** A notification at each outing's time. */
+  remind?: boolean;
+  /** Minutes of walking a day; absent for no goal (walks can always be logged). */
+  walkGoal?: number;
+  createdAt: number;
+  updatedAt?: number;
+  by: string;
+}
+/** `id` is the pet's id. */
+export interface OutingPlan extends OutingPlanData {
+  id: string;
+}
+
+/**
+ * petOutings/{id}: one time out. For a scheduled outing `slot` names it and the id is the kit's
+ * `outingId(petId, day, slot)`, so the app, the portal's to-do and the assistant write the same one.
+ * A walk on its own has `walkMin` and no `pee` or `poop`.
+ */
+export interface OutingData {
+  petId: string;
+  slot?: string;
+  at: number;
+  pee?: boolean;
+  poop?: boolean;
+  walkMin?: number;
+  note?: string;
+  /** The assistant's request id (pet_log_outing), kept through edits. */
+  req?: string;
+  by: string;
+  createdAt: number;
+  updatedAt?: number;
+}
+export interface Outing extends OutingData {
+  id: string;
+}
+
 /** The only keys each collection's documents may carry; the rules list the same. */
 export const FIELDS = {
   petProfiles: ['name', 'species', 'breed', 'birthDate', 'birthDateApprox', 'weightUnit', 'targetWeight', 'targetNote', 'notes', 'createdAt', 'updatedAt', 'by'],
@@ -221,6 +278,8 @@ export const FIELDS = {
   petMedCourses: ['petId', 'name', 'dose', 'timesPerDay', 'times', 'startDate', 'days', 'withFood', 'notes', 'givers', 'approvedHelpers', 'createdAt', 'updatedAt', 'by'],
   petMedDoses: ['petId', 'courseId', 'slot', 'at', 'skipped', 'by', 'createdAt'],
   petPhotos: ['data', 'updatedAt', 'by'],
+  petOutingPlans: ['on', 'mode', 'times', 'every', 'from', 'to', 'poopMin', 'flagDays', 'remind', 'walkGoal', 'createdAt', 'updatedAt', 'by'],
+  petOutings: ['petId', 'slot', 'at', 'pee', 'poop', 'walkMin', 'note', 'req', 'by', 'createdAt', 'updatedAt'],
 } as const;
 
 /** String length caps, mirrored in the rules. */
@@ -248,6 +307,7 @@ export const LIMITS = {
   courseName: 80,
   courseDose: 80,
   courseNotes: 500,
+  outingNote: 200,
   /** Characters in a photo's data URL (the rules allow 100 000; the kit aims under 60 000). */
   photo: 100_000,
 } as const;

@@ -1,8 +1,9 @@
 // Builds documents with exactly the keys the rules accept, trimmed to their limits. Shared by the
 // live store and the sample-data store, so both write the same shapes.
 
-import type { AppointmentData, AppointmentKind, CourseData, DoseData, FeedingData, MealData, MedDoseData, PetData, RecordData, ReminderData, ReminderKind, Species, WeightData } from './model';
-import { LIMITS, type PetPhotoData } from './model';
+import type { AppointmentData, AppointmentKind, CourseData, DoseData, FeedingData, MealData, MedDoseData, OutingData, OutingMode, OutingPlanData, PetData, RecordData, ReminderData, ReminderKind, Species, WeightData } from './model';
+import { LIMITS, OUTING_MODES, type PetPhotoData } from './model';
+import { OUTING_LIMITS } from '@huishouden/pwa-kit/pet-outings';
 import { giversFields } from '@huishouden/pwa-kit/roles';
 import { isPhotoDataUrl } from '@huishouden/pwa-kit/photo';
 import { isRecurring, type Unit } from './schedule';
@@ -231,4 +232,70 @@ export function medDoseDoc(d: { petId: string; courseId: string; slot: number; a
 export function photoDoc(dataUrl: string, by: string, updatedAt: number): PetPhotoData {
   if (!isPhotoDataUrl(dataUrl) || dataUrl.length > LIMITS.photo) throw new Error('Not a photo Pet can keep');
   return { data: dataUrl, updatedAt: Math.round(updatedAt), by };
+}
+
+export interface OutingPlanInput {
+  on: boolean;
+  mode: OutingMode;
+  times?: string[];
+  every?: number;
+  from?: string;
+  to?: string;
+  poopMin?: number;
+  flagDays?: number;
+  remind?: boolean;
+  walkGoal?: number;
+}
+
+const wholeIn = (v: number | undefined, min: number, max: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v))) : undefined);
+
+/** A pet's outing plan; settings for another mode are kept, so switching back finds them. */
+export function outingPlanDoc(p: OutingPlanInput, by: string, createdAt: number, updatedAt?: number): OutingPlanData {
+  const times = p.times ? [...new Set(p.times.filter(isHhmm))].sort().slice(0, OUTING_LIMITS.times) : undefined;
+  const poopMin = wholeIn(p.poopMin, 0, OUTING_LIMITS.poopMin);
+  const walkGoal = wholeIn(p.walkGoal, 0, OUTING_LIMITS.walkMin);
+  return defined({
+    on: !!p.on,
+    mode: OUTING_MODES.includes(p.mode) ? p.mode : 'meals',
+    times: times?.length ? times : undefined,
+    every: wholeIn(p.every, 1, OUTING_LIMITS.every),
+    from: isHhmm(p.from) ? p.from : undefined,
+    to: isHhmm(p.to) ? p.to : undefined,
+    poopMin: poopMin ? poopMin : undefined,
+    flagDays: wholeIn(p.flagDays, 1, OUTING_LIMITS.flagDays),
+    remind: p.remind ? true : undefined,
+    walkGoal: walkGoal ? walkGoal : undefined,
+    createdAt: Math.round(createdAt),
+    updatedAt: updatedAt === undefined ? undefined : Math.round(updatedAt),
+    by,
+  });
+}
+
+export interface OutingInput {
+  petId: string;
+  /** The scheduled outing it answers; absent for an extra one or a walk. */
+  slot?: string;
+  at: number;
+  pee?: boolean;
+  poop?: boolean;
+  walkMin?: number;
+  note?: string;
+  req?: string;
+}
+
+export function outingDoc(o: OutingInput, by: string, createdAt: number, updatedAt?: number): OutingData {
+  const walkMin = wholeIn(o.walkMin, 0, OUTING_LIMITS.walkMin);
+  return defined({
+    petId: o.petId,
+    slot: o.slot ? o.slot.slice(0, OUTING_LIMITS.slotKey) : undefined,
+    at: Math.round(o.at),
+    pee: typeof o.pee === 'boolean' ? o.pee : undefined,
+    poop: typeof o.poop === 'boolean' ? o.poop : undefined,
+    walkMin: walkMin ? walkMin : undefined,
+    note: trimmed(o.note, LIMITS.outingNote),
+    req: o.req || undefined,
+    by,
+    createdAt: Math.round(createdAt),
+    updatedAt: updatedAt === undefined ? undefined : Math.round(updatedAt),
+  });
 }

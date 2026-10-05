@@ -1,6 +1,8 @@
 import type { ContactWrites } from '@huishouden/pwa-kit/contacts';
 import { applyOps as applyKitOps, withoutId, type Backend as KitBackend, type Op as KitOp } from '@huishouden/pwa-kit/store';
-import { appointmentDoc, photoDoc, courseDoc, doseDoc, feedingDoc, mealDoc, medDoseDoc, petDoc, recordDoc, reminderDoc, weightDoc } from '../lib/build';
+import { appointmentDoc, photoDoc, courseDoc, doseDoc, feedingDoc, mealDoc, medDoseDoc, outingDoc, outingPlanDoc, petDoc, recordDoc, reminderDoc, weightDoc } from '../lib/build';
+import { outingId } from '../lib/outings';
+import { toYmd } from '@huishouden/pwa-kit/time';
 import { markGiven } from '../lib/schedule';
 import { defaultMeals } from '../lib/feeding';
 import type { PetHouseholdData } from '../lib/demo';
@@ -53,10 +55,13 @@ export function createActions(b: Backend): PetActions {
         medDoses: mine(d.medDoses),
         appointments: d.appointments.filter((a) => a.petIds.includes(pet.id)),
         photo: d.photos.find((p) => p.id === pet.id),
+        outingPlan: d.outingPlans.find((p) => p.id === pet.id),
+        outings: mine(d.outings),
       };
       const ops: Op[] = [{ col: 'pets', id: pet.id, data: null }];
       if (bundle.photo) ops.push({ col: 'photos', id: pet.id, data: null });
-      for (const key of ['reminders', 'doses', 'weights', 'records', 'meals', 'feedings', 'courses', 'medDoses'] as const) for (const x of bundle[key]) ops.push({ col: key, id: x.id, data: null });
+      if (bundle.outingPlan) ops.push({ col: 'outingPlans', id: pet.id, data: null });
+      for (const key of ['reminders', 'doses', 'weights', 'records', 'meals', 'feedings', 'courses', 'medDoses', 'outings'] as const) for (const x of bundle[key]) ops.push({ col: key, id: x.id, data: null });
       for (const a of bundle.appointments) {
         const others = a.petIds.filter((p) => p !== pet.id);
         ops.push({ col: 'appointments', id: a.id, data: others.length ? { ...withoutId(a), petIds: others } : null });
@@ -66,8 +71,9 @@ export function createActions(b: Backend): PetActions {
     },
     restorePet: (bundle) => {
       const ops: Op[] = [{ col: 'pets', id: bundle.pet.id, data: withoutId(bundle.pet) }];
-      for (const key of ['reminders', 'doses', 'weights', 'records', 'meals', 'feedings', 'courses', 'medDoses', 'appointments'] as const)
-        for (const x of bundle[key]) ops.push({ col: key, id: x.id, data: withoutId(x) });
+      for (const key of ['reminders', 'doses', 'weights', 'records', 'meals', 'feedings', 'courses', 'medDoses', 'appointments', 'outings'] as const)
+        for (const x of bundle[key] ?? []) ops.push({ col: key, id: x.id, data: withoutId(x) });
+      if (bundle.outingPlan) ops.push({ col: 'outingPlans', id: bundle.outingPlan.id, data: withoutId(bundle.outingPlan) });
       if (bundle.photo) ops.push({ col: 'photos', id: bundle.photo.id, data: withoutId(bundle.photo) });
       b.write(ops);
     },
@@ -173,6 +179,23 @@ export function createActions(b: Backend): PetActions {
     moveMedDose: (d, at) => put('medDoses', d.id, medDoseDoc({ ...d, at }, d.by, d.createdAt)),
     deleteMedDoses: (list) => b.write(list.map((d) => ({ col: 'medDoses', id: d.id, data: null }))),
     restoreMedDoses: (list) => b.write(list.map((d) => ({ col: 'medDoses', id: d.id, data: withoutId(d) }))),
+    saveOutingPlan: (petId, input) => {
+      const before = b.read().outingPlans.find((p) => p.id === petId);
+      const now = b.now();
+      put('outingPlans', petId, outingPlanDoc(input, before?.by ?? b.me, before?.createdAt ?? now, before ? now : undefined));
+      return before;
+    },
+    restoreOutingPlan: (petId, before) => (before ? put('outingPlans', petId, withoutId(before)) : del('outingPlans', petId)),
+    logOuting: (input) => {
+      track(input.pee === undefined && input.poop === undefined ? 'log walk' : 'log outing');
+      const id = input.slot ? outingId(input.petId, toYmd(input.at), input.slot) : b.newId('outings');
+      const o = { id, ...outingDoc(input, b.me, b.now()) };
+      put('outings', id, withoutId(o));
+      return o;
+    },
+    updateOuting: (o, input) => put('outings', o.id, outingDoc({ ...input, req: o.req }, o.by, o.createdAt, b.now())),
+    deleteOutings: (list) => b.write(list.map((o) => ({ col: 'outings', id: o.id, data: null }))),
+    restoreOutings: (list) => b.write(list.map((o) => ({ col: 'outings', id: o.id, data: withoutId(o) }))),
     saveContact: (id, input) => b.contacts.save(id, input),
     deleteContact: (c) => b.contacts.remove(c),
     restoreContact: (c) => b.contacts.restore(c),
