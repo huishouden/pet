@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.16.2](https://github.com/huishouden/pet/compare/v1.16.1...v1.16.2) (2026-10-05)
+
+### Other
+
+* Maintenance
+
 ## [1.16.1](https://github.com/huishouden/pet/compare/v1.16.0...v1.16.1) (2026-10-05)
 
 
