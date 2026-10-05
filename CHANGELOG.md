@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.16.1](https://github.com/huishouden/pet/compare/v1.16.0...v1.16.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* **today:** done and not done look different on the board, Needs doing and Care ([#65](https://github.com/huishouden/pet/issues/65)) ([2b8243b](https://github.com/huishouden/pet/commit/2b8243bd5ad744eada7dccb25e1baa78fa82b370))
+
 ## [1.16.0](https://github.com/huishouden/pet/compare/v1.15.1...v1.16.0) (2026-10-04)
 
 
