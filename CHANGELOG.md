@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.17.0](https://github.com/huishouden/pet/compare/v1.16.3...v1.17.0) (2026-10-05)
+
+### Features
+
+* **reminders:** dose, meal and birthday reminders name what they are about ([5d7a026](https://github.com/huishouden/pet/commit/5d7a026ec78daaf54a0ed157929d628a30d1c1ca))
+
+### Other
+
+* docs, review: reminders that stop once done elsewhere ([98e7523](https://github.com/huishouden/pet/commit/98e7523fc3b4cf36a1f1674d9397e1161213b371))
+
 ## [1.16.3](https://github.com/huishouden/pet/compare/v1.16.2...v1.16.3) (2026-10-05)
 
 ### Tests
