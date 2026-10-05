@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Cake, CalendarDays, ChevronRight, PawPrint, Pill, Plus, Syringe, Utensils } from 'lucide-react';
 import type { Course, Meal, Pet, Reminder } from '../lib/model';
 import { toYmd, type Ymd } from '@huishouden/pwa-kit/time';
-import { allDoneLine, birthdaysToday, comingUp, laterToday, needsDoing, type ComingItem, type LaterItem, type Need } from '../lib/today';
+import { allDoneLine, birthdaysToday, comingUp, doneNow, laterToday, needsDoing, type ComingItem, type LaterItem, type Need } from '../lib/today';
 import { useClock } from '@huishouden/pwa-kit/react/clock';
 import type { PetStore } from '../data/types';
 import type { Open } from '../PetApp';
@@ -46,6 +46,7 @@ export function Today({ store, pets, open, onGive, onToggleMeal, onToggleDose, a
     );
 
   const needs = needsDoing(data, pets, now);
+  const done = doneNow(data, pets, now);
   const later = laterToday(data, pets, now);
   const coming = comingUp(data, pets, now);
   const parties = birthdaysToday(pets, now);
@@ -65,7 +66,7 @@ export function Today({ store, pets, open, onGive, onToggleMeal, onToggleDose, a
 
   return (
     <div className="flex flex-col gap-5 lg:h-full lg:overflow-y-auto [&>*]:shrink-0">
-      <NeedsDoing needs={needs} pets={pets} allDone={allDoneLine(later)} onDo={doNeed} onOpen={openNeed} />
+      <NeedsDoing needs={needs} done={done} pets={pets} me={store.me} now={now} allDone={allDoneLine(later)} onDo={doNeed} onUndo={doNeed} onOpen={openNeed} />
       {afterNeeds}
       {parties.map(({ pet, countdown }) => (
         <BirthdayCard key={pet.id} pet={pet} pets={pets} turns={countdown.turns} onOpen={() => open.showPet(pet.id)} />

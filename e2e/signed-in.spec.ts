@@ -15,13 +15,16 @@ test.beforeAll(async () => {
 const PET = 'Test pet';
 const board = (page: Page) => page.getByRole('region', { name: 'Feeding' });
 // first(): a pet added twice by runs racing on an empty household still gives one tile to follow.
-const am = (page: Page) => board(page).getByRole('button', { name: new RegExp(`^${PET} AM`) }).first();
+const am = (page: Page) => board(page).getByRole('button', { name: `Feed ${PET} AM` }).first();
+const amDone = (page: Page) => board(page).getByRole('button', { name: `Undo fed for ${PET} AM` }).first();
+/** The AM tile in either state. */
+const amAny = (page: Page) => am(page).or(amDone(page)).first();
 
 /** The test pet's board on Today, adding the pet (which gets AM and PM meals) the first time. */
 async function openBoard(page: Page) {
   // Loaded: the board, or the first-pet prompt of an empty household.
   await expect(board(page).or(page.getByRole('button', { name: 'Add a pet' }))).toBeVisible({ timeout: 20_000 });
-  if ((await am(page).count()) === 0) {
+  if ((await amAny(page).count()) === 0) {
     await page.getByRole('button', { name: 'Pets', exact: true }).click();
     await page.getByRole('button', { name: 'Add pet' }).click();
     const dialog = page.getByRole('dialog', { name: 'New pet' });
@@ -30,20 +33,21 @@ async function openBoard(page: Page) {
     await expect(page.getByRole('region', { name: `${PET}'s profile` })).toBeVisible();
     await page.getByRole('button', { name: 'Today', exact: true }).click();
   }
-  await expect(am(page)).toBeVisible({ timeout: 20_000 });
+  await expect(amAny(page)).toBeVisible({ timeout: 20_000 });
 }
 
 test('the morning feed one member ticks shows as fed for the other', async ({ page, browser }) => {
   await signInTestUser(page, { email: 'test-a@example.com' });
   await openBoard(page);
   // An earlier run may have ticked it already today: untick, so this run's tick is its own.
-  if ((await am(page).getAttribute('aria-pressed')) === 'true') {
-    await am(page).click();
-    await expect(am(page)).toHaveAttribute('aria-pressed', 'false');
+  if (await amDone(page).isVisible()) {
+    await amDone(page).click();
+    await expect(am(page)).toBeVisible();
   }
   await am(page).click();
-  await expect(am(page)).toHaveAttribute('aria-pressed', 'true');
-  await expect(am(page)).toHaveAccessibleName(/fed at .* by You/);
+  await expect(amDone(page)).toBeVisible();
+  await expect(am(page)).toHaveCount(0);
+  await expect(board(page)).toContainText(/Fed by you · /);
 
   // Saved in the household, not just on this screen: the other member's own browser shows it fed.
   const other = await browser.newContext({ baseURL: test.info().project.use.baseURL });
@@ -51,15 +55,15 @@ test('the morning feed one member ticks shows as fed for the other', async ({ pa
     const theirs = await other.newPage();
     await signInTestUser(theirs, { email: 'test-b@example.com' });
     await openBoard(theirs);
-    await expect(am(theirs)).toHaveAttribute('aria-pressed', 'true', { timeout: 20_000 });
-    await expect(am(theirs)).not.toHaveAccessibleName(/by You/);
+    await expect(amDone(theirs)).toBeVisible({ timeout: 20_000 });
+    await expect(board(theirs).locator('[data-completion=done]').filter({ hasText: /Fed by .* · / }).first()).not.toContainText('by you');
   } finally {
     await other.close();
   }
 });
 
 const PILL = 'Restricted pill';
-const pill = (page: Page) => board(page).getByRole('button', { name: new RegExp(`^${PET} ${PILL}`) }).first();
+const pill = (page: Page) => board(page).getByRole('button', { name: new RegExp(`^Give ${PET} ${PILL}`) }).first();
 
 /** test-a's year-long course for the test pet that only approved helpers may give (none are). */
 async function restrictedCourse(page: Page) {

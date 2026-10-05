@@ -1,19 +1,18 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
-import { Check, Pill, Plus } from 'lucide-react';
+import { useId, useState, type CSSProperties, type ReactNode } from 'react';
+import { Pill, Plus, Utensils } from 'lucide-react';
 import type { Course, Feeding, Meal, MedDose, Pet } from '../lib/model';
 import { mealsOf, mealsOn } from '../lib/feeding';
 import { courseText, dosesOn, slotMealName } from '../lib/courses';
-import { personName } from '@huishouden/pwa-kit/people';
-import { addDays, atClock, formatDayLong, formatTime, toHhmm, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
+import { addDays, formatDayLong, formatTime, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
 import { useT } from '../i18n';
-import { formatClock } from '../lib/format';
+import { doneBy, formatClock } from '../lib/format';
 import { PetAvatar } from './PetAvatar';
-import { Chip, ghostButton, overline } from '@huishouden/pwa-kit/react/ui';
+import { Chip, CompleteButton, DoneBadge, ghostButton, overline } from '@huishouden/pwa-kit/react/ui';
 
 /**
  * The paper board, compact, for every pet at once: one small row per pet (photo and name), one
- * toggle per meal and per dose of a running medicine course. A done toggle says when and who; one
- * whose time has passed says "Not fed yet" or "Missed" in terracotta. The board is today's log, so it
+ * tile per meal and per dose of a running medicine course (`Tile`). A done tile says who and when,
+ * with Undo; an open one whose time has passed says "Not fed yet" or "Missed" in terracotta. The board is today's log, so it
  * starts empty each day; Yesterday switches it to the day before, to tick what was given but not
  * logged. Everything else about a pet is on its page.
  */
@@ -34,11 +33,9 @@ export function FeedingBoard({ pets, meals, feedings, courses, medDoses, me, now
   const [yesterday, setYesterday] = useState(false);
   // "Biscuit AM", or "Biscuit AM yesterday" on the day before.
   const subject = (pet: string, thing: string) => (yesterday ? t('toast.whoYesterday', { who: t('toast.petMeal', { pet, meal: thing }) }) : t('toast.petMeal', { pet, meal: thing }));
-  const at = (ms: number) => atClock(toHhmm(ms));
   // A moment on the shown day: now, or the same time yesterday.
   const day = yesterday ? addDays(now, -1) : now;
   const dayYmd = toYmd(day);
-  const who = (email: string) => personName(email, { email: me });
   const dosesOf = (c: Course) => dosesOn(c, medDoses, dayYmd, now);
   const tilesOf = (pet: Pet) => mealsOf(meals, pet.id).length + courses.filter((c) => c.petId === pet.id).reduce((n, c) => n + dosesOf(c).length, 0);
   // One column count for the whole board, so AM sits above AM like on the paper one.
@@ -86,20 +83,14 @@ export function FeedingBoard({ pets, meals, feedings, courses, medDoses, me, now
                       <Tile
                         key={meal.id}
                         small
-                        done={fed}
-                        late={late}
+                        state={fed ? 'done' : late ? 'late' : 'open'}
                         title={meal.name}
-                        detail={fed ? `${formatTime(status.at)} · ${who(status.feeding.by)}` : late ? (yesterday ? t('board.notFed') : t('board.notFedYet')) : t('board.byTime', { time: formatTime(status.at) })}
-                        label={
-                          fed
-                            ? t('board.fedLabel', { what: subject(pet.name, meal.name), at: at(status.at), who: who(status.feeding.by) })
-                            : yesterday
-                              ? t('board.notFedYesterdayLabel', { what: subject(pet.name, meal.name) })
-                              : late
-                                ? t('board.notFedYetLabel', { what: subject(pet.name, meal.name) })
-                                : t('board.notYetMealLabel', { what: subject(pet.name, meal.name) })
-                        }
-                        onClick={() => onToggleMeal(pet, meal, day)}
+                        verb={t('done.feed')}
+                        detail={fed ? doneBy('fed', status.feeding.by, me, status.at) : late ? (yesterday ? t('board.notFed') : t('board.notFedYet')) : t('board.byTime', { time: formatTime(status.at) })}
+                        label={t('done.feedName', { name: subject(pet.name, meal.name) })}
+                        undoLabel={t('done.undoFed', { name: subject(pet.name, meal.name) })}
+                        onDo={() => onToggleMeal(pet, meal, day)}
+                        onUndo={() => onToggleMeal(pet, meal, day)}
                       />
                     );
                   })}
@@ -113,22 +104,16 @@ export function FeedingBoard({ pets, meals, feedings, courses, medDoses, me, now
                       <Tile
                         key={`${course.id}-${slot}`}
                         small
-                        done={given}
-                        late={missed}
-                        icon={<Pill size={20} className="shrink-0" aria-hidden="true" />}
+                        state={given ? 'done' : skipped ? 'skipped' : missed ? 'late' : 'open'}
+                        icon={<Pill size={20} className="shrink-0 text-link" aria-hidden="true" />}
                         compact
                         title={title}
-                        detail={given ? `${formatTime(status.at)} · ${who(status.dose.by)}` : skipped ? t('board.skippedBy', { who: who(status.dose.by) }) : missed ? t('board.missed') : courseText(course, now)}
-                        label={
-                          given
-                            ? t('board.givenLabel', { what: subject(pet.name, `${course.name} ${slotName}`), at: at(status.at), who: who(status.dose.by) })
-                            : skipped
-                              ? t('board.skippedLabel', { what: subject(pet.name, `${course.name} ${slotName}`), who: who(status.dose.by) })
-                              : yesterday
-                                ? t('board.missedYesterdayLabel', { what: subject(pet.name, `${course.name} ${slotName}`) })
-                                : t(missed ? 'board.missedLabel' : 'board.notYetDoseLabel', { what: subject(pet.name, `${course.name} ${slotName}`), course: courseText(course, now) })
-                        }
-                        onClick={() => onToggleDose(pet, course, slot, dayYmd)}
+                        verb={t('done.give')}
+                        detail={given ? doneBy('given', status.dose.by, me, status.at) : skipped ? doneBy('skipped', status.dose.by, me, status.at) : missed ? t('board.missed') : courseText(course, now)}
+                        label={t('done.giveName', { name: subject(pet.name, `${course.name} ${slotName}`) })}
+                        undoLabel={t(skipped ? 'done.undoSkipped' : 'done.undoGiven', { name: subject(pet.name, `${course.name} ${slotName}`) })}
+                        onDo={() => onToggleDose(pet, course, slot, dayYmd)}
+                        onUndo={() => onToggleDose(pet, course, slot, dayYmd)}
                       />
                     );
                   })}
@@ -142,42 +127,66 @@ export function FeedingBoard({ pets, meals, feedings, courses, medDoses, me, now
   );
 }
 
-export function Tile({ done, late, title, detail, label, icon, compact, small, onClick }: {
-  done: boolean;
-  late: boolean;
+/**
+ * One meal or dose on the board or a course's log. Open: an outlined forest tile that is the button,
+ * its title, then the verb and when ("Feed · by 7:00 PM"; past its time, "Not fed yet" in
+ * terracotta). Done: not a button any more: the check badge, the title muted, "Fed by You · 7:04 AM"
+ * and a small Undo (the board is the day's log, so Undo stays). Skipped: the quiet skip badge.
+ */
+export function Tile({ state, title, verb, detail, label, undoLabel, icon, compact, small, onDo, onUndo }: {
+  state: 'open' | 'late' | 'done' | 'skipped';
   title: string;
+  /** The open tile's verb: "Feed", "Give". */
+  verb: string;
+  /** Open: when it is due or that it is late. Done: who and when. */
   detail: string;
+  /** The open tile's name: "Feed Biscuit AM". */
   label: string;
+  /** Undo's name: "Undo fed for Biscuit AM". */
+  undoLabel: string;
   icon?: ReactNode;
   /** Medicine tiles carry a longer title ("Antibiotic PM"), so it is a step smaller. */
   compact?: boolean;
   /** The Today board's size: a short tile, still a full tap target. */
   small?: boolean;
-  onClick: () => void;
+  onDo: () => void;
+  onUndo: () => void;
 }) {
+  const detailId = useId();
+  const done = state === 'done' || state === 'skipped';
+  const heading = `leading-tight font-semibold ${small ? 'text-base sm:text-lg' : compact ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl'}`;
+  const sub = small ? 'text-sm sm:text-base' : 'text-base sm:text-lg';
+  if (done)
+    return (
+      <div data-completion={state} className={`flex w-full min-w-0 flex-col justify-center border border-line bg-surface ${small ? 'rounded-xl py-1 pr-1 pl-3' : 'rounded-2xl py-1.5 pr-1 pl-4'}`}>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="[&>span]:h-7 [&>span]:w-7 [&_svg]:h-4 [&_svg]:w-4">
+            <DoneBadge skipped={state === 'skipped'} />
+          </span>
+          <span className={`min-w-0 flex-1 truncate text-muted ${heading}`}>{title}</span>
+          <CompleteButton done name={title} undoLabel={undoLabel} onDone={onDo} onUndo={onUndo} />
+        </div>
+        <span className={`-mt-1 pb-1 leading-snug text-muted ${sub}`}>{detail}</span>
+      </div>
+    );
+  const late = state === 'late';
   return (
     <button
       type="button"
-      aria-pressed={done}
+      data-completion="open"
       aria-label={label}
-      onClick={onClick}
-      className={`flex w-full min-w-0 flex-col justify-center text-left ${small ? 'min-h-14 rounded-xl px-3 py-1.5' : 'min-h-20 rounded-2xl px-4 py-2'} transition-colors duration-150 ${
-        done
-          ? 'bg-primary text-on-primary hover:bg-primary-hover'
-          : late
-            ? 'border-2 border-terracotta bg-attention-tint text-attention hover:bg-surface'
-            : 'border border-line bg-surface text-ink hover:border-forest-400'
-      }`}
+      aria-describedby={detailId}
+      onClick={onDo}
+      className={`flex w-full min-w-0 flex-col justify-center border border-primary bg-surface text-left text-ink transition-colors duration-150 hover:bg-tint ${small ? 'min-h-14 rounded-xl px-3 py-1.5' : 'min-h-20 rounded-2xl px-4 py-2'}`}
     >
-      <span className={`flex min-w-0 items-center gap-2 leading-tight font-semibold ${small ? 'text-base sm:text-lg' : compact ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl'}`}>
-        {done ? (
-          <Check size={24} className="shrink-0" aria-hidden="true" />
-        ) : (
-          icon ?? <span className={`h-5 w-5 shrink-0 rounded-md border-2 ${late ? 'border-terracotta-dark dark:border-terracotta-light' : 'border-stone-400'}`} aria-hidden="true" />
-        )}
+      <span className={`flex min-w-0 items-center gap-2 ${heading}`}>
+        {icon ?? <Utensils size={20} className="shrink-0 text-link" aria-hidden="true" />}
         <span className="truncate">{title}</span>
       </span>
-      <span className={`mt-0.5 truncate ${small ? 'text-sm sm:text-base' : 'text-base sm:text-lg'} ${done ? 'text-forest-100 dark:text-forest-900' : late ? 'font-semibold' : 'text-muted'}`}>{detail}</span>
+      <span id={detailId} className={`mt-0.5 truncate ${sub}`}>
+        <span className="font-semibold text-link">{verb}</span>
+        <span className={late ? 'font-semibold text-attention' : 'text-muted'}> · {detail}</span>
+      </span>
     </button>
   );
 }

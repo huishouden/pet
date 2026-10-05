@@ -10,38 +10,44 @@ test.beforeEach(async ({ page }) => {
 
 test('the board shows who fed whom and who is still waiting', async ({ page }) => {
   const board = page.getByRole('region', { name: 'Feeding' });
-  await expect(board.getByRole('button', { name: /^Biscuit AM: fed at 7:04/ })).toHaveAttribute('aria-pressed', 'true');
-  await expect(board.getByRole('button', { name: /^Biscuit AM/ })).toContainText('You');
-  await expect(board.getByRole('button', { name: /^Miso AM: not fed yet/ })).toContainText('Not fed yet');
-  await expect(board.getByRole('button', { name: /^Miso PM: not yet/ })).toContainText('by 7:00');
+  // Done: no button but Undo, and who and when; open: the "Feed" tile. Never aria-pressed.
+  await expect(board.getByRole('button', { name: 'Feed Biscuit AM' })).toHaveCount(0);
+  await expect(board.getByRole('button', { name: 'Undo fed for Biscuit AM' })).toBeVisible();
+  await expect(board.locator('[data-completion=done]').filter({ hasText: 'Fed by you · 7:04 AM' })).toBeVisible();
+  await expect(board.getByRole('button', { name: 'Feed Miso AM' })).toContainText('Not fed yet');
+  await expect(board.getByRole('button', { name: 'Feed Miso PM' })).toContainText('by 7:00');
+  await expect(board.locator('[data-completion][aria-pressed], [data-completion] [aria-pressed]')).toHaveCount(0);
   // The board is just the toggles: details live on each pet's page.
   await expect(board).not.toContainText('Last fed');
 });
 
 test('a tap ticks a meal with the time and who, Undo puts it back', async ({ page }) => {
   const board = page.getByRole('region', { name: 'Feeding' });
-  await board.getByRole('button', { name: /^Miso AM/ }).click();
-  const tile = board.getByRole('button', { name: /^Miso AM: fed at 10:30 AM by You/ });
-  await expect(tile).toHaveAttribute('aria-pressed', 'true');
+  await board.getByRole('button', { name: 'Feed Miso AM' }).click();
+  await expect(board.getByRole('button', { name: 'Feed Miso AM' })).toHaveCount(0);
+  await expect(board.getByRole('button', { name: 'Undo fed for Miso AM' })).toBeVisible();
+  await expect(board).toContainText('Fed by you · 10:30 AM');
   await expect(page.getByText('Miso AM: fed at 10:30 AM')).toBeVisible();
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await expect(board.getByRole('button', { name: /^Miso AM: not fed yet/ })).toHaveAttribute('aria-pressed', 'false');
+  await expect(board.getByRole('button', { name: 'Feed Miso AM' })).toContainText('Not fed yet');
 });
 
-test('tapping a ticked meal un-ticks it, with Undo', async ({ page }) => {
+test("a fed meal's Undo un-ticks it, and the toast's Undo ticks it again", async ({ page }) => {
   const board = page.getByRole('region', { name: 'Feeding' });
-  await board.getByRole('button', { name: /^Biscuit AM/ }).click();
-  await expect(board.getByRole('button', { name: /^Biscuit AM: not fed yet/ })).toHaveAttribute('aria-pressed', 'false');
+  await board.getByRole('button', { name: 'Undo fed for Biscuit AM' }).click();
+  await expect(board.getByRole('button', { name: 'Feed Biscuit AM' })).toContainText('Not fed yet');
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await expect(board.getByRole('button', { name: /^Biscuit AM: fed at 7:04/ })).toBeVisible();
+  await expect(board.getByRole('button', { name: 'Undo fed for Biscuit AM' })).toBeVisible();
 });
 
 test('a medicine course puts its doses on the board, day 3 of 7', async ({ page }) => {
   const board = page.getByRole('region', { name: 'Feeding' });
-  await expect(board.getByRole('button', { name: /^Biscuit Antibiotic AM: missed/ })).toContainText('Missed');
-  const pm = board.getByRole('button', { name: /^Biscuit Antibiotic PM: not yet, Day 3 of 7/ });
+  await expect(board.getByRole('button', { name: 'Give Biscuit Antibiotic AM' })).toContainText('Missed');
+  const pm = board.getByRole('button', { name: 'Give Biscuit Antibiotic PM' });
+  await expect(pm).toContainText('Day 3 of 7');
   await pm.click();
-  await expect(board.getByRole('button', { name: /^Biscuit Antibiotic PM: given at 10:30 AM by You/ })).toBeVisible();
+  await expect(board.getByRole('button', { name: 'Undo given for Biscuit Antibiotic PM' })).toBeVisible();
+  await expect(board).toContainText('Given by you · 10:30 AM');
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(pm).toBeVisible();
 });
@@ -75,7 +81,7 @@ test('a new course defaults to the pet’s AM and PM times and appears on the bo
   await dialog.getByLabel('Number of days').fill('5');
   await dialog.getByRole('button', { name: 'Save' }).click();
   await page.getByRole('button', { name: 'Today', exact: true }).click();
-  await expect(page.getByRole('button', { name: /^Miso Eye drops AM: missed, Day 1 of 5/ })).toContainText('Missed');
+  await expect(page.getByRole('button', { name: 'Give Miso Eye drops AM' })).toContainText('Missed');
 });
 
 test('renaming a meal changes the board', async ({ page }) => {
@@ -85,7 +91,7 @@ test('renaming a meal changes the board', async ({ page }) => {
   await dialog.getByLabel('Name').fill('Dinner');
   await dialog.getByRole('button', { name: 'Save' }).click();
   await page.getByRole('button', { name: 'Today', exact: true }).click();
-  await expect(page.getByRole('button', { name: /^Biscuit Dinner: not yet/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Feed Biscuit Dinner' })).toBeVisible();
 });
 
 test('Scan the label fills the course from the photo and lists what it did not understand', async ({ page }) => {
@@ -128,12 +134,13 @@ test('a course that started yesterday: mark yesterday’s doses as given, at the
   const log = page.getByRole('dialog', { name: 'Eye drops: doses by day' });
   await expect(log).toContainText('Day 2 of 3 · 0 of 6 doses given · 0 of 3 days complete');
   const day1 = log.getByRole('listitem', { name: 'Day 1, Tuesday, May 13' });
-  await expect(day1.getByRole('button', { name: /^Miso Eye drops AM on Tuesday, May 13: missed/ })).toContainText('Missed');
+  await expect(day1.getByRole('button', { name: 'Give Miso Eye drops AM on Tuesday, May 13' })).toContainText('Missed');
 
-  await day1.getByRole('button', { name: /^Miso Eye drops AM on Tuesday, May 13/ }).click();
-  await expect(day1.getByRole('button', { name: /^Miso Eye drops AM on Tuesday, May 13: given at 9 AM by You/ })).toHaveAttribute('aria-pressed', 'true');
+  await day1.getByRole('button', { name: 'Give Miso Eye drops AM on Tuesday, May 13' }).click();
+  await expect(day1.getByRole('button', { name: 'Undo given for Miso Eye drops AM on Tuesday, May 13' })).toBeVisible();
+  await expect(day1).toContainText('Given by you · 9:00 AM');
   await expect(page.getByText('Miso Eye drops yesterday: given at 9 AM')).toBeVisible();
-  await day1.getByRole('button', { name: /^Miso Eye drops PM on Tuesday, May 13/ }).click();
+  await day1.getByRole('button', { name: 'Give Miso Eye drops PM on Tuesday, May 13' }).click();
   await expect(day1).toContainText('All given');
   await expect(log).toContainText('2 of 6 doses given · 1 of 3 days complete');
 
@@ -141,13 +148,13 @@ test('a course that started yesterday: mark yesterday’s doses as given, at the
   await day1.getByRole('button', { name: 'Change the time of Eye drops PM on Tuesday, May 13' }).click();
   await day1.getByLabel('Time Eye drops PM was given on Tuesday, May 13').fill('18:30');
   await day1.getByRole('button', { name: 'Save' }).click();
-  await expect(day1.getByRole('button', { name: /^Miso Eye drops PM on Tuesday, May 13: given at 6:30 PM by You/ })).toBeVisible();
+  await expect(day1).toContainText('Given by you · 6:30 PM');
 
-  // Un-ticking puts it back to missed, with Undo.
-  await day1.getByRole('button', { name: /^Miso Eye drops AM on Tuesday, May 13: given/ }).click();
-  await expect(day1.getByRole('button', { name: /^Miso Eye drops AM on Tuesday, May 13: missed/ })).toBeVisible();
+  // Undo puts it back to missed; the toast's Undo gives it again.
+  await day1.getByRole('button', { name: 'Undo given for Miso Eye drops AM on Tuesday, May 13' }).click();
+  await expect(day1.getByRole('button', { name: 'Give Miso Eye drops AM on Tuesday, May 13' })).toContainText('Missed');
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await expect(day1.getByRole('button', { name: /^Miso Eye drops AM on Tuesday, May 13: given at 9 AM/ })).toBeVisible();
+  await expect(day1.getByRole('button', { name: 'Undo given for Miso Eye drops AM on Tuesday, May 13' })).toBeVisible();
 
   await log.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByRole('region', { name: "Miso's medicine" })).toContainText('2 of 6 doses given · 1 of 3 days complete');
@@ -157,18 +164,19 @@ test('the board switches to yesterday to tick a meal and a dose at their times',
   const board = page.getByRole('region', { name: 'Feeding' });
   await board.getByRole('button', { name: 'Yesterday', exact: true }).click();
   await expect(board).toContainText('Tuesday, May 13');
-  const miso = board.getByRole('button', { name: /^Miso PM yesterday/ });
+  const miso = board.getByRole('button', { name: /Miso PM yesterday$/ });
   await expect(miso).toBeVisible();
   // The sample has Biscuit's antibiotic given both times on the 13th.
-  await expect(board.getByRole('button', { name: /^Biscuit Antibiotic PM yesterday: given at 6:05 PM/ })).toBeVisible();
-  const pm = board.getByRole('button', { name: /^Biscuit Antibiotic PM yesterday/ });
+  await expect(board).toContainText('Given by you · 6:05 PM');
+  await board.getByRole('button', { name: 'Undo given for Biscuit Antibiotic PM yesterday' }).click();
+  const pm = board.getByRole('button', { name: 'Give Biscuit Antibiotic PM yesterday' });
+  await expect(pm).toContainText('Missed');
   await pm.click();
-  await expect(board.getByRole('button', { name: /^Biscuit Antibiotic PM yesterday: missed/ })).toBeVisible();
-  await pm.click();
-  await expect(board.getByRole('button', { name: /^Biscuit Antibiotic PM yesterday: given at 7 PM by You/ })).toBeVisible();
+  await expect(board.getByRole('button', { name: 'Undo given for Biscuit Antibiotic PM yesterday' })).toBeVisible();
+  await expect(board).toContainText('Given by you · 7:00 PM');
 
   await board.getByRole('button', { name: 'Today', exact: true }).click();
-  await expect(board.getByRole('button', { name: /^Biscuit Antibiotic PM: not yet, Day 3 of 7/ })).toBeVisible();
+  await expect(board.getByRole('button', { name: 'Give Biscuit Antibiotic PM' })).toContainText('Day 3 of 7');
   await page.getByRole('region', { name: 'Needs doing' }).getByRole('button', { name: /^Antibiotic for Biscuit, .*Open$/ }).click();
   await expect(page.getByRole('dialog', { name: 'Antibiotic: doses by day' })).toContainText('Day 3 of 7 · 4 of 14 doses given · 2 of 7 days complete');
 });
