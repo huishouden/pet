@@ -122,8 +122,11 @@ test('Scan the label fills the course from the photo and lists what it did not u
 
 test('Scan the label takes two photos chosen together, and a photo pasted with Ctrl+V', async ({ page }) => {
   const label = readFileSync(new URL('./fixtures/label.txt', import.meta.url), 'utf8');
+  // The reader asks the mock for its text twice per photo (is there one, then take it): count them.
   await page.addInitScript((text) => {
-    (window as unknown as { __mockLabelText: string }).__mockLabelText = text;
+    const w = window as unknown as { __mockLabelText: string; __labelReads: number };
+    w.__labelReads = 0;
+    Object.defineProperty(w, '__mockLabelText', { get: () => (w.__labelReads++, text) });
   }, label);
   await page.goto('./?tab=pets&pet=demo-pet-miso');
   await page.getByRole('region', { name: "Miso's medicine" }).getByRole('button', { name: 'Add course' }).click();
@@ -133,6 +136,7 @@ test('Scan the label takes two photos chosen together, and a photo pasted with C
     { name: 'back.jpg', mimeType: 'image/jpeg', buffer: Buffer.from('back') },
   ]);
   await expect(dialog.getByLabel('Medicine')).toHaveValue('Amoxicillin 50 mg');
+  expect(await page.evaluate(() => (window as unknown as { __labelReads: number }).__labelReads)).toBe(4);
   await dialog.getByLabel('Medicine').fill('');
   await page.evaluate(() => {
     const data = new DataTransfer();
