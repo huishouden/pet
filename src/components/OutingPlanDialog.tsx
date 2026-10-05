@@ -104,7 +104,7 @@ export function OutingPlanDialog({ plan, pet, meals, onSave, onClose }: {
                 {times.map((time, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <input
-                      className={`${inputClass} w-40`}
+                      className={`${inputClass} max-w-40`}
                       type="time"
                       value={time}
                       aria-label={t('planDialog.timeN', { n: i + 1 })}
@@ -156,7 +156,7 @@ export function OutingPlanDialog({ plan, pet, meals, onSave, onClose }: {
               {t('planDialog.remind')}
             </Checkbox>
             <Field label={t('planDialog.walkGoal')} hint={t('planDialog.walkGoalHint')}>
-              <input className={`${inputClass} w-40`} type="number" inputMode="numeric" min={0} max={OUTING_LIMITS.walkMin} value={walkGoal} placeholder={t('planDialog.walkGoalNone')} onChange={(e) => setWalkGoal(e.target.value)} />
+              <input className={`${inputClass} max-w-40`} type="number" inputMode="numeric" min={0} max={OUTING_LIMITS.walkMin} value={walkGoal} placeholder={t('planDialog.walkGoalNone')} onChange={(e) => setWalkGoal(e.target.value)} />
             </Field>
           </>
         )}

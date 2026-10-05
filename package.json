@@ -2,7 +2,7 @@
   "name": "huishouden-pet",
   "private": true,
   "license": "PolyForm-Shield-1.0.0",
-  "version": "1.19.3",
+  "version": "1.20.0",
   "type": "module",
   "scripts": {
     "dev": "vite --port=3003 --host=0.0.0.0",
@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "test": "bun test src",
-    "e2e": "playwright test e2e/smoke.spec.ts e2e/today.spec.ts e2e/feeding.spec.ts e2e/care.spec.ts e2e/pets.spec.ts e2e/contacts.spec.ts e2e/contact-import.spec.ts e2e/calendar.spec.ts e2e/birthdays.spec.ts e2e/photos.spec.ts e2e/i18n.spec.ts",
+    "e2e": "playwright test e2e/smoke.spec.ts e2e/today.spec.ts e2e/feeding.spec.ts e2e/care.spec.ts e2e/pets.spec.ts e2e/contacts.spec.ts e2e/contact-import.spec.ts e2e/calendar.spec.ts e2e/birthdays.spec.ts e2e/photos.spec.ts e2e/i18n.spec.ts e2e/outings.spec.ts",
     "e2e:signed-in": "playwright test e2e/signed-in.spec.ts",
     "screenshots": "playwright test e2e/screenshots.spec.ts",
     "demo-photos": "bun scripts/demo-photos.ts",

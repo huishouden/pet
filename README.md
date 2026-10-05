@@ -59,6 +59,8 @@ accept nothing else.
 | `petDoses` | petId, reminderId, title, at, by, createdAt |
 | `petAppointments` | petIds, kind, title, at, location, notes, contactId, calendarEventId, calendarLink, createdAt, by |
 | `petWeights` | petId, at, value, unit, by, createdAt |
+| `petOutingPlans` | on, mode (`meals`, `times`, `every`), times, every, from, to, poopMin, flagDays, remind, walkGoal, createdAt, updatedAt, by (id = the pet's id; admins and members set it, everyone reads it) |
+| `petOutings` | petId, slot, at, pee, poop, walkMin, note, req (the assistant's request id), by, createdAt, updatedAt (a scheduled outing's id is `out-<petId>-<day>-<slot>`, pwa-kit `./pet-outings`; a walk alone has no pee or poop) |
 | `petRecords` | petId, title, date, text, createdAt, updatedAt, by |
 
 The daily board is not stored: it is today's feeds and doses, so it starts empty each morning.
@@ -76,9 +78,21 @@ The Firestore rules live in the repo that owns the project's rules file
 scopes; the household comes from the shared `households` document, so one invite from the portal
 opens every Huishouden app.
 
+Outings are a pet's bathroom breaks. A pet's page turns them on (admins and members): with its meals
+(one per meal, named after it), at set times, or every few hours between two times; how many poops a
+day to expect; after how many short days in a row to suggest the vet (2 by default); reminders at each
+outing; and a walk goal, off by default. Today shows each pet's scheduled outings with two taps,
+Pooped and Pee only, "1 of 2 poops today", a quiet note when yesterday ended under the minimum and a
+vet hint once several days in a row did (a day with nothing logged ends the run: nobody tracked it).
+"+ Outing" logs an extra one or a walk; any outing can carry a walk behind a small Walk chip (10, 20,
+30 or 45 minutes, or any length, and a note). The pet's page has a 14-day strip of poops a day with
+each day's walk minutes under it, and the latest outings to fix. Anyone in the household logs
+outings, helpers and kids too; who did and when is kept.
+
 Scan the label reads a medicine label photo on the device (`@huishouden/pwa-kit/dose`, tesseract.js
 loaded on first use) and fills in the course for the person to check; the photo is never stored or
-uploaded. Medicine doses, meals nobody has ticked by their time and each pet's next birthday (9:00
+uploaded. Medicine doses, meals nobody has ticked by their time, scheduled outings (with reminders on
+in the pet's plan; to admins, members and helpers, cancelled once the outing is logged anywhere) and each pet's next birthday (9:00
 on the day; not for an approximate birth date) become reminders in the
 household's `reminders` collection (`@huishouden/pwa-kit/reminders`), which the shared sender
 delivers as notifications to each member who turned them on for a device (Care, "Notifications on
@@ -95,6 +109,7 @@ can read it, so it carries titles, pet names, places and doses, never notes:
 | `medicine` (all day) | each course ("Antibiotic for Pepper"), one item from its first day through its last ("1 tablet, twice a day, with food"), for the calendar; with no status, the portal's Today leaves it out | none |
 | `medicine` | today's and tomorrow's doses at their times ("Antibiotic for Pepper", the dose as the detail), ref `dose:<courseId>:<day>:<slot>` | `done` once given, else `upcoming` |
 | `birthday` (all day) | a pet's next birthday within 180 days ("Pepper turns 5"); not for an approximate birth date | none |
+| `task` | today's and tomorrow's scheduled outings at their times ("Take Pepper out · PM"), how it went as the detail once logged, ref `outing:<petId>:<slot>:<day>` | `done` once logged, else `upcoming` |
 | `feeding` | today's and tomorrow's meals at their times ("Feed Pepper · AM"), with food and portion as the detail when set, ref `meal:<mealId>:<day>` | `done` once fed that day, else `upcoming` |
 
 Items cover 30 days back to 180 days ahead (overdue reminders whatever their age) and link to
@@ -114,6 +129,8 @@ own buttons make:
 |---|---|---|---|
 | a care reminder due today or overdue, not dismissed ("Flea and tick", the pet as who, due its day, added when the reminder was) | `reminder:<id>` | Given ("Done" for Other): logs a dose (`petDoses/todo-<id>-<due>`) and sets `lastDoneAt`, and a repeating one's next due day from today; admins, members, helpers | Dismiss: sets `dismissedAt`; admins, members and whoever added it |
 | each of today's doses of a course not yet given or skipped ("Antibiotic for Pepper", the dose and its time, added when the course was) | `dose:<courseId>:<day>:<slot>` | Given: logs the dose at its own time that day (`petMedDoses/todo-<courseId>-<day>-<slot>`), so an item left over from yesterday never ticks today's | Skip: the same, `skipped: true` |
+
+| each of today's scheduled outings not yet logged ("Take Pepper out · PM", its time) | `outing:<petId>:<slot>:<day>` | Pooped: logs the outing (`petOutings/out-<petId>-<day>-<slot>`), now, by whoever taps; admins, members, helpers, kids | Pee only: the same, `poop: false` |
 
 A course's doses go to admins, members and helpers, or with "Only approved helpers" to admins,
 members and those helpers by name; never kids, and Given on care never for kids either (it logs a
@@ -138,7 +155,7 @@ Household data lives in the household's own Firestore documents, visible only to
 To catch problems early, the app sends reports to New Relic (free tier) through
 `@huishouden/pwa-kit/observability`: errors (emails, ids, query strings and long numbers removed),
 Core Web Vitals and page loads, the app version, device type, and the country and region New Relic
-derives from the request; and anonymous usage counts per visit: `log feed`, `give dose`, `give medicine`, `save appointment`, `log weight`, `save medicine course`, and which tab is open. Households are counted by a
+derives from the request; and anonymous usage counts per visit: `log feed`, `log outing`, `log walk`, `give dose`, `give medicine`, `save appointment`, `log weight`, `save medicine course`, and which tab is open. Households are counted by a
 hash of the id. No names, emails, entries, free text or precise location, and no cookie or stored
 id: nothing links one visit to the next. When the browser sends Global Privacy Control or Do Not
 Track, usage counts are skipped; errors and speed still go. Local builds, staging and automated

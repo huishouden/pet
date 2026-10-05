@@ -126,8 +126,9 @@ export function OutingDialog({ outing, pet, now, onSave, onDelete, onClose }: {
                     {t('outings.minutes', { minutes: m })}
                   </Chip>
                 ))}
+                <span className="w-24">
                 <input
-                  className={`${inputClass} w-24`}
+                  className={inputClass}
                   type="number"
                   inputMode="numeric"
                   min={1}
@@ -136,6 +137,7 @@ export function OutingDialog({ outing, pet, now, onSave, onDelete, onClose }: {
                   onChange={(e) => setMinutes(e.target.value)}
                   aria-label={t('outingDialog.walkMinutes')}
                 />
+                </span>
               </div>
             </Field>
             <Field label={t('outingDialog.note')}>

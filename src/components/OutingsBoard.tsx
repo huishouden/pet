@@ -90,7 +90,7 @@ export function OutingsBoard({ pets, plans, meals, outings, me, now, onLog, onUn
                             {late ? t('outings.notOutYet', { time: formatTime(status.at) }) : t('outings.at', { time: formatTime(status.at) })}
                           </span>
                         </span>
-                        <span className="flex gap-1.5">
+                        <span className="flex w-full gap-1.5 sm:w-auto [&>button]:flex-1 sm:[&>button]:flex-none">
                           <button type="button" className={completeButton} onClick={() => onLog(pet, slot, true)} aria-label={t('outings.logPooped', { name })}>
                             {t('outings.pooped')}
                           </button>
