@@ -65,7 +65,7 @@ function Row({ item, pets, me, now, onDone, onUndo, onOpen }: { item: RoutineIte
       attention={overdue}
       status={log ? doneBy('done', log.by, me, log.at) : undefined}
       done={!!log}
-      leading={<span className={`h-12 w-1.5 shrink-0 rounded-full ${overdue ? 'bg-attention-fill' : 'bg-forest-200 dark:bg-forest-600'}`} aria-hidden="true" />}
+      leading={<span className={`h-12 w-1.5 shrink-0 rounded-full ${overdue ? 'bg-attention-fill' : 'bg-tint'}`} aria-hidden="true" />}
       onOpen={() => onOpen(routine)}
       openLabel={t('routines.open', { name: routine.name })}
       onDone={() => onDone(routine, status.due)}

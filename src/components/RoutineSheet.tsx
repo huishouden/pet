@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings2 } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import type { Pet, Routine, RoutineLog } from '../lib/model';
 import { LIMITS } from '../lib/model';
 import { dueLine, historyOf, petsLabel, scheduleText, statusOf } from '../lib/routines';
@@ -40,7 +40,7 @@ export function RoutineSheet({ routine, pets, logs, me, now, managesRoutines, on
         <>
           {managesRoutines && (
             <button type="button" className={`${ghostButton} mr-auto`} onClick={() => onEdit(routine)}>
-              <Settings2 size={18} /> {t('routines.settings')}
+              <Pencil size={18} /> {t('common.edit')}
             </button>
           )}
           <button type="button" className={ghostButton} onClick={onClose}>

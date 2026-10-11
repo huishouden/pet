@@ -532,7 +532,6 @@
   "routines.staffSetsUp": "An admin or member can set this up.",
   "routines.withPets": "with {pets}",
   "routines.fromDone": "{every}, counted from when it was last done",
-  "routines.settings": "Settings",
   "routines.note": "Note (optional)",
   "routines.notePlaceholder": "Fresh bag, used the green scoop…",
   "routines.markName": "Mark {name} done",

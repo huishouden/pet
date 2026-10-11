@@ -532,7 +532,6 @@
   "routines.staffSetsUp": "Een beheerder of lid kan dit instellen.",
   "routines.withPets": "met {pets}",
   "routines.fromDone": "{every}, geteld vanaf de laatste keer dat het gedaan is",
-  "routines.settings": "Instellingen",
   "routines.note": "Notitie (optioneel)",
   "routines.notePlaceholder": "Nieuwe zak, groene schep gebruikt…",
   "routines.markName": "{name} afvinken",

@@ -81,5 +81,5 @@ test('a helper marks routines done but cannot set them up', async ({ page }) => 
   await page.goto('./?tab=pets&pet=demo-pet-miso&as=helper');
   await expect(page.getByRole('button', { name: 'Add a care routine for Miso' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Open Scoop litter box' }).click();
-  await expect(page.getByRole('dialog', { name: 'Scoop litter box' }).getByRole('button', { name: 'Settings' })).toHaveCount(0);
+  await expect(page.getByRole('dialog', { name: 'Scoop litter box' }).getByRole('button', { name: 'Edit' })).toHaveCount(0);
 });
