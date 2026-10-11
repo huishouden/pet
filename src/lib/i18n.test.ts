@@ -22,17 +22,17 @@ const antibiotic = d.courses.find((c) => c.name === 'Antibiotic')!;
 describe('notifications in every language', () => {
   test('dose reminders say the time the reader’s way, not 19:00', async () => {
     const [r] = await localizeReminders(() => courseReminders(antibiotic, biscuit, d.medDoses, DEMO_NOW));
-    expect(r.texts.en?.body).toContain('at 7 PM');
-    expect(r.texts.en?.body).not.toContain('19:00');
-    expect(r.texts.es?.body).toContain('a las 7 p.m.');
-    expect(r.texts.nl?.body).toContain('om 19:00');
-    expect(r.texts.es?.body).toContain('con comida');
+    expect(r.body).toContain('at 7 PM');
+    expect(r.body).not.toContain('19:00');
+    expect(r.texts?.es?.body).toContain('a las 7 p.m.');
+    expect(r.texts?.nl?.body).toContain('om 19:00');
+    expect(r.texts?.es?.body).toContain('con comida');
   });
 
   test('meal reminders and the pet’s name stay as entered', async () => {
     const list = await localizeReminders(() => mealReminders(biscuit, d.meals, d.feedings, DEMO_NOW));
-    expect(list[0].texts.es?.title).toMatch(/^Biscuit: .+ sin comer todavía$/);
-    expect(list[0].texts.nl?.title).toMatch(/^Biscuit: .+ nog niet gegeten$/);
+    expect(list[0].texts?.es?.title).toMatch(/^Biscuit: .+ sin comer todavía$/);
+    expect(list[0].texts?.nl?.title).toMatch(/^Biscuit: .+ nog niet gegeten$/);
   });
 });
 
