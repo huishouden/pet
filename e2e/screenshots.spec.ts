@@ -101,6 +101,29 @@ test('calendar import', async ({ page }) => {
   });
 });
 
+test('routines', ({ page }) =>
+  captureScreenshot(page, 'routines', {
+    path: './?tab=pets&pet=demo-pet-miso',
+    fixedTime,
+    prepare: async (p) => {
+      const card = p.getByRole('region', { name: "Miso's care routines" });
+      await card.scrollIntoViewIfNeeded();
+      await expect(card.getByText('Overdue by 2 days')).toBeVisible();
+    },
+  }));
+
+test('phone: routines', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await captureScreenshot(page, 'phone-routines', {
+    fixedTime,
+    prepare: async (p) => {
+      const board = p.getByRole('region', { name: 'Care routines', exact: true });
+      await board.scrollIntoViewIfNeeded();
+      await expect(board.getByText('Overdue by 2 days')).toBeVisible();
+    },
+  });
+});
+
 test('phone: today', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await captureScreenshot(page, 'phone-today', {

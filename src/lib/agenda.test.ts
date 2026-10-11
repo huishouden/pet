@@ -297,6 +297,8 @@ describe('everything Pet publishes', () => {
     pets,
     outingPlans: [],
     outings: [],
+    routines: [],
+    routineLogs: [],
     appointments: [appointment()],
     reminders: [reminder(), reminder({ id: 'rem-done', every: undefined, unit: undefined, lastDoneAt: at(5, 1) })],
     courses: [course()],
@@ -366,7 +368,7 @@ describe('everything Pet publishes', () => {
 });
 
 describe('writes after a change', () => {
-  const data: AgendaData = { outingPlans: [], outings: [], pets, appointments: [appointment()], reminders: [reminder()], courses: [course()], medDoses: [], meals, feedings: [] };
+  const data: AgendaData = { outingPlans: [], outings: [], routines: [], routineLogs: [], pets, appointments: [appointment()], reminders: [reminder()], courses: [course()], medDoses: [], meals, feedings: [] };
   const writtenFrom = (d: AgendaData) => new Map([...agendaByRef(d, NOW, ORIGIN)].map(([ref, items]) => [ref, JSON.stringify(items)]));
 
   test('nothing to write when nothing changed', () => {

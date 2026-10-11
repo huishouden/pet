@@ -165,3 +165,42 @@ test('an admin turns outings on; a helper logs the AM outing, and the admin sees
   await expect(outings(admin).locator('[data-completion=done]').first()).toContainText('Pooped', { timeout: 20_000 });
   await expect(outings(admin).locator('[data-completion=done]').first()).not.toContainText('You');
 });
+
+test('an admin sets up the litter box; a helper scoops it, the portal ticks the next, and both show as done', async ({ browser }) => {
+  const routines = (page: Page) => page.getByRole('region', { name: 'Care routines', exact: true });
+  const TITLE = 'Scoop litter box';
+  const admin = await hh.open(browser, 'admin');
+  await openBoard(admin);
+  if ((await routines(admin).count()) === 0) {
+    await openPet(admin);
+    const card = admin.getByRole('region', { name: `${PET}'s care routines` });
+    await card.getByRole('button', { name: `Add a care routine for ${PET}` }).first().click();
+    const dialog = admin.getByRole('dialog', { name: 'New care routine' });
+    await dialog.getByRole('button', { name: TITLE }).click();
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(card.getByRole('button', { name: `Open ${TITLE}` })).toContainText('Every day');
+    await admin.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Today' }).click();
+  }
+  await expect(routines(admin)).toBeVisible({ timeout: 20_000 });
+
+  // A helper (a sitter) scoops the box: anyone in the household may, and it is theirs in the log.
+  const helper = await hh.open(browser, 'helper');
+  await openBoard(helper);
+  const mark = routines(helper).getByRole('button', { name: `Mark ${TITLE} done` });
+  const undo = routines(helper).getByRole('button', { name: `Undo done for ${TITLE}` });
+  await expect(mark.or(undo).first()).toBeVisible({ timeout: 20_000 });
+  if (await mark.isVisible()) await mark.click();
+  // With nothing else open the list folds to "All routines done"; its row opens again.
+  const folded = (page: Page) => routines(page).getByRole('button', { name: /All routines done/ });
+  await expect(folded(helper).or(undo).first()).toBeVisible();
+  await helper.waitForTimeout(3000);
+  await expect(helper.getByText(/only admins and members can do that/)).toHaveCount(0);
+  // Setting routines up is for admins and members: a helper sees no Add.
+  await openPet(helper);
+  await expect(helper.getByRole('button', { name: `Add a care routine for ${PET}` })).toHaveCount(0);
+
+  await admin.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Today' }).click();
+  await expect(folded(admin)).toBeVisible({ timeout: 20_000 });
+  await folded(admin).click();
+  await expect(routines(admin).locator('[data-completion=done]').filter({ hasText: TITLE })).not.toContainText('by you');
+});

@@ -118,7 +118,10 @@ test('the installed app is offered in the Share menu', async ({ request }) => {
       title: 'share_title',
       text: 'share_text',
       url: 'share_url',
-      files: [{ name: 'contact', accept: ['text/vcard', 'text/x-vcard', 'text/directory', '.vcf', '.vcard'] }],
+      files: [
+        { name: 'contact', accept: ['text/vcard', 'text/x-vcard', 'text/directory', '.vcf', '.vcard'] },
+        { name: 'image', accept: ['image/*'] },
+      ],
     },
   });
 });

@@ -1,6 +1,7 @@
 // Firestore shapes under households/{householdId}. The project's rules accept exactly these keys
 // (`keys().hasOnly(FIELDS.x)`), so writers build documents from these types and never add fields.
 
+import type { RoutineKind, RoutineMode, RoutineUnit } from '@huishouden/pwa-kit/pet-routines';
 import type { Unit } from './schedule';
 import type { WeightUnit } from './weight';
 
@@ -265,6 +266,55 @@ export interface Outing extends OutingData {
   id: string;
 }
 
+/**
+ * petRoutines/{id}: a care routine (scoop the litter box, change the litter, brush) for one or
+ * several pets (two cats, one box), repeating every N days, weeks or months counted from when it
+ * was last done (`after-done`) or fixed on the calendar from `since` (`fixed`), or on set weekdays
+ * (`weekdays`, 0 = Sunday). The kit's `pet-routines` decides when it is due.
+ */
+export interface RoutineData {
+  name: string;
+  /** A preset's key, or `custom`. */
+  kind?: RoutineKind;
+  petIds: string[];
+  mode: RoutineMode;
+  every?: number;
+  unit?: RoutineUnit;
+  days?: number[];
+  /** The first day it is due; the anchor of a fixed routine. */
+  since: string;
+  /** A notification at `time` on each due day. */
+  remind?: boolean;
+  time?: string;
+  createdAt: number;
+  updatedAt?: number;
+  by: string;
+}
+export interface Routine extends RoutineData {
+  id: string;
+}
+
+/**
+ * petRoutineLogs/{id}: a routine's due day done. The id is the kit's `routineLogId(routineId,
+ * due)`, so the app, the portal's to-do and the assistant write the same one and the reminder for
+ * that day is cancelled by it.
+ */
+export interface RoutineLogData {
+  routineId: string;
+  /** The due day this answers. */
+  due: string;
+  /** The day it was done. */
+  on: string;
+  at: number;
+  note?: string;
+  by: string;
+  createdAt: number;
+  updatedAt?: number;
+}
+export interface RoutineLog extends RoutineLogData {
+  id: string;
+}
+
 /** The only keys each collection's documents may carry; the rules list the same. */
 export const FIELDS = {
   petProfiles: ['name', 'species', 'breed', 'birthDate', 'birthDateApprox', 'weightUnit', 'targetWeight', 'targetNote', 'notes', 'createdAt', 'updatedAt', 'by'],
@@ -280,6 +330,8 @@ export const FIELDS = {
   petPhotos: ['data', 'updatedAt', 'by'],
   petOutingPlans: ['on', 'mode', 'times', 'every', 'from', 'to', 'poopMin', 'flagDays', 'remind', 'walkGoal', 'createdAt', 'updatedAt', 'by'],
   petOutings: ['petId', 'slot', 'at', 'pee', 'poop', 'walkMin', 'note', 'req', 'by', 'createdAt', 'updatedAt'],
+  petRoutines: ['name', 'kind', 'petIds', 'mode', 'every', 'unit', 'days', 'since', 'remind', 'time', 'createdAt', 'updatedAt', 'by'],
+  petRoutineLogs: ['routineId', 'due', 'on', 'at', 'note', 'by', 'createdAt', 'updatedAt'],
 } as const;
 
 /** String length caps, mirrored in the rules. */
@@ -308,6 +360,8 @@ export const LIMITS = {
   courseDose: 80,
   courseNotes: 500,
   outingNote: 200,
+  routineName: 60,
+  routineNote: 200,
   /** Characters in a photo's data URL (the rules allow 100 000; the kit aims under 60 000). */
   photo: 100_000,
 } as const;

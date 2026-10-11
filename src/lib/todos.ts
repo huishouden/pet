@@ -8,17 +8,18 @@ import type { Role } from '@huishouden/pwa-kit/roles';
 import type { Op } from '@huishouden/pwa-kit/store';
 import type { TodoAction, TodoInput } from '@huishouden/pwa-kit/todos';
 import { formatTime, parseYmd, toYmd } from '@huishouden/pwa-kit/time';
-import type { Course, Meal, MedDose, Outing, OutingPlan, Pet, Reminder } from './model';
+import type { Course, Meal, MedDose, Outing, OutingPlan, Pet, Reminder, Routine, RoutineLog } from './model';
 import { outingId, slotsOn, takeOut, type OutingSlot } from './outings';
 import { LIMITS } from './model';
 import { dosesOn, slotAt, todoMedDoseId } from './courses';
 import { dueState, isRecurring, type Unit } from './schedule';
-import { forPet, reminderRef, doseRef, outingRef, tabUrl, type AgendaData } from './agenda';
+import { forPet, reminderRef, doseRef, outingRef, routineRef, tabUrl, type AgendaData } from './agenda';
+import { petsLabel, routineLogId, routinesToday } from './routines';
 import { APP_ORIGIN } from './notify';
 import { COLLECTIONS } from '../data/types';
 import { t } from '../i18n';
 
-export type TodoData = Pick<AgendaData, 'pets' | 'reminders' | 'courses' | 'medDoses' | 'outingPlans' | 'outings' | 'meals'>;
+export type TodoData = Pick<AgendaData, 'pets' | 'reminders' | 'courses' | 'medDoses' | 'outingPlans' | 'outings' | 'meals' | 'routines' | 'routineLogs'>;
 
 const STAFF: Role[] = ['admin', 'member'];
 // Given logs a dose in petDoses, which the rules never let a kid write, whatever the reminder's kind
@@ -147,6 +148,29 @@ export function outingTodos(pet: Pick<Pet, 'id' | 'name'>, plan: OutingPlan | un
     }));
 }
 
+/**
+ * Done on a routine's due day from the to-do list, as Pet's own Mark done: the log for that routine
+ * and due day (`routineLogId`, so a second tap writes the same one and the reminder for it is
+ * cancelled), today, now, by whoever taps.
+ */
+export const routineOps = (r: Pick<Routine, 'id'>, due: string): Op[] => [
+  { col: COLLECTIONS.routineLogs, id: routineLogId(r.id, due), data: { routineId: r.id, due, on: '$today', at: '$now', by: '$me', createdAt: '$now' } },
+];
+
+/** Routines due today or overdue, each with Done for anyone in the household (a sitter scoops the box too). */
+export function routineTodos(routines: Routine[], pets: Pick<Pet, 'id' | 'name'>[], logs: RoutineLog[], now: number, origin = APP_ORIGIN): TodoInput[] {
+  return routinesToday(routines, logs, now).open.map(({ routine, status }) => ({
+    ref: routineRef(routine.id, status.due),
+    title: routine.name.trim(),
+    createdAt: routine.createdAt,
+    due: allDayStart(status.due),
+    who: petsLabel(routine, pets).slice(0, 60),
+    url: tabUrl('today', undefined, origin),
+    owner: routine.by,
+    done: { label: t('done.markDone'), ops: routineOps(routine, status.due), roles: OUTERS },
+  }));
+}
+
 /** Everything Pet publishes to the to-do list, for `syncTodos`. */
 export function todoItems(data: TodoData, now: number, origin = APP_ORIGIN): TodoInput[] {
   const out: TodoInput[] = [];
@@ -155,6 +179,7 @@ export function todoItems(data: TodoData, now: number, origin = APP_ORIGIN): Tod
     if (item) out.push(item);
   }
   for (const c of data.courses) out.push(...doseTodos(c, data.medDoses, data.pets, now, origin));
+  out.push(...routineTodos(data.routines, data.pets, data.routineLogs, now, origin));
   for (const p of data.pets) out.push(...outingTodos(p, data.outingPlans.find((x) => x.id === p.id), data.meals, data.outings, now, origin));
   return out;
 }

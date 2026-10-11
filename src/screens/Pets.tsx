@@ -15,6 +15,7 @@ import { PetAvatar, PetChips } from '../components/PetAvatar';
 import { WeightChart } from '../components/WeightChart';
 import { FeedingCard, MedicineCard } from '../components/PetFeedingCards';
 import { OutingsCard } from '../components/OutingsCard';
+import { RoutinesCard } from '../components/RoutinesCard';
 import { permissions } from '../lib/permissions';
 import { ReminderRow } from './Care';
 import { cardClass, ghostButton, iconButton, overline, primaryButton } from '@huishouden/pwa-kit/react/ui';
@@ -117,6 +118,17 @@ function PetDetail({ pet, pets, store, open, now, onGive, onRestore, notify }: {
           {pet.notes && <p className="mt-4 rounded-xl bg-page px-4 py-3 text-lg whitespace-pre-line text-ink-soft">{pet.notes}</p>}
         </section>
         <FeedingCard pet={pet} meals={store.data.meals} feedings={store.data.feedings} me={store.me} now={now} open={open} />
+        <RoutinesCard
+          pet={pet}
+          pets={pets}
+          routines={store.data.routines}
+          logs={store.data.routineLogs}
+          me={store.me}
+          now={now}
+          managesRoutines={perms.managesRoutines}
+          onAdd={() => open.routine(null, pet.id)}
+          onOpen={open.routineSheet}
+        />
         <OutingsCard
           pet={pet}
           plan={store.data.outingPlans.find((p) => p.id === pet.id)}

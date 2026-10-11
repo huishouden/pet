@@ -1,6 +1,6 @@
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import type { HouseholdHome } from '@huishouden/pwa-kit/home';
-import type { Appointment, Course, Dose, Feeding, Meal, MedDose, Outing, OutingPlan, Pet, PetPhoto, PetRecord, Reminder, Weight } from './model';
+import type { Appointment, Course, Dose, Feeding, Meal, MedDose, Outing, OutingPlan, Pet, PetPhoto, PetRecord, Reminder, Routine, RoutineLog, Weight } from './model';
 import { DEMO_PHOTOS } from './demoPhotos';
 import { toYmd } from '@huishouden/pwa-kit/time';
 
@@ -41,9 +41,12 @@ export interface PetHouseholdData {
   /** Each pet's outing plan, by pet id. */
   outingPlans: OutingPlan[];
   outings: Outing[];
+  /** Care routines (scoop the litter box...) and the due days done. */
+  routines: Routine[];
+  routineLogs: RoutineLog[];
 }
 
-export const emptyData = (): PetHouseholdData => ({ pets: [], reminders: [], doses: [], appointments: [], weights: [], records: [], meals: [], feedings: [], courses: [], medDoses: [], photos: [], contacts: [], outingPlans: [], outings: [] });
+export const emptyData = (): PetHouseholdData => ({ pets: [], reminders: [], doses: [], appointments: [], weights: [], records: [], meals: [], feedings: [], courses: [], medDoses: [], photos: [], contacts: [], outingPlans: [], outings: [], routines: [], routineLogs: [] });
 
 /** Local time on a 2031 day: month 1–12. */
 const on = (month: number, day: number, hhmm = '12:00', year = 2031) => {
@@ -321,6 +324,37 @@ function outings(): Outing[] {
   return out;
 }
 
+/**
+ * Miso's litter box: scooped daily (today's is still to do), the litter changed a week after the
+ * last change (nine days ago, so it is two days overdue), and Biscuit's weekly brushing. A fountain
+ * for both pets shows one routine for several.
+ */
+function routines(): Routine[] {
+  const base = { createdAt: CREATED, by: ALEX };
+  return [
+    { id: 'demo-routine-scoop', name: 'Scoop litter box', kind: 'scoop', petIds: [MISO], mode: 'fixed', every: 1, unit: 'day', since: ymd(1, 5), remind: true, time: '19:00', ...base },
+    { id: 'demo-routine-litter', name: 'Change litter', kind: 'litter', petIds: [MISO], mode: 'after-done', every: 1, unit: 'week', since: ymd(1, 5), ...base },
+    { id: 'demo-routine-brush', name: 'Brush Biscuit', kind: 'brush', petIds: [BISCUIT], mode: 'weekdays', days: [0, 3], since: ymd(1, 5), by: SAM, createdAt: CREATED },
+    { id: 'demo-routine-fountain', name: 'Clean water fountain', kind: 'fountain', petIds: [MISO, BISCUIT], mode: 'after-done', every: 2, unit: 'week', since: ymd(1, 5), by: SAM, createdAt: CREATED },
+  ];
+}
+
+function routineLogs(): RoutineLog[] {
+  const out: RoutineLog[] = [];
+  const add = (routineId: string, due: string, month: number, day: number, hhmm: string, by: string, note?: string) => {
+    const at = on(month, day, hhmm);
+    out.push({ id: `rtn-${routineId}-${due}`, routineId, due, on: ymd(month, day), at, ...(note ? { note } : {}), by, createdAt: at });
+  };
+  // The daily scoop, done each evening for the last week except last Saturday.
+  for (let day = 7; day <= 13; day++) if (day !== 10) add('demo-routine-scoop', ymd(5, day), 5, day, '19:10', day % 2 ? SAM : ALEX);
+  // The litter, changed on 5 May and a week before that.
+  add('demo-routine-litter', ymd(4, 28), 4, 28, '18:30', ALEX);
+  add('demo-routine-litter', ymd(5, 5), 5, 5, '18:20', ALEX, 'Fresh bag of the unscented kind');
+  add('demo-routine-brush', ymd(5, 11), 5, 11, '17:45', SAM);
+  add('demo-routine-fountain', ymd(5, 3), 5, 3, '10:15', SAM);
+  return out;
+}
+
 /** Invented businesses on invented streets; 555-01xx numbers are reserved for fiction. */
 function contacts(): Contact[] {
   const base = { apps: ['pet'], createdAt: CREATED, by: SAM };
@@ -391,5 +425,7 @@ export function demoData(): PetHouseholdData {
     contacts: contacts(),
     outingPlans: outingPlans(),
     outings: outings(),
+    routines: routines(),
+    routineLogs: routineLogs(),
   };
 }

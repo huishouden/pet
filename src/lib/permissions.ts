@@ -14,6 +14,8 @@ export interface PetPermissions {
   managesCourses: boolean;
   /** A pet's outing plan (when it goes out, its minimum, reminders, a walk goal): admins and members. */
   managesPlans: boolean;
+  /** Set up, change and remove care routines (scoop the litter box...): admins and members. Anyone marks one done. */
+  managesRoutines: boolean;
   /** Mark a care reminder given (it logs a dose): never a kid. */
   givesCare: boolean;
   /** Give a dose of this course. */
@@ -33,6 +35,7 @@ export function permissions(role: Role | null, me: string): PetPermissions {
     mayChange: (record) => can(role, 'edit-others') || (!!record.by && record.by === me),
     managesCourses: can(role, 'change-settings'),
     managesPlans: can(role, 'change-settings'),
+    managesRoutines: can(role, 'change-settings'),
     givesCare: can(role, 'give-medicine'),
     mayGiveCourse: (course) => mayGive(course, role, me),
     seesPrivate: can(role, 'see-private'),
