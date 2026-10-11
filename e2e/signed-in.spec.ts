@@ -190,7 +190,9 @@ test('an admin sets up the litter box; a helper scoops it, the portal ticks the 
   const undo = routines(helper).getByRole('button', { name: `Undo done for ${TITLE}` });
   await expect(mark.or(undo).first()).toBeVisible({ timeout: 20_000 });
   if (await mark.isVisible()) await mark.click();
-  await expect(undo).toBeVisible();
+  // With nothing else open the list folds to "All routines done"; its row opens again.
+  const folded = (page: Page) => routines(page).getByRole('button', { name: /All routines done/ });
+  await expect(folded(helper).or(undo).first()).toBeVisible();
   await helper.waitForTimeout(3000);
   await expect(helper.getByText(/only admins and members can do that/)).toHaveCount(0);
   // Setting routines up is for admins and members: a helper sees no Add.
@@ -198,5 +200,7 @@ test('an admin sets up the litter box; a helper scoops it, the portal ticks the 
   await expect(helper.getByRole('button', { name: `Add a care routine for ${PET}` })).toHaveCount(0);
 
   await admin.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Today' }).click();
-  await expect(routines(admin).locator('[data-completion=done]').filter({ hasText: TITLE })).not.toContainText('by you', { timeout: 20_000 });
+  await expect(folded(admin)).toBeVisible({ timeout: 20_000 });
+  await folded(admin).click();
+  await expect(routines(admin).locator('[data-completion=done]').filter({ hasText: TITLE })).not.toContainText('by you');
 });
