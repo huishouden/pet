@@ -16,6 +16,8 @@ import { COLLECTIONS, type DataKey, type PetStore } from './types';
 
 /** How far back dose history reads: a year of daily medication, and every monthly one. */
 const DOSE_HISTORY_DAYS = 400;
+/** How far back routine logs read: enough for a litter change every few months, and the history on a routine's sheet. */
+const ROUTINE_HISTORY_DAYS = 400;
 /** The feeding history the Pets tab shows (14 days), plus a day of margin. */
 const FEEDING_HISTORY_DAYS = 15;
 
@@ -68,6 +70,8 @@ export function useLiveStore(householdId: string, me: string, household: { membe
       listen('medDoses', query(col('medDoses'), where('at', '>=', Date.now() - DOSE_HISTORY_DAYS * DAY))),
       listen('feedings', query(col('feedings'), where('at', '>=', Date.now() - FEEDING_HISTORY_DAYS * DAY))),
       listen('outingPlans', col('outingPlans')),
+      listen('routines', col('routines')),
+      listen('routineLogs', query(col('routineLogs'), where('at', '>=', Date.now() - ROUTINE_HISTORY_DAYS * DAY))),
       listen('outings', query(col('outings'), where('at', '>=', Date.now() - FEEDING_HISTORY_DAYS * DAY))),
       watchContacts(db, householdId, (contacts) => setData((d) => ({ ...d, contacts })), { app: APP, restricted, backfillPositions: true, onError: fail('contacts') }), // i18n-ignore: a key, not text
     ];

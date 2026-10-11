@@ -31,6 +31,7 @@ export const courseAgendaRef = (id: string) => `course:${id}`;
 export const birthdayAgendaRef = (petId: string) => `birthday:${petId}`;
 export const mealRef = (mealId: string, day: string) => `meal:${mealId}:${day}`;
 export const doseRef = (courseId: string, day: string, slot: number) => `dose:${courseId}:${day}:${slot}`;
+export const routineRef = (routineId: string, due: string) => `routine:${routineId}:${due}`;
 export const outingRef = (petId: string, slot: string, day: string) => `outing:${petId}:${slot}:${day}`;
 
 /** How far ahead a birthday is published. */
@@ -263,7 +264,7 @@ export function outingAgenda(pet: Pick<Pet, 'id' | 'name'>, plan: OutingPlan | u
   );
 }
 
-export type AgendaData = Pick<PetHouseholdData, 'pets' | 'appointments' | 'reminders' | 'courses' | 'medDoses' | 'meals' | 'feedings' | 'outingPlans' | 'outings'>;
+export type AgendaData = Pick<PetHouseholdData, 'pets' | 'appointments' | 'reminders' | 'courses' | 'medDoses' | 'meals' | 'feedings' | 'outingPlans' | 'outings' | 'routines' | 'routineLogs'>;
 
 /** Every record's items by ref, refs with nothing to publish included (empty), for per-ref writes. */
 export function agendaByRef(data: AgendaData, now: number, origin = APP_ORIGIN): Map<string, AgendaEntry[]> {

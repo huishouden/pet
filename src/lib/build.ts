@@ -1,6 +1,8 @@
 // Builds documents with exactly the keys the rules accept, trimmed to their limits. Shared by the
 // live store and the sample-data store, so both write the same shapes.
 
+import type { RoutineData, RoutineLogData } from './model';
+import { ROUTINE_KINDS, ROUTINE_LIMITS, ROUTINE_MODES, ROUTINE_UNITS, isRoutineSchedule, type RoutineKind, type RoutineMode, type RoutineUnit } from '@huishouden/pwa-kit/pet-routines';
 import type { AppointmentData, AppointmentKind, CourseData, DoseData, FeedingData, MealData, MedDoseData, OutingData, OutingMode, OutingPlanData, PetData, RecordData, ReminderData, ReminderKind, Species, WeightData } from './model';
 import { LIMITS, OUTING_MODES, type PetPhotoData } from './model';
 import { OUTING_LIMITS } from '@huishouden/pwa-kit/pet-outings';
@@ -294,6 +296,64 @@ export function outingDoc(o: OutingInput, by: string, createdAt: number, updated
     walkMin: walkMin ? walkMin : undefined,
     note: trimmed(o.note, LIMITS.outingNote),
     req: o.req || undefined,
+    by,
+    createdAt: Math.round(createdAt),
+    updatedAt: updatedAt === undefined ? undefined : Math.round(updatedAt),
+  });
+}
+
+export interface RoutineInput {
+  name: string;
+  kind?: RoutineKind;
+  petIds: string[];
+  mode: RoutineMode;
+  every?: number;
+  unit?: RoutineUnit;
+  days?: number[];
+  since: string;
+  remind?: boolean;
+  time?: string;
+}
+
+/** A care routine; the settings of another way of repeating are dropped, so the document is only what it needs. */
+export function routineDoc(r: RoutineInput, by: string, createdAt: number, updatedAt?: number): RoutineData {
+  const mode = ROUTINE_MODES.includes(r.mode) ? r.mode : 'after-done';
+  const weekdays = mode === 'weekdays';
+  const days = weekdays ? [...new Set(r.days ?? [])].filter((d) => Number.isInteger(d) && d >= 0 && d <= 6).sort((a, b) => a - b) : undefined;
+  const doc = defined({
+    name: (trimmed(r.name, LIMITS.routineName) ?? ''),
+    kind: r.kind && ROUTINE_KINDS.includes(r.kind) ? r.kind : undefined,
+    petIds: [...new Set(r.petIds)].slice(0, ROUTINE_LIMITS.pets),
+    mode,
+    every: weekdays ? undefined : wholeIn(r.every, 1, ROUTINE_LIMITS.every),
+    unit: weekdays ? undefined : ROUTINE_UNITS.includes(r.unit as RoutineUnit) ? r.unit : undefined,
+    days: days?.length ? days : undefined,
+    since: r.since,
+    remind: r.remind ? true : undefined,
+    time: r.remind && isHhmm(r.time) ? r.time : undefined,
+    createdAt: Math.round(createdAt),
+    updatedAt: updatedAt === undefined ? undefined : Math.round(updatedAt),
+    by,
+  });
+  if (!doc.name || !doc.petIds.length || !isYmd(doc.since) || !isRoutineSchedule(doc)) throw new Error('Not a routine Pet can keep');
+  return doc;
+}
+
+export interface RoutineLogInput {
+  routineId: string;
+  due: string;
+  on: string;
+  at: number;
+  note?: string;
+}
+
+export function routineLogDoc(l: RoutineLogInput, by: string, createdAt: number, updatedAt?: number): RoutineLogData {
+  return defined({
+    routineId: l.routineId,
+    due: l.due,
+    on: l.on,
+    at: Math.round(l.at),
+    note: trimmed(l.note, LIMITS.routineNote),
     by,
     createdAt: Math.round(createdAt),
     updatedAt: updatedAt === undefined ? undefined : Math.round(updatedAt),

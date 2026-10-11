@@ -4,7 +4,9 @@
 
 import { appUrl, SUITE_ORIGIN } from '@huishouden/pwa-kit/site';
 import { remindersForCourse, type ReminderInput, type ReminderSource } from '@huishouden/pwa-kit/reminders';
-import type { Course, Feeding, Meal, MedDose, Outing, OutingPlan, Pet } from './model';
+import type { Course, Feeding, Meal, MedDose, Outing, OutingPlan, Pet, Routine, RoutineLog } from './model';
+import { ROUTINE_DEFAULTS, petsLabel, routineLogId } from './routines';
+import { routineDueDays } from '@huishouden/pwa-kit/pet-routines';
 import { outingFor, outingId, slotsOf, takeOut } from './outings';
 import { atTime } from '@huishouden/pwa-kit/time';
 import { courseState, slotAt, todoMedDoseId } from './courses';
@@ -26,6 +28,7 @@ export const courseRef = (courseId: string) => `${APP}:course:${courseId}`;
 export const mealsRef = (petId: string) => `${APP}:meals:${petId}`;
 export const birthdayRef = (petId: string) => `${APP}:birthday:${petId}`;
 export const outingsRef = (petId: string) => `${APP}:outings:${petId}`;
+export const routinesRef = (routineId: string) => `${APP}:routine:${routineId}`;
 
 /** A link that opens Pet on one pet's page. */
 export const petUrl = (petId: string) => appUrl(APP_BASE, `?tab=pets&pet=${encodeURIComponent(petId)}`, APP_ORIGIN);
@@ -141,4 +144,35 @@ export function outingReminders(pet: Pick<Pet, 'id' | 'name'>, plan: OutingPlan 
     }
   }
   return out;
+}
+
+/**
+ * What a routine reminder is about: the routine, still there, and the log for that due day
+ * (`routineLogId`), not yet written. Done anywhere (here, the portal's To-do list, the assistant) or
+ * the routine removed, the sender deletes the reminder unsent.
+ */
+export const routineSource = (routineId: string, due: string): ReminderSource => ({
+  checks: [{ doc: `${COLLECTIONS.routines}/${routineId}` }, { doc: `${COLLECTIONS.routineLogs}/${routineLogId(routineId, due)}`, absent: true }],
+});
+
+/**
+ * With reminders on, a nudge at the routine's time on each due day today and tomorrow that is still
+ * to come and not done, to `recipients` (admins, members and helpers: whoever may do it).
+ */
+export function routineReminders(routine: Routine, pets: Pick<Pet, 'id' | 'name'>[], logs: RoutineLog[], now: number, recipients: string[] | 'all', days = 2): ReminderInput[] {
+  if (!routine.remind) return [];
+  const today = toYmd(now);
+  return routineDueDays(routine, logs, today, toYmd(addDays(now, days - 1)))
+    .map((due) => ({ due, at: atTime(due, routine.time ?? ROUTINE_DEFAULTS.remindAt) }))
+    .filter(({ at }) => at > now)
+    .map(({ due, at }) => ({
+      app: APP,
+      title: t('notify.routineTitle', { name: routine.name.trim(), pets: petsLabel(routine, pets) }),
+      body: t('notify.routineBody'),
+      at,
+      url: APP_URL,
+      ref: routinesRef(routine.id),
+      recipients,
+      source: routineSource(routine.id, due),
+    }));
 }

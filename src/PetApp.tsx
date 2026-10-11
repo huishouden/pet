@@ -3,10 +3,12 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import { clearSharedImages, readSharedImages } from '@huishouden/pwa-kit/shared-images';
 import { clearSharedContact, readSharedContact, type Contact, type ParsedContact } from '@huishouden/pwa-kit/contacts';
-import type { Appointment, Course, Feeding, Meal, Outing, Pet, PetRecord, Reminder } from './lib/model';
+import type { Appointment, Course, Feeding, Meal, Outing, Pet, PetRecord, Reminder, Routine, RoutineLog } from './lib/model';
 import { outingWhat, type OutingSlot } from './lib/outings';
 import { OutingDialog } from './components/OutingDialog';
 import { OutingPlanDialog } from './components/OutingPlanDialog';
+import { RoutineDialog } from './components/RoutineDialog';
+import { RoutineSheet } from './components/RoutineSheet';
 import { fedTodayFor, mealAt, mealsOf } from './lib/feeding';
 import { givenOnFor, slotAt } from './lib/courses';
 import { sortPets } from './lib/pets';
@@ -93,6 +95,10 @@ export interface Open {
   outing: (outing: Outing | null, petId: string) => void;
   /** A pet's outing plan: admins and members. */
   outingPlan: (petId: string) => void;
+  /** Sets up a care routine (`null`) or changes one: admins and members. */
+  routine: (routine: Routine | null, petId?: string) => void;
+  /** One routine: its history, a note, Mark done. */
+  routineSheet: (routine: Routine) => void;
   /** Shows one pet on the Pets tab. */
   showPet: (petId: string) => void;
 }
@@ -119,6 +125,8 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   const [doseLog, setDoseLog] = useState<string | null>(null);
   const [outing, setOuting] = useState<{ outing: Outing | null; petId: string } | null>(null);
   const [planFor, setPlanFor] = useState<string | null>(null);
+  const [routineDialog, setRoutineDialog] = useState<{ routine: Routine | null; petId?: string } | null>(null);
+  const [sheetId, setSheetId] = useState<string | null>(null);
   // A course saved with a start date in the past: offer to mark the doses already given.
   const [backfill, setBackfill] = useState<string | null>(null);
   const pets = useMemo(() => sortPets(store.data.pets), [store.data.pets]);
@@ -210,6 +218,8 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
     },
     outing: (o, petId) => editable(o, () => setOuting({ outing: o, petId })),
     outingPlan: (petId) => (perms.managesPlans ? setPlanFor(petId) : notify(refusal('change-settings'))),
+    routine: (r, petId) => (perms.managesRoutines ? setRoutineDialog({ routine: r, petId }) : notify(refusal('change-settings'))),
+    routineSheet: (r) => setSheetId(r.id),
     showPet: (petId) => {
       setShownPet(petId);
       chooseTab('pets');
@@ -226,6 +236,17 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
     const pet = pets.find((p) => p.id === o.petId);
     actions.deleteOutings([o]);
     notify(t('toast.outingRemoved', { name: pet?.name ?? '' }), () => actions.restoreOutings([o]));
+  };
+
+  // A routine's Mark done: the log for its due day, now, by me (a note optional). Undo removes it.
+  const doneRoutine = (r: Routine, due: string, note?: string) => {
+    const l = actions.markRoutineDone(r, due, note);
+    notify(t('toast.routineDone', { name: r.name, at: atTimeOf(l.at) }), () => actions.deleteRoutineLogs([l]));
+  };
+  const undoRoutine = (l: RoutineLog, r: Routine) => {
+    if (!perms.mayChange(l)) return notify(refusal('edit-others'));
+    actions.deleteRoutineLogs([l]);
+    notify(t('toast.routineUndone', { name: r.name }), () => actions.restoreRoutineLogs([l]));
   };
 
   const give = (r: Reminder) => {
@@ -302,6 +323,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
     notify(t('toast.skipped', { what }), () => actions.deleteMedDoses([skipped]));
   };
 
+  const sheetRoutine = sheetId ? store.data.routines.find((r) => r.id === sheetId) : undefined;
   const backfillCourse = backfill ? store.data.courses.find((c) => c.id === backfill) : undefined;
   const logCourse = doseLog ? store.data.courses.find((c) => c.id === doseLog) : undefined;
 
@@ -322,6 +344,8 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
         onToggleDose={(pet, c, slot, day) => toggleDose(pet, c, slot, day)}
         onLogOuting={logOuting}
         onUndoOuting={undoOuting}
+        onDoneRoutine={doneRoutine}
+        onUndoRoutine={undoRoutine}
         afterNeeds={<CalendarSuggestions suggestions={suggested.suggestions} now={now} onAdd={(m) => importEvents([m])} onDismiss={suggested.dismiss} />}
       />
     );
@@ -573,6 +597,44 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
             const before = actions.saveOutingPlan(planFor, input);
             notify(input.on ? t('toast.planSaved', { name: pet.name }) : t('toast.planOff', { name: pet.name }), () => actions.restoreOutingPlan(planFor, before));
           }}
+        />
+      )}
+      {routineDialog && (
+        <RoutineDialog
+          routine={routineDialog.routine}
+          petId={routineDialog.petId}
+          pets={pets}
+          now={now}
+          onClose={() => setRoutineDialog(null)}
+          onSave={(input) => {
+            actions.saveRoutine(routineDialog.routine?.id ?? null, input);
+            notify(routineDialog.routine ? t('toast.routineSaved', { name: input.name.trim() }) : t('common.added', { name: input.name.trim() }));
+          }}
+          onDelete={
+            routineDialog.routine
+              ? () => {
+                  const bundle = actions.deleteRoutine(routineDialog.routine!);
+                  notify(t('common.deleted', { name: bundle.routine.name }), () => actions.restoreRoutine(bundle));
+                }
+              : undefined
+          }
+        />
+      )}
+      {sheetRoutine && (
+        <RoutineSheet
+          routine={sheetRoutine}
+          pets={pets}
+          logs={store.data.routineLogs}
+          me={store.me}
+          now={now}
+          managesRoutines={perms.managesRoutines}
+          onDone={doneRoutine}
+          onUndo={undoRoutine}
+          onEdit={(r) => {
+            setSheetId(null);
+            open.routine(r);
+          }}
+          onClose={() => setSheetId(null)}
         />
       )}
       {course && (

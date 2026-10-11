@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { cancelReminders, localizeReminders, replaceReminders, type ReminderInput } from '@huishouden/pwa-kit/reminders';
 import { t } from '../i18n';
-import { birthdayRef, birthdayReminders, courseRef, courseReminders, mealReminders, mealsRef, outingReminders, outingsRef } from '../lib/notify';
+import { birthdayRef, birthdayReminders, courseRef, courseReminders, mealReminders, mealsRef, outingReminders, outingsRef, routineReminders, routinesRef } from '../lib/notify';
 import { householdRole, type Role } from '@huishouden/pwa-kit/roles';
 import { toYmd } from '@huishouden/pwa-kit/time';
 import type { PetHouseholdData } from '../lib/demo';
@@ -9,7 +9,7 @@ import { db } from './firebase';
 
 /**
  * Keeps the household's reminders for Pet in step with its data: each course's remaining doses
- * each pet's untaken meal cut-offs, and each pet's next birthday. Runs when the app opens, after changes settle, and when the
+ * each pet's untaken meal cut-offs, and each pet's next birthday, and each care routine's due days (when it has reminders on). Runs when the app opens, after changes settle, and when the
  * day turns. Only refs whose reminders changed since the last write are rewritten, and refs whose
  * course or pet disappeared are cancelled.
  */
@@ -43,6 +43,7 @@ export function useReminderSync(
       for (const p of data.pets) builders.set(birthdayRef(p.id), () => birthdayReminders(p, now));
       for (const p of data.pets)
         builders.set(outingsRef(p.id), () => (outers.length ? outingReminders(p, data.outingPlans.find((x) => x.id === p.id), data.meals, data.outings, now, outers) : []));
+      for (const r of data.routines) builders.set(routinesRef(r.id), () => (outers.length ? routineReminders(r, data.pets, data.routineLogs, now, outers) : []));
       const jobs: Promise<unknown>[] = [];
       for (const [ref, build] of builders) {
         const signature = JSON.stringify(build().map((r) => [r.id, r.at, r.title, r.body, r.recipients]));
@@ -65,5 +66,5 @@ export function useReminderSync(
       Promise.all(jobs).catch(() => errorRef.current(t('sync.notifications')));
     }, 2000);
     return () => clearTimeout(id);
-  }, [householdId, me, restricted, ready, day, data.courses, data.medDoses, data.pets, data.meals, data.feedings, data.outingPlans, data.outings, outersKey]);
+  }, [householdId, me, restricted, ready, day, data.courses, data.medDoses, data.pets, data.meals, data.feedings, data.outingPlans, data.outings, data.routines, data.routineLogs, outersKey]);
 }

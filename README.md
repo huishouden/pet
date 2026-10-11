@@ -37,6 +37,7 @@ Installable on the tablet, phones and laptops, and works offline (changes sync w
 
 | Scan the label | Weight and target |
 |---|---|
+| ![Miso's care routines: the litter changed a week after the last time, two days overdue, the daily scoop, and a fountain shared with Biscuit](docs/screenshots/routines.png) | ![Care routines on Today on a phone, the overdue one first](docs/screenshots/phone-routines.png) |
 | ![A medicine course filled in from a label photo, with the line it did not understand](docs/screenshots/scan-label.png) | ![The latest weight against the vet's target, which way it is heading, and the target as a dashed line on the chart](docs/screenshots/weight-target.png) |
 
 _Screenshots of the live site signed out, which shows two invented pets dated in 2031. Refreshed by CI after each deploy._
@@ -60,6 +61,8 @@ accept nothing else.
 | `petAppointments` | petIds, kind, title, at, location, notes, contactId, calendarEventId, calendarLink, createdAt, by |
 | `petWeights` | petId, at, value, unit, by, createdAt |
 | `petOutingPlans` | on, mode (`meals`, `times`, `every`), times, every, from, to, poopMin, flagDays, remind, walkGoal, createdAt, updatedAt, by (id = the pet's id; admins and members set it, everyone reads it) |
+| `petRoutines` | name, kind (`scoop`, `litter`, `brush`, `fountain`, `fishWater`, `cage`, `custom`), petIds (one or several pets), mode (`after-done`, `fixed`, `weekdays`), every, unit (`day`, `week`, `month`), days (0 = Sunday), since, remind, time, createdAt, updatedAt, by (admins and members set them up, everyone reads them) |
+| `petRoutineLogs` | routineId, due, on, at, note, by, createdAt, updatedAt (a due day done; id `rtn-<routineId>-<due>`, pwa-kit `./pet-routines`; anyone in the household writes one in their own name) |
 | `petOutings` | petId, slot, at, pee, poop, walkMin, note, req (the assistant's request id), by, createdAt, updatedAt (a scheduled outing's id is `out-<petId>-<day>-<slot>`, pwa-kit `./pet-outings`; a walk alone has no pee or poop) |
 | `petRecords` | petId, title, date, text, createdAt, updatedAt, by |
 
@@ -89,10 +92,22 @@ vet hint once several days in a row did (a day with nothing logged ends the run:
 each day's walk minutes under it, and the latest outings to fix. Anyone in the household logs
 outings, helpers and kids too; who did and when is kept.
 
+Care routines are chores that come round again: scoop the litter box, change the litter, brush,
+clean the water fountain, change the fish tank water, clean the cage, or your own. A pet's page adds
+one (admins and members): pick a preset or name it, choose the pets it is for (two cats and one box
+make one routine), and how it repeats: every N days, weeks or months counted from when it was last
+done (change the litter a week after the last change), the same on the calendar, or on set weekdays;
+with an optional reminder at a time of day. A fixed routine that was missed is not piled up: only the
+latest day is open. Today lists what is due, the most overdue first and in terracotta, each with Mark
+done; a done one says who and when and has Undo for a few hours. A routine opens to its history and
+takes a note when marked done. Anyone in the household marks one done, helpers and kids too (a
+sitter scoops the box); who did and when is kept. To set up a litter box: Pets, the cat, Care
+routines, Add a routine, Scoop litter box, then again for Change litter.
+
 Scan the label reads a medicine label photo on the device (`@huishouden/pwa-kit/dose`, tesseract.js
 loaded on first use) and fills in the course for the person to check; the photo is never stored or
 uploaded. Medicine doses, meals nobody has ticked by their time, scheduled outings (with reminders on
-in the pet's plan; to admins, members and helpers, cancelled once the outing is logged anywhere) and each pet's next birthday (9:00
+in the pet's plan; to admins, members and helpers, cancelled once the outing is logged anywhere) care routines with reminders on (at their time on each due day, to admins, members and helpers, cancelled once the day is marked done anywhere) and each pet's next birthday (9:00
 on the day; not for an approximate birth date) become reminders in the
 household's `reminders` collection (`@huishouden/pwa-kit/reminders`), which the shared sender
 delivers as notifications to each member who turned them on for a device (Care, "Notifications on
@@ -130,6 +145,7 @@ own buttons make:
 | a care reminder due today or overdue, not dismissed ("Flea and tick", the pet as who, due its day, added when the reminder was) | `reminder:<id>` | Given ("Done" for Other): logs a dose (`petDoses/todo-<id>-<due>`) and sets `lastDoneAt`, and a repeating one's next due day from today; admins, members, helpers | Dismiss: sets `dismissedAt`; admins, members and whoever added it |
 | each of today's doses of a course not yet given or skipped ("Antibiotic for Pepper", the dose and its time, added when the course was) | `dose:<courseId>:<day>:<slot>` | Given: logs the dose at its own time that day (`petMedDoses/todo-<courseId>-<day>-<slot>`), so an item left over from yesterday never ticks today's | Skip: the same, `skipped: true` |
 | each of today's scheduled outings not yet logged ("Take Pepper out · PM", its time) | `outing:<petId>:<slot>:<day>` | Pooped: logs the outing (`petOutings/out-<petId>-<day>-<slot>`), now, by whoever taps; admins, members, helpers, kids | Pee only: the same, `poop: false` |
+| each care routine due today or overdue ("Scoop litter box", the pets as who) | `routine:<id>:<due>` | Mark done: logs the due day (`petRoutineLogs/rtn-<id>-<due>`), today, now, by whoever taps; admins, members, helpers, kids | none |
 
 A course's doses go to admins, members and helpers, or with "Only approved helpers" to admins,
 members and those helpers by name; never kids, and Given on care never for kids either (it logs a
@@ -154,7 +170,7 @@ Household data lives in the household's own Firestore documents, visible only to
 To catch problems early, the app sends reports to New Relic (free tier) through
 `@huishouden/pwa-kit/observability`: errors (emails, ids, query strings and long numbers removed),
 Core Web Vitals and page loads, the app version, device type, and the country and region New Relic
-derives from the request; and anonymous usage counts per visit: `log feed`, `log outing`, `log walk`, `give dose`, `give medicine`, `save appointment`, `log weight`, `save medicine course`, and which tab is open. Households are counted by a
+derives from the request; and anonymous usage counts per visit: `log feed`, `log outing`, `log walk`, `give dose`, `give medicine`, `save routine`, `do routine`, `save appointment`, `log weight`, `save medicine course`, and which tab is open. Households are counted by a
 hash of the id. No names, emails, entries, free text or precise location, and no cookie or stored
 id: nothing links one visit to the next. When the browser sends Global Privacy Control or Do Not
 Track, usage counts are skipped; errors and speed still go. Local builds, staging and automated

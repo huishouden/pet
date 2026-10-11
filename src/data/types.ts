@@ -1,7 +1,7 @@
 import type { Contact, ContactInput } from '@huishouden/pwa-kit/contacts';
 import type { Role } from '@huishouden/pwa-kit/roles';
-import type { Appointment, Course, Dose, Feeding, Meal, MedDose, Outing, OutingPlan, Pet, PetPhoto, PetRecord, Reminder, Weight } from '../lib/model';
-import type { AppointmentInput, CourseInput, FeedingInput, MealInput, OutingInput, OutingPlanInput, PetInput, RecordInput, ReminderInput } from '../lib/build';
+import type { Appointment, Course, Dose, Feeding, Meal, MedDose, Outing, OutingPlan, Pet, PetPhoto, PetRecord, Reminder, Routine, RoutineLog, Weight } from '../lib/model';
+import type { AppointmentInput, CourseInput, FeedingInput, MealInput, OutingInput, OutingPlanInput, PetInput, RecordInput, ReminderInput, RoutineInput } from '../lib/build';
 import type { PetHouseholdData } from '../lib/demo';
 import type { WeightUnit } from '../lib/weight';
 
@@ -22,6 +22,8 @@ export const COLLECTIONS = {
   photos: 'petPhotos',
   outingPlans: 'petOutingPlans',
   outings: 'petOutings',
+  routines: 'petRoutines',
+  routineLogs: 'petRoutineLogs',
 } as const;
 export type DataKey = keyof typeof COLLECTIONS;
 
@@ -39,6 +41,9 @@ export interface PetBundle {
   photo?: PetPhoto;
   outingPlan?: OutingPlan;
   outings: Outing[];
+  /** Routines that include this pet, as they were: those only for it are deleted (with their history), shared ones lose it. */
+  routines: Routine[];
+  routineLogs: RoutineLog[];
   /** Appointments as they were: those only for this pet are deleted, shared ones lose this pet. */
   appointments: Appointment[];
 }
@@ -104,6 +109,15 @@ export interface PetActions {
   updateOuting(o: Outing, input: OutingInput): void;
   deleteOutings(list: Outing[]): void;
   restoreOutings(list: Outing[]): void;
+  /** Sets up or changes a care routine; returns its id. */
+  saveRoutine(id: string | null, input: RoutineInput): string;
+  /** Removes a routine with its history; returns both, for Undo (`restoreRoutine`). */
+  deleteRoutine(r: Routine): { routine: Routine; logs: RoutineLog[] };
+  restoreRoutine(bundle: { routine: Routine; logs: RoutineLog[] }): void;
+  /** Marks a routine's due day done today by the signed-in member, under the id the portal and the assistant use. Undo is deleteRoutineLogs. */
+  markRoutineDone(r: Routine, due: string, note?: string): RoutineLog;
+  deleteRoutineLogs(list: RoutineLog[]): void;
+  restoreRoutineLogs(list: RoutineLog[]): void;
   saveContact(id: string | null, input: ContactInput): void;
   deleteContact(c: Contact): void;
   /** Puts a deleted contact back under its old id, so appointments that point at it still do. */

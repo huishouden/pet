@@ -1,6 +1,7 @@
 import type { ContactWrites } from '@huishouden/pwa-kit/contacts';
 import { applyOps as applyKitOps, withoutId, type Backend as KitBackend, type Op as KitOp } from '@huishouden/pwa-kit/store';
-import { appointmentDoc, photoDoc, courseDoc, doseDoc, feedingDoc, mealDoc, medDoseDoc, outingDoc, outingPlanDoc, petDoc, recordDoc, reminderDoc, weightDoc } from '../lib/build';
+import { appointmentDoc, photoDoc, courseDoc, doseDoc, feedingDoc, mealDoc, medDoseDoc, outingDoc, outingPlanDoc, petDoc, recordDoc, reminderDoc, routineDoc, routineLogDoc, weightDoc } from '../lib/build';
+import { routineLogId } from '../lib/routines';
 import { outingId } from '../lib/outings';
 import { toYmd } from '@huishouden/pwa-kit/time';
 import { markGiven } from '../lib/schedule';
@@ -57,11 +58,21 @@ export function createActions(b: Backend): PetActions {
         photo: d.photos.find((p) => p.id === pet.id),
         outingPlan: d.outingPlans.find((p) => p.id === pet.id),
         outings: mine(d.outings),
+        routines: d.routines.filter((r) => r.petIds.includes(pet.id)),
+        routineLogs: [],
       };
+      const onlyHere = (r: { petIds: string[] }) => r.petIds.length === 1;
+      bundle.routineLogs = d.routineLogs.filter((l) => bundle.routines.some((r) => r.id === l.routineId && onlyHere(r)));
       const ops: Op[] = [{ col: 'pets', id: pet.id, data: null }];
       if (bundle.photo) ops.push({ col: 'photos', id: pet.id, data: null });
       if (bundle.outingPlan) ops.push({ col: 'outingPlans', id: pet.id, data: null });
       for (const key of ['reminders', 'doses', 'weights', 'records', 'meals', 'feedings', 'courses', 'medDoses', 'outings'] as const) for (const x of bundle[key]) ops.push({ col: key, id: x.id, data: null });
+      for (const r of bundle.routines) {
+        if (onlyHere(r)) {
+          ops.push({ col: 'routines', id: r.id, data: null });
+          for (const l of bundle.routineLogs.filter((x) => x.routineId === r.id)) ops.push({ col: 'routineLogs', id: l.id, data: null });
+        } else ops.push({ col: 'routines', id: r.id, data: { ...withoutId(r), petIds: r.petIds.filter((p) => p !== pet.id) } });
+      }
       for (const a of bundle.appointments) {
         const others = a.petIds.filter((p) => p !== pet.id);
         ops.push({ col: 'appointments', id: a.id, data: others.length ? { ...withoutId(a), petIds: others } : null });
@@ -74,6 +85,8 @@ export function createActions(b: Backend): PetActions {
       for (const key of ['reminders', 'doses', 'weights', 'records', 'meals', 'feedings', 'courses', 'medDoses', 'appointments', 'outings'] as const)
         for (const x of bundle[key] ?? []) ops.push({ col: key, id: x.id, data: withoutId(x) });
       if (bundle.outingPlan) ops.push({ col: 'outingPlans', id: bundle.outingPlan.id, data: withoutId(bundle.outingPlan) });
+      for (const r of bundle.routines ?? []) ops.push({ col: 'routines', id: r.id, data: withoutId(r) });
+      for (const l of bundle.routineLogs ?? []) ops.push({ col: 'routineLogs', id: l.id, data: withoutId(l) });
       if (bundle.photo) ops.push({ col: 'photos', id: bundle.photo.id, data: withoutId(bundle.photo) });
       b.write(ops);
     },
@@ -196,6 +209,31 @@ export function createActions(b: Backend): PetActions {
     updateOuting: (o, input) => put('outings', o.id, outingDoc({ ...input, req: o.req }, o.by, o.createdAt, b.now())),
     deleteOutings: (list) => b.write(list.map((o) => ({ col: 'outings', id: o.id, data: null }))),
     restoreOutings: (list) => b.write(list.map((o) => ({ col: 'outings', id: o.id, data: withoutId(o) }))),
+    saveRoutine: (id, input) => {
+      track('save routine');
+      const existing = find('routines', id);
+      const now = b.now();
+      const routineId = id ?? b.newId('routines');
+      put('routines', routineId, routineDoc(input, existing?.by ?? b.me, existing?.createdAt ?? now, existing ? now : undefined));
+      return routineId;
+    },
+    deleteRoutine: (r) => {
+      const logs = b.read().routineLogs.filter((l) => l.routineId === r.id);
+      b.write([{ col: 'routines', id: r.id, data: null }, ...logs.map((l) => ({ col: 'routineLogs' as const, id: l.id, data: null }))]);
+      return { routine: r, logs };
+    },
+    restoreRoutine: ({ routine, logs }) =>
+      b.write([{ col: 'routines', id: routine.id, data: withoutId(routine) }, ...logs.map((l) => ({ col: 'routineLogs' as const, id: l.id, data: withoutId(l) }))]),
+    markRoutineDone: (r, due, note) => {
+      track('do routine');
+      const now = b.now();
+      const id = routineLogId(r.id, due);
+      const l = { id, ...routineLogDoc({ routineId: r.id, due, on: toYmd(now), at: now, note }, b.me, now) };
+      put('routineLogs', id, withoutId(l));
+      return l;
+    },
+    deleteRoutineLogs: (list) => b.write(list.map((l) => ({ col: 'routineLogs', id: l.id, data: null }))),
+    restoreRoutineLogs: (list) => b.write(list.map((l) => ({ col: 'routineLogs', id: l.id, data: withoutId(l) }))),
     saveContact: (id, input) => b.contacts.save(id, input),
     deleteContact: (c) => b.contacts.remove(c),
     restoreContact: (c) => b.contacts.restore(c),

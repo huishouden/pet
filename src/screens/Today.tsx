@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import { Cake, CalendarDays, ChevronRight, DoorOpen, PawPrint, Pill, Plus, Syringe, Utensils } from 'lucide-react';
-import type { Course, Meal, Outing, Pet, Reminder } from '../lib/model';
+import type { Course, Meal, Outing, Pet, Reminder, Routine, RoutineLog } from '../lib/model';
 import type { OutingSlot } from '../lib/outings';
 import { OutingsBoard } from '../components/OutingsBoard';
+import { RoutinesBoard } from '../components/RoutinesBoard';
 import { toYmd, type Ymd } from '@huishouden/pwa-kit/time';
 import { allDoneLine, birthdaysToday, comingUp, doneNow, laterToday, needsDoing, type ComingItem, type LaterItem, type Need } from '../lib/today';
 import { useClock } from '@huishouden/pwa-kit/react/clock';
@@ -21,7 +22,7 @@ const COMING_SHOWN = 5;
  * "What needs doing for the pets right now?": what is due or late at the top, with its one tap; then
  * the rest of today and what is coming up; then the day's board and the pets, each a tap from its page.
  */
-export function Today({ store, pets, open, onGive, onToggleMeal, onToggleDose, onLogOuting, onUndoOuting, afterNeeds }: {
+export function Today({ store, pets, open, onGive, onToggleMeal, onToggleDose, onLogOuting, onUndoOuting, onDoneRoutine, onUndoRoutine, afterNeeds }: {
   store: PetStore;
   pets: Pet[];
   open: Open;
@@ -30,6 +31,8 @@ export function Today({ store, pets, open, onGive, onToggleMeal, onToggleDose, o
   onToggleDose: (pet: Pet, course: Course, slot: number, day: Ymd) => void;
   onLogOuting: (pet: Pet, slot: OutingSlot, poop: boolean) => void;
   onUndoOuting: (o: Outing) => void;
+  onDoneRoutine: (r: Routine, due: string) => void;
+  onUndoRoutine: (log: RoutineLog, r: Routine) => void;
   /** Shown just below Needs doing (calendar suggestions). */
   afterNeeds?: ReactNode;
 }) {
@@ -71,6 +74,16 @@ export function Today({ store, pets, open, onGive, onToggleMeal, onToggleDose, o
   return (
     <div className="flex flex-col gap-5 lg:h-full lg:overflow-y-auto [&>*]:shrink-0">
       <NeedsDoing needs={needs} done={done} pets={pets} me={store.me} now={now} allDone={allDoneLine(later)} onDo={doNeed} onUndo={doNeed} onOpen={openNeed} />
+      <RoutinesBoard
+        routines={data.routines}
+        logs={data.routineLogs}
+        pets={pets}
+        me={store.me}
+        now={now}
+        onDone={onDoneRoutine}
+        onUndo={onUndoRoutine}
+        onOpen={open.routineSheet}
+      />
       <OutingsBoard
         pets={pets}
         plans={data.outingPlans}
