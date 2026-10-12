@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { expectPageReads, useTestHousehold } from '@huishouden/pwa-kit/e2e';
+import { expectPageReads, resetPageReads, useTestHousehold } from '@huishouden/pwa-kit/e2e';
 import { testHousehold } from '@huishouden/pwa-kit/staging';
 
 // Read budgets (pwa-kit STANDARD.md "Read budgets"): what opening Pet costs a household in
@@ -33,6 +33,10 @@ const docs: Record<string, Record<string, unknown>> = {
   // A course of an antibiotic, twice a day, started three days ago: four doses given.
   'petMedCourses/abx': { petId: 'rex', name: 'Test antibiotic', dose: '1 tablet', timesPerDay: 2, times: ['08:00', '20:00'], startDate: ymd(NOW - 3 * DAY), days: 10, withFood: true, ...made },
   ...Object.fromEntries([1, 2, 3, 4].map((n) => [`petMedDoses/abx-${n}`, { petId: 'rex', courseId: 'abx', slot: n % 2, at: NOW - Math.ceil(n / 2) * DAY, by, createdAt: NOW - Math.ceil(n / 2) * DAY }])),
+  // An older course, two weeks of heart pills that ended 46 days ago: its six doses are read only when
+  // its log is opened (`medDoseWindowStart` reads the courses running or finished within a month).
+  'petMedCourses/heart': { petId: 'rex', name: 'Test heart pills', dose: '1 tablet', timesPerDay: 2, times: ['08:00', '20:00'], startDate: ymd(NOW - 60 * DAY), days: 14, withFood: false, ...made },
+  ...Object.fromEntries([1, 2, 3, 4, 5, 6].map((n) => [`petMedDoses/heart-${n}`, { petId: 'rex', courseId: 'heart', slot: n % 2, at: NOW - (60 - Math.ceil(n / 2)) * DAY, by, createdAt: NOW - 50 * DAY }])),
   // Appointments: one for everyone, one private (helpers and kids never read it).
   'petAppointments/vet': { petIds: ['rex'], kind: 'vet', title: 'Test vet visit', at: NOW + 5 * DAY, private: false, ...made },
   'petAppointments/groom': { petIds: ['miso'], kind: 'grooming', title: 'Test grooming', at: NOW + 8 * DAY, private: true, ...made },
@@ -95,7 +99,7 @@ async function firstOpen(browser: Browser, as: Role, path: string, ready: (page:
 }
 
 // 32: every tab mounts the same listeners: the household (1); pets (2), care reminders (1) and their
-// doses (2), the course (1) and its doses (4), appointments (2), weights (1), records (1), meals (4),
+// doses (2), the courses (2) and the running one's doses (4), appointments (2), weights (1), records (1), meals (4),
 // two weeks of feedings (1) and outings (none: 1), outing plans (none: 1), photos (none: 1),
 // routines (2) and their logs (4); the contacts (2) and their payment details (none: 1). On the
 // local preview the links are http, so the publish stops before reading; e2e/reads.sdk.ts budgets it.
@@ -107,14 +111,40 @@ for (const [tab, ready] of [
   ['?tab=contacts', (p: Page) => expect(p.getByText('Test Vet clinic').first()).toBeVisible({ timeout: 30_000 })],
 ] as const) {
   test(`opening Pet${tab ? ` at ${tab.slice(5)}` : ' (Today)'}, signed in as an admin`, async ({ browser }) => {
-    await firstOpen(browser, 'admin', `./${tab}`, ready, 32, `Pet ${tab || 'Today'}, admin`);
+    await firstOpen(browser, 'admin', `./${tab}`, ready, 33, `Pet ${tab || 'Today'}, admin`);
   });
 }
 
 // A member reads what an admin does. Helpers and kids ask only for what isn't private: the vet
 // visit, not the grooming; the vet clinic, not the sitter; and no contacts' payment details.
-for (const [as, max] of [['member', 32], ['helper', 29], ['kid', 29]] as const) {
+for (const [as, max] of [['member', 33], ['helper', 30], ['kid', 30]] as const) {
   test(`opening Pet (Today), signed in as a ${as}`, async ({ browser }) => {
     await firstOpen(browser, as, './', board, max, `Pet Today, ${as}`);
   });
 }
+
+// The older course's log, opened from the Pets tab: its six doses, read once while it is open.
+test("opening an older course's dose log reads its doses then", async ({ browser }) => {
+  const context = await browser.newContext({ baseURL: test.info().project.use.baseURL });
+  try {
+    const page = await context.newPage();
+    await hh.signIn(page, 'admin', './?tab=pets');
+    await page.getByRole('button', { name: 'Test Rex', exact: true }).click({ timeout: 30_000 });
+    const older = page.getByRole('region', { name: "Test Rex's medicine" }).locator('li', { hasText: 'Test heart pills' });
+    await expect(older).toContainText('finished', { timeout: 30_000 });
+    // Its counts aren't shown on the card: its doses haven't been read.
+    await expect(older).not.toContainText('doses');
+    await page.waitForTimeout(3500);
+    await resetPageReads(page);
+    await expectPageReads(
+      page,
+      async () => {
+        await page.getByRole('button', { name: 'Doses by day for Test heart pills' }).click();
+        await expect(page.getByRole('dialog')).toContainText('Test heart pills');
+      },
+      { max: 6, min: 6, label: 'Pet, an older course log' },
+    );
+  } finally {
+    await context.close();
+  }
+});

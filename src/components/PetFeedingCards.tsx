@@ -2,7 +2,7 @@ import { History, Pencil, Pill, Plus } from 'lucide-react';
 import type { Course, Feeding, Meal, MedDose, Pet } from '../lib/model';
 import { mealsOf } from '../lib/feeding';
 import { dailyCounts, recent as recentEntries } from '@huishouden/pwa-kit/log';
-import { courseState, courseText, lastDay, progress, timesText } from '../lib/courses';
+import { courseState, courseText, lastDay, progress, timesText, dosesRead } from '../lib/courses';
 import { personInitial, personName } from '@huishouden/pwa-kit/people';
 import { formatDayShort, formatTime, parseYmd, relativeDay, toYmd } from '@huishouden/pwa-kit/time';
 import { formatClock, formatDateShort } from '../lib/format';
@@ -126,7 +126,7 @@ export function FeedingCard({ pet, meals, feedings, me, now, open }: { pet: Pet;
 
 
 /** Medicine courses: running and upcoming ones with their day and doses given, then finished ones. */
-export function MedicineCard({ pet, courses, medDoses, now, open, perms }: { pet: Pet; courses: Course[]; medDoses: MedDose[]; now: number; open: Open; perms?: PetPermissions }) {
+export function MedicineCard({ pet, courses, medDoses, medDosesFrom = 0, now, open, perms }: { pet: Pet; courses: Course[]; medDoses: MedDose[]; medDosesFrom?: number; now: number; open: Open; perms?: PetPermissions }) {
   const t = useT();
   const manages = perms?.managesCourses ?? true;
   const mine = courses.filter((c) => c.petId === pet.id).sort((a, b) => (a.startDate < b.startDate ? 1 : -1));
@@ -178,7 +178,11 @@ export function MedicineCard({ pet, courses, medDoses, now, open, perms }: { pet
         {finished.map((c) => (
           <li key={c.id} className="flex min-h-12 items-center gap-3 border-b border-line last:border-b-0">
             <span className="min-w-0 flex-1 text-base text-muted">
-              <span className="font-medium text-ink">{c.name}</span> · {t('medicineCard.finished', { date: formatDateShort(parseYmd(lastDay(c))!), given: progress(c, medDoses).given, total: progress(c, medDoses).total })}
+              <span className="font-medium text-ink">{c.name}</span> ·{' '}
+              {/* An older course's doses aren't read on open (medDoseWindowStart): its log reads them when opened. */}
+              {dosesRead(c, medDosesFrom)
+                ? t('medicineCard.finished', { date: formatDateShort(parseYmd(lastDay(c))!), given: progress(c, medDoses).given, total: progress(c, medDoses).total })
+                : t('medicineCard.finishedOn', { date: formatDateShort(parseYmd(lastDay(c))!) })}
             </span>
             <button type="button" className={iconButton} onClick={() => open.doseLog(c)} aria-label={t('medicineCard.dosesByDayFor', { name: c.name })}>
               <History size={18} />

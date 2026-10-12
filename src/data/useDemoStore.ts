@@ -34,5 +34,5 @@ export function useDemoStore(clock: () => number): PetStore {
     return createActions(backend);
   }, [clock, me, memory, patch, read]);
 
-  return { data, ready: true, actions, members: DEMO_MEMBERS, me, role, household };
+  return { data, ready: true, actions, members: DEMO_MEMBERS, me, role, household, medDosesFrom: 0, watchCourseDoses: (id, onChange) => (onChange(data.medDoses.filter((d) => d.courseId === id)), () => {}) };
 }

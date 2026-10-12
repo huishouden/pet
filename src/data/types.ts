@@ -137,4 +137,8 @@ export interface PetStore {
   role: Role | null;
   /** Members and roles, for the helpers a medicine course can be restricted to. */
   household: { members: string[]; roles?: Record<string, Role> };
+  /** From when `data.medDoses` holds the course doses (`medDoseWindowStart`; 0: all of them). */
+  medDosesFrom: number;
+  /** Follows one course's doses, all of them: an older course's log while it is open. Returns the stop. */
+  watchCourseDoses: (courseId: string, onChange: (doses: MedDose[]) => void) => () => void;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { collection, doc, onSnapshot, query, where, type Query } from 'firebase/firestore';
 import { commitOps } from '@huishouden/pwa-kit/firestore';
 import { householdContacts, markUnflaggedOpen, watchContacts } from '@huishouden/pwa-kit/contacts';
@@ -15,8 +15,9 @@ import { REMINDER_SOURCES } from '../lib/notify';
 import { AGENDA_SOURCES, useAgendaSync } from './agendaSync';
 import { COLLECTIONS, type DataKey, type PetStore } from './types';
 import { logWindowStart } from '../lib/routines';
+import { medDoseWindowStart } from '../lib/courses';
 
-/** How far back dose history reads: a year of daily medication, and every monthly one. */
+/** How far back the reminders' dose history reads: a year of every monthly one. */
 const DOSE_HISTORY_DAYS = 400;
 /** The feeding history the Pets tab shows (14 days), plus a day of margin. */
 const FEEDING_HISTORY_DAYS = 15;
@@ -67,7 +68,6 @@ export function useLiveStore(householdId: string, me: string, household: { membe
       listen('meals', col('meals')),
       listen('courses', col('courses')),
       listen('photos', col('photos')),
-      listen('medDoses', query(col('medDoses'), where('at', '>=', Date.now() - DOSE_HISTORY_DAYS * DAY))),
       listen('feedings', query(col('feedings'), where('at', '>=', Date.now() - FEEDING_HISTORY_DAYS * DAY))),
       listen('outingPlans', col('outingPlans')),
       listen('routines', col('routines')),
@@ -76,6 +76,33 @@ export function useLiveStore(householdId: string, me: string, household: { membe
     ];
     return () => unsubs.forEach((u) => u());
   }, [base, householdId, restricted]);
+
+  // The course doses from `medDoseWindowStart` (the courses running, to come or finished within a
+  // month), once the courses are in; started again only when that day moves.
+  const medDosesFrom = answered.has('courses') ? medDoseWindowStart(data.courses, Date.now()) : null;
+  useEffect(() => {
+    if (medDosesFrom === null) return;
+    return onSnapshot(
+      query(collection(db, base, COLLECTIONS.medDoses), where('at', '>=', medDosesFrom)),
+      (s) => {
+        setData((d) => ({ ...d, medDoses: s.docs.map((x) => ({ id: x.id, ...x.data() }) as PetHouseholdData['medDoses'][number]) }));
+        setAnswered((a) => (a.has('medDoses') ? a : new Set(a).add('medDoses')));
+      },
+      (e) => {
+        setAnswered((a) => (a.has('medDoses') ? a : new Set(a).add('medDoses')));
+        errorRef.current(readError(e, t('live.medDoses')));
+      },
+    );
+  }, [base, medDosesFrom]);
+  const watchCourseDoses = useCallback(
+    (courseId: string, onChange: (doses: PetHouseholdData['medDoses']) => void) =>
+      onSnapshot(
+        query(collection(db, base, COLLECTIONS.medDoses), where('courseId', '==', courseId)),
+        (s) => onChange(s.docs.map((x) => ({ id: x.id, ...x.data() }) as PetHouseholdData['medDoses'][number])),
+        (e) => errorRef.current(readError(e, t('live.medDoses'))),
+      ),
+    [base],
+  );
 
   // The routine logs from `logWindowStart` (the slowest routine's history), once the routines are
   // in; started again only when that day moves (the day turns, a slower routine is added).
@@ -123,5 +150,5 @@ export function useLiveStore(householdId: string, me: string, household: { membe
   useReminderSync(householdId, me, data, REMINDER_SOURCES.every((k) => answered.has(k)), onError, restricted, household);
   useAgendaSync(householdId, me, data, AGENDA_SOURCES.every((k) => answered.has(k)), restricted);
 
-  return { data, ready, actions, members, me, role, household };
+  return { data, ready, actions, members, me, role, household, medDosesFrom: medDosesFrom ?? Date.now(), watchCourseDoses };
 }
