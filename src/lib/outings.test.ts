@@ -5,6 +5,7 @@ import { FIELDS } from './model';
 import { outingDoc, outingPlanDoc } from './build';
 import { dayCounts, history, outingFlag, outingId, outingWhat, poopLine, slotsOf, slotsOn, underStreak, walkLine } from './outings';
 import { outingReminders, outingSource } from './notify';
+import { mergedReminderText, reminderMergeKey } from '@huishouden/pwa-kit/reminders';
 import { outingAgenda } from './agenda';
 import { outingTodos } from './todos';
 import { createActions, applyOps, type Backend } from '../data/actions';
@@ -123,6 +124,18 @@ describe('the documents', () => {
 });
 
 describe('what goes out of the app', () => {
+  test('two pets out at the same meal: one notification, "Take Milo and Theo out · Dinner"', () => {
+    const milo: Pet = { ...theo, id: 'milo', name: 'Milo' };
+    const miloMeals = meals.map((m) => ({ ...m, id: m.id.replace('theo', 'milo'), petId: 'milo' }));
+    const to = ['sam@example.com', 'jo@example.com'];
+    const [t1] = outingReminders(theo, plan, [...meals, ...miloMeals], [], NOW, to);
+    const [m1] = outingReminders(milo, { ...plan, id: 'milo' }, [...meals, ...miloMeals], [], NOW, to);
+    expect(t1.at).toBe(m1.at);
+    const full = (r: typeof t1) => ({ ...r, recipients: r.recipients ?? 'all' });
+    expect(reminderMergeKey(full(t1))).toBe(reminderMergeKey(full(m1)));
+    expect(mergedReminderText([full(t1), full(m1)], 'en').title).toBe(`Take Milo and Theo out · ${t1.title.split(' · ')[1]}`);
+  });
+
   const am = { ...outing(at(14, '07:40'), true, { slot: 'meal-theo-am' }), id: outingId('theo', TODAY, 'meal-theo-am') };
 
   test('reminders: the outings still to come today and tomorrow, each cancelled once its outing is logged anywhere', () => {

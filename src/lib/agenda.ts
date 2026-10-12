@@ -19,7 +19,7 @@ import { describeRecurrence, dueState } from './schedule';
 import { appUrl } from '@huishouden/pwa-kit/site';
 import { APP, APP_BASE, APP_ORIGIN } from './notify';
 import { t } from '../i18n';
-import { mealMerge, outingMerge } from './merge';
+import { mealMerge, mealTitle, outingMerge } from './merge';
 
 /** The repo short name the agenda files Pet's items under. */
 export const AGENDA_APP = APP;
@@ -227,7 +227,7 @@ export function mealAgenda(pet: Pick<Pet, 'id' | 'name'>, meals: Meal[], feeding
       const detail = [meal.food, meal.portion].map((s) => s?.trim()).filter(Boolean).join(', ');
       const item: AgendaEntry = {
         kind: 'feeding',
-        title: t('agenda.feed', { name, meal: meal.name.trim() }).slice(0, AGENDA_LIMITS.title),
+        title: mealTitle(name, meal.name).slice(0, AGENDA_LIMITS.title),
         start: mealAt(meal.time, day),
         allDay: false,
         ...(detail ? { detail } : {}),
