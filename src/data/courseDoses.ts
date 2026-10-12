@@ -18,6 +18,14 @@ export function useCourseDoses(store: PetStore, course: Course | undefined): Med
   const own = course && !dosesRead(course, store.medDosesFrom) ? course.id : null;
   const [followed, setFollowed] = useState<{ id: string; doses: MedDose[] } | null>(null);
   const { watchCourseDoses } = store;
-  useEffect(() => (own ? watchCourseDoses(own, (doses) => setFollowed({ id: own, doses })) : undefined), [own, watchCourseDoses]);
+  useEffect(() => {
+    if (!own) return;
+    const stop = watchCourseDoses(own, (doses) => setFollowed({ id: own, doses }));
+    // Closed: forgotten, so reopening waits for the listener again rather than showing old doses.
+    return () => {
+      stop();
+      setFollowed(null);
+    };
+  }, [own, watchCourseDoses]);
   return course ? courseDoseSource(course, store.medDosesFrom, store.data.medDoses, followed) : null;
 }

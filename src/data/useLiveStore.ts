@@ -26,6 +26,28 @@ const FEEDING_HISTORY_DAYS = 15;
 /** A query's documents with their ids. */
 const entities = <T,>(s: QuerySnapshot): T[] => s.docs.map((x) => ({ id: x.id, ...x.data() }) as T);
 
+interface Windowed {
+  data: (list: never[]) => void;
+  answer: () => void;
+  fail: (e: Error) => void;
+}
+
+/** A list read from `from` on (`at >=`), or nothing until `from` is known. Returns the stop. */
+function listenFrom(base: string, path: string, from: number | null, on: Windowed): (() => void) | undefined {
+  if (from === null) return;
+  return onSnapshot(
+    query(collection(db, base, path), where('at', '>=', from)),
+    (s) => {
+      on.data(entities(s));
+      on.answer();
+    },
+    (e) => {
+      on.answer();
+      on.fail(e);
+    },
+  );
+}
+
 /**
  * Live household data from Firestore with onSnapshot listeners. Writes are fire-and-forget: the
  * persistent cache applies them locally at once (also offline) and syncs later.
@@ -87,25 +109,14 @@ export function useLiveStore(householdId: string, me: string, household: { membe
   // slowest routine's history).
   const medDosesFrom = answered.has('courses') ? medDoseWindowStart(data.courses, Date.now()) : null;
   const logsFrom = answered.has('routines') ? logWindowStart(data.routines, Date.now()) : null;
-  const listenFrom = (key: 'medDoses' | 'routineLogs', from: number | null) => {
-    if (from === null) return;
-    const answer = () => setAnswered((a) => (a.has(key) ? a : new Set(a).add(key)));
-    return onSnapshot(
-      query(collection(db, base, COLLECTIONS[key]), where('at', '>=', from)),
-      (s) => {
-        setData((d) => ({ ...d, [key]: entities(s) }));
-        answer();
-      },
-      (e) => {
-        answer();
-        errorRef.current(readError(e, t(`live.${key}`))); // i18n-dynamic: live.
-      },
-    );
-  };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => listenFrom('medDoses', medDosesFrom), [base, medDosesFrom]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => listenFrom('routineLogs', logsFrom), [base, logsFrom]);
+  const windowed = (key: 'medDoses' | 'routineLogs'): Windowed => ({
+    data: (list) => setData((d) => ({ ...d, [key]: list })),
+    answer: () => setAnswered((a) => (a.has(key) ? a : new Set(a).add(key))),
+    fail: (e) => errorRef.current(readError(e, t(`live.${key}`))), // i18n-dynamic: live.
+  });
+  // `windowed` uses only state setters and a ref, so the base and the window are what restart these.
+  useEffect(() => listenFrom(base, COLLECTIONS.medDoses, medDosesFrom, windowed('medDoses')), [base, medDosesFrom]);
+  useEffect(() => listenFrom(base, COLLECTIONS.routineLogs, logsFrom, windowed('routineLogs')), [base, logsFrom]);
 
   const watchCourseDoses = useCallback(
     (courseId: string, onChange: (doses: MedDose[]) => void) =>
