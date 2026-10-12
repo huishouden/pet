@@ -19,6 +19,7 @@ import { describeRecurrence, dueState } from './schedule';
 import { appUrl } from '@huishouden/pwa-kit/site';
 import { APP, APP_BASE, APP_ORIGIN } from './notify';
 import { t } from '../i18n';
+import { mealMerge, outingMerge } from './merge';
 
 /** The repo short name the agenda files Pet's items under. */
 export const AGENDA_APP = APP;
@@ -233,6 +234,7 @@ export function mealAgenda(pet: Pick<Pet, 'id' | 'name'>, meals: Meal[], feeding
         url: tabUrl('today', undefined, origin),
         who: name,
         status: fedTodayFor(feedings, meal.id, day).length ? 'done' : 'upcoming',
+        merge: mealMerge(name, meal.name),
       };
       return { ref: mealRef(meal.id, toYmd(day)), items: [item] };
     }),
@@ -258,6 +260,7 @@ export function outingAgenda(pet: Pick<Pet, 'id' | 'name'>, plan: OutingPlan | u
         url: tabUrl('today', undefined, origin),
         who: name,
         status: done ? 'done' : 'upcoming',
+        merge: outingMerge(name, slot),
       };
       return { ref: outingRef(pet.id, slot.key, day), items: [item] };
     }),

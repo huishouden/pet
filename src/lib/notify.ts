@@ -8,6 +8,7 @@ import type { Course, Feeding, Meal, MedDose, Outing, OutingPlan, Pet, Routine, 
 import { ROUTINE_DEFAULTS, petsLabel, routineLogId } from './routines';
 import { routineDueDays } from '@huishouden/pwa-kit/pet-routines';
 import { outingFor, outingId, slotsOf, takeOut } from './outings';
+import { mealReminderMerge, outingMerge } from './merge';
 import { atTime } from '@huishouden/pwa-kit/time';
 import { courseState, slotAt, todoMedDoseId } from './courses';
 import { fedTodayFor, mealAt, mealsOf } from './feeding';
@@ -94,6 +95,7 @@ export function mealReminders(pet: Pick<Pet, 'id' | 'name'>, meals: Meal[], feed
         url: APP_URL,
         ref: mealsRef(pet.id),
         source: mealSource(meal.id),
+        merge: mealReminderMerge(pet.name, meal.name),
       });
     }
   }
@@ -140,6 +142,7 @@ export function outingReminders(pet: Pick<Pet, 'id' | 'name'>, plan: OutingPlan 
         ref: outingsRef(pet.id),
         recipients,
         source: outingSource(pet.id, day, slot.key),
+        merge: outingMerge(pet.name, slot),
       });
     }
   }

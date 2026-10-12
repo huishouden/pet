@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { agendaDoc, agendaOpsAllowed, allDayStart, canEdit, fillEditOps } from '@huishouden/pwa-kit/agenda';
+import { agendaDoc, agendaOpsAllowed, allDayStart, canEdit, fillEditOps, mergeAgenda, toAgendaItem } from '@huishouden/pwa-kit/agenda';
 import { toYmd } from '@huishouden/pwa-kit/time';
 import {
   appointmentEdit,
@@ -16,6 +16,7 @@ import {
   courseDetail,
   doseAgenda,
   mealAgenda,
+  outingAgenda,
   reminderAgenda,
   tabUrl,
   type AgendaData,
@@ -253,6 +254,7 @@ describe('feeding', () => {
         url: `${URL}/`,
         who: 'Pepper',
         status: 'done',
+        merge: { key: 'meal:am', part: 'Pepper', title: 'Feed {parts} · AM' },
       },
     ]);
     expect(list[1].items[0]).toMatchObject({ title: 'Feed Pepper · PM', start: mealAt('19:00', NOW), status: 'upcoming' });
@@ -272,6 +274,7 @@ describe('feeding', () => {
         url: `${URL}/`,
         who: 'Pepper',
         status: 'upcoming',
+        merge: { key: 'meal:am', part: 'Pepper', title: 'Feed {parts} · AM' },
       },
     ]);
     expect(list[3].items[0]).toMatchObject({ title: 'Feed Pepper · PM', start: at(5, 15, '19:00'), status: 'upcoming' });
@@ -426,5 +429,27 @@ describe('changes made in a calendar come back', () => {
     expect(reminderEntry(reminder({ dismissedAt: NOW }), pets, NOW, ORIGIN)).toBeNull();
     const [span] = courseAgenda(course(), pets, NOW, ORIGIN);
     expect(courseEntry(course(), pets, ORIGIN)).toMatchObject({ allDay: true, start: span.start, end: span.end });
+  });
+});
+
+describe('two pets at the same meal show as one', () => {
+  const juniperMeals: Meal[] = [{ id: 'meal-j-am', petId: juniper.id, name: 'AM', time: '09:00', ...stamp }];
+  const both = [...meals, ...juniperMeals];
+  const stored = (pet: Pet) =>
+    mealAgenda(pet, both, [], NOW, ORIGIN).flatMap((m) => m.items.map((i, n) => toAgendaItem(`${m.ref}-${n}`, agendaDoc('pet', { ...i, ref: m.ref }, BY, NOW))));
+
+  test('the agenda: "Feed Juniper and Pepper · AM"; a fed one stays apart', () => {
+    const shown = mergeAgenda([...stored(pepper), ...stored(juniper)], 'en');
+    expect(shown.filter((i) => i.start === mealAt('09:00', NOW)).map((i) => i.title)).toEqual(['Feed Juniper and Pepper · AM']);
+    const fed = mergeAgenda([...mealAgenda(pepper, both, [fedAm], NOW, ORIGIN), ...mealAgenda(juniper, both, [], NOW, ORIGIN)].flatMap((m) => m.items.map((i, n) => toAgendaItem(`${m.ref}-${n}`, agendaDoc('pet', { ...i, ref: m.ref }, BY, NOW)))), 'en');
+    expect(fed.filter((i) => i.start === mealAt('09:00', NOW)).map((i) => i.title).sort()).toEqual(['Feed Juniper · AM', 'Feed Pepper · AM']);
+  });
+
+  test('outings at the same slot carry one merge key', () => {
+    const plan = { on: true, mode: 'meals' as const, every: 4, from: '07:00', to: '21:00', poopMin: 0, flagDays: 2, remind: true, walkGoal: 0 };
+    const [p] = outingAgenda(pepper, { ...plan, id: pepper.id } as never, both, [], NOW, ORIGIN);
+    const [j] = outingAgenda(juniper, { ...plan, id: juniper.id } as never, both, [], NOW, ORIGIN);
+    expect(p.items[0].merge?.key).toBe(j.items[0].merge?.key);
+    expect(p.items[0].merge?.title).toBe('Take {parts} out · AM');
   });
 });
