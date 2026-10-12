@@ -33,6 +33,7 @@ export interface PetHouseholdData {
   meals: Meal[];
   feedings: Feeding[];
   courses: Course[];
+  /** The live store's are a window (`medDoseWindowStart`), not every dose: see `PetStore.medDosesFrom`. */
   medDoses: MedDose[];
   /** Each pet's avatar photo, by pet id. */
   photos: PetPhoto[];

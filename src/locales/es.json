@@ -403,6 +403,7 @@
   "medicineCard.dosesByDayFor": "Dosis por día de {name}",
   "medicineCard.dosesByDay": "Dosis por día",
   "medicineCard.finished": "terminado el {date} · {given} de {total} dosis",
+  "medicineCard.finishedOn": "terminado el {date}",
   "doseLog.timeGivenToday": "Hora en que se dio {title} hoy",
   "doseLog.timeGivenOn": "Hora en que se dio {title} el {date}",
   "done.give": "Dar",

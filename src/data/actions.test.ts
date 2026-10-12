@@ -206,3 +206,40 @@ test('every sample document already has only rule keys', () => {
   for (const key of Object.keys(COLLECTIONS) as DataKey[]) ops.push((d[key] as { id: string }[]).map(({ id, ...data }) => ({ col: key, id, data })));
   expectRuleKeys(ops);
 });
+
+describe("deleting a pet removes its older history, outside what the store read", () => {
+  test('older course doses and feedings are found, deleted, and put back by Undo', async () => {
+    const data = demoData();
+    const pet = data.pets[0]!;
+    // On the server, not in what the store read (its windows): two old course doses and a feeding.
+    const server: Record<string, { id: string; petId: string }[]> = {
+      medDoses: [...data.medDoses.filter((d) => d.petId === pet.id), { id: 'old-dose-1', petId: pet.id }, { id: 'old-dose-2', petId: pet.id }],
+      feedings: [{ id: 'old-feeding', petId: pet.id }],
+      doses: [],
+      outings: [],
+    };
+    const writes: Op[][] = [];
+    let current = data;
+    const actions = createActions({
+      me: 'sam@example.com',
+      now: () => DEMO_NOW,
+      read: () => current,
+      newId: (key) => `${key}-new`,
+      write: (ops) => {
+        writes.push(ops);
+        current = applyOps(current, ops);
+      },
+      contacts: { save: () => {}, remove: () => {}, restore: () => {} },
+      allForPet: async (key, petId) => server[key]!.filter((x) => x.petId === petId),
+    });
+    const bundle = actions.removePet(pet);
+    actions.restorePet(bundle);
+    // Undo waited for the sweep: the older documents were deleted first, then restored with the rest.
+    await bundle.swept;
+    await new Promise((r) => setTimeout(r, 0));
+    const deleted = writes.flat().filter((o) => o.data === null).map((o) => o.id);
+    expect(deleted).toEqual(expect.arrayContaining(['old-dose-1', 'old-dose-2', 'old-feeding']));
+    const restored = writes.at(-1)!.filter((o) => o.data !== null).map((o) => o.id);
+    expect(restored).toEqual(expect.arrayContaining(['old-dose-1', 'old-dose-2', 'old-feeding', pet.id]));
+  });
+});

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { collection, doc, onSnapshot, query, where, type Query } from 'firebase/firestore';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { collection, doc, getDocs, onSnapshot, query, where, type Query, type QuerySnapshot } from 'firebase/firestore';
 import { commitOps } from '@huishouden/pwa-kit/firestore';
 import { householdContacts, markUnflaggedOpen, watchContacts } from '@huishouden/pwa-kit/contacts';
 import { can, householdRole, isRestricted, type Role } from '@huishouden/pwa-kit/roles';
@@ -7,6 +7,7 @@ import { readError } from '@huishouden/pwa-kit/feedback';
 import { t } from '../i18n';
 import { APP } from '../lib/contacts';
 import { emptyData, type PetHouseholdData } from '../lib/demo';
+import type { MedDose } from '../lib/model';
 import { DAY } from '@huishouden/pwa-kit/time';
 import { db } from './firebase';
 import { createActions, type Backend } from './actions';
@@ -15,11 +16,37 @@ import { REMINDER_SOURCES } from '../lib/notify';
 import { AGENDA_SOURCES, useAgendaSync } from './agendaSync';
 import { COLLECTIONS, type DataKey, type PetStore } from './types';
 import { logWindowStart } from '../lib/routines';
+import { medDoseWindowStart } from '../lib/courses';
 
-/** How far back dose history reads: a year of daily medication, and every monthly one. */
+/** How far back the reminders' dose history reads: a year of every monthly one. */
 const DOSE_HISTORY_DAYS = 400;
 /** The feeding history the Pets tab shows (14 days), plus a day of margin. */
 const FEEDING_HISTORY_DAYS = 15;
+
+/** A query's documents with their ids. */
+const entities = <T,>(s: QuerySnapshot): T[] => s.docs.map((x) => ({ id: x.id, ...x.data() }) as T);
+
+interface Windowed {
+  data: (list: never[]) => void;
+  answer: () => void;
+  fail: (e: Error) => void;
+}
+
+/** A list read from `from` on (`at >=`), or nothing until `from` is known. Returns the stop. */
+function listenFrom(base: string, path: string, from: number | null, on: Windowed): (() => void) | undefined {
+  if (from === null) return;
+  return onSnapshot(
+    query(collection(db, base, path), where('at', '>=', from)),
+    (s) => {
+      on.data(entities(s));
+      on.answer();
+    },
+    (e) => {
+      on.answer();
+      on.fail(e);
+    },
+  );
+}
 
 /**
  * Live household data from Firestore with onSnapshot listeners. Writes are fire-and-forget: the
@@ -48,7 +75,7 @@ export function useLiveStore(householdId: string, me: string, household: { membe
       onSnapshot(
         q,
         (s) => {
-          setData((d) => ({ ...d, [key]: s.docs.map((x) => ({ id: x.id, ...x.data() })) }));
+          setData((d) => ({ ...d, [key]: entities(s) }));
           answer(key);
         },
         (e) => {
@@ -67,7 +94,6 @@ export function useLiveStore(householdId: string, me: string, household: { membe
       listen('meals', col('meals')),
       listen('courses', col('courses')),
       listen('photos', col('photos')),
-      listen('medDoses', query(col('medDoses'), where('at', '>=', Date.now() - DOSE_HISTORY_DAYS * DAY))),
       listen('feedings', query(col('feedings'), where('at', '>=', Date.now() - FEEDING_HISTORY_DAYS * DAY))),
       listen('outingPlans', col('outingPlans')),
       listen('routines', col('routines')),
@@ -77,23 +103,30 @@ export function useLiveStore(householdId: string, me: string, household: { membe
     return () => unsubs.forEach((u) => u());
   }, [base, householdId, restricted]);
 
-  // The routine logs from `logWindowStart` (the slowest routine's history), once the routines are
-  // in; started again only when that day moves (the day turns, a slower routine is added).
+  // Lists read from a window that hangs on other lists, once those are in; each listener starts
+  // again only when its window's day moves. The course doses from `medDoseWindowStart` (the courses
+  // running, to come or finished within a month); the routine logs from `logWindowStart` (the
+  // slowest routine's history).
+  const medDosesFrom = answered.has('courses') ? medDoseWindowStart(data.courses, Date.now()) : null;
   const logsFrom = answered.has('routines') ? logWindowStart(data.routines, Date.now()) : null;
-  useEffect(() => {
-    if (logsFrom === null) return;
-    return onSnapshot(
-      query(collection(db, base, COLLECTIONS.routineLogs), where('at', '>=', logsFrom)),
-      (s) => {
-        setData((d) => ({ ...d, routineLogs: s.docs.map((x) => ({ id: x.id, ...x.data() }) as PetHouseholdData['routineLogs'][number]) }));
-        setAnswered((a) => (a.has('routineLogs') ? a : new Set(a).add('routineLogs')));
-      },
-      (e) => {
-        setAnswered((a) => (a.has('routineLogs') ? a : new Set(a).add('routineLogs')));
-        errorRef.current(readError(e, t('live.routineLogs')));
-      },
-    );
-  }, [base, logsFrom]);
+  const windowed = (key: 'medDoses' | 'routineLogs'): Windowed => ({
+    data: (list) => setData((d) => ({ ...d, [key]: list })),
+    answer: () => setAnswered((a) => (a.has(key) ? a : new Set(a).add(key))),
+    fail: (e) => errorRef.current(readError(e, t(`live.${key}`))), // i18n-dynamic: live.
+  });
+  // `windowed` uses only state setters and a ref, so the base and the window are what restart these.
+  useEffect(() => listenFrom(base, COLLECTIONS.medDoses, medDosesFrom, windowed('medDoses')), [base, medDosesFrom]);
+  useEffect(() => listenFrom(base, COLLECTIONS.routineLogs, logsFrom, windowed('routineLogs')), [base, logsFrom]);
+
+  const watchCourseDoses = useCallback(
+    (courseId: string, onChange: (doses: MedDose[]) => void) =>
+      onSnapshot(
+        query(collection(db, base, COLLECTIONS.medDoses), where('courseId', '==', courseId)),
+        (s) => onChange(entities(s)),
+        (e) => errorRef.current(readError(e, t('live.medDoses'))),
+      ),
+    [base],
+  );
 
   // Appointments saved before the private flag are hidden from helpers and kids until written with
   // `private: false`; an admin's or member's device does that once.
@@ -112,6 +145,7 @@ export function useLiveStore(householdId: string, me: string, household: { membe
       newId: (key) => doc(collection(db, base, COLLECTIONS[key])).id,
       write: (ops) => report(commitOps(db, base, ops, (key) => COLLECTIONS[key])),
       contacts: householdContacts(db, householdId, APP, me, report),
+      allForPet: async (key, petId) => entities(await getDocs(query(collection(db, base, COLLECTIONS[key]), where('petId', '==', petId)))),
     };
     return createActions(backend);
   }, [base, householdId, me]);
@@ -123,5 +157,5 @@ export function useLiveStore(householdId: string, me: string, household: { membe
   useReminderSync(householdId, me, data, REMINDER_SOURCES.every((k) => answered.has(k)), onError, restricted, household);
   useAgendaSync(householdId, me, data, AGENDA_SOURCES.every((k) => answered.has(k)), restricted);
 
-  return { data, ready, actions, members, me, role, household };
+  return { data, ready, actions, members, me, role, household, medDosesFrom: medDosesFrom ?? Date.now(), watchCourseDoses };
 }

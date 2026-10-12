@@ -403,6 +403,7 @@
   "medicineCard.dosesByDayFor": "Doses per dag voor {name}",
   "medicineCard.dosesByDay": "Doses per dag",
   "medicineCard.finished": "klaar op {date} · {given} van {total} doses",
+  "medicineCard.finishedOn": "klaar op {date}",
   "doseLog.timeGivenToday": "Tijd waarop {title} vandaag is gegeven",
   "doseLog.timeGivenOn": "Tijd waarop {title} op {date} is gegeven",
   "done.give": "Geven",

@@ -8,7 +8,7 @@ import { markGiven } from '../lib/schedule';
 import { defaultMeals } from '../lib/feeding';
 import type { PetHouseholdData } from '../lib/demo';
 import type { DataKey, PetActions, PetBundle } from './types';
-import { track } from '@huishouden/pwa-kit/observability';
+import { reportError, track } from '@huishouden/pwa-kit/observability';
 
 /** One document write: `data` null deletes. */
 export type Op = KitOp<DataKey>;
@@ -23,14 +23,25 @@ export interface Backend extends KitBackend<DataKey> {
   /** The data as last seen (for edits that keep the original author and creation time). */
   read(): PetHouseholdData;
   contacts: ContactWrites;
+  /**
+   * Every document of `key` for the pet, also those older than `read()` holds (its lists are read
+   * from a window): deleting a pet removes them too. Absent where `read()` holds everything.
+   */
+  allForPet?: (key: PetHistoryKey, petId: string) => Promise<{ id: string }[]>;
 }
 
+/** A pet's histories that the live store reads from a window. */
+export type PetHistoryKey = 'doses' | 'feedings' | 'medDoses' | 'outings';
+export const PET_HISTORIES: readonly PetHistoryKey[] = ['doses', 'feedings', 'medDoses', 'outings'];
+
 export function createActions(b: Backend): PetActions {
+  // Assigned below: restorePet calls it again once the sweep is done.
+  let actions: PetActions;
   const put = (key: DataKey, id: string, data: object) => b.write([{ col: key, id, data }]);
   const del = (key: DataKey, id: string) => b.write([{ col: key, id, data: null }]);
   const find = <K extends DataKey>(key: K, id: string | null) => (id ? (b.read()[key] as { id: string; by: string; createdAt: number }[]).find((x) => x.id === id) : undefined);
 
-  return {
+  actions = {
     savePet: (id, input) => {
       const existing = find('pets', id);
       const petId = id ?? b.newId('pets');
@@ -78,9 +89,29 @@ export function createActions(b: Backend): PetActions {
         ops.push({ col: 'appointments', id: a.id, data: others.length ? { ...withoutId(a), petIds: others } : null });
       }
       b.write(ops);
+      // The pet's older history, outside what was read: found and deleted after; Undo waits for it.
+      const all = b.allForPet;
+      if (all)
+        bundle.swept = Promise.all(
+          PET_HISTORIES.map(async (key) => {
+            const known = new Set((bundle[key] as { id: string }[]).map((x) => x.id));
+            const older = (await all(key, pet.id)).filter((x) => !known.has(x.id));
+            (bundle[key] as { id: string }[]).push(...older);
+            if (older.length) b.write(older.map((x) => ({ col: key, id: x.id, data: null })));
+          }),
+        ).then(
+          () => undefined,
+          (e) => reportError(e, { where: 'delete pet history' }),
+        );
       return bundle;
     },
     restorePet: (bundle) => {
+      if (bundle.swept) {
+        const swept = bundle.swept;
+        bundle.swept = undefined;
+        void swept.then(() => actions.restorePet(bundle));
+        return;
+      }
       const ops: Op[] = [{ col: 'pets', id: bundle.pet.id, data: withoutId(bundle.pet) }];
       for (const key of ['reminders', 'doses', 'weights', 'records', 'meals', 'feedings', 'courses', 'medDoses', 'appointments', 'outings'] as const)
         for (const x of bundle[key] ?? []) ops.push({ col: key, id: x.id, data: withoutId(x) });
@@ -238,6 +269,7 @@ export function createActions(b: Backend): PetActions {
     deleteContact: (c) => b.contacts.remove(c),
     restoreContact: (c) => b.contacts.restore(c),
   };
+  return actions;
 }
 
 /** Applies writes to in-memory data: the sample store, and the unit tests of the actions. */

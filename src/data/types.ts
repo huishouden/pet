@@ -46,6 +46,8 @@ export interface PetBundle {
   routineLogs: RoutineLog[];
   /** Appointments as they were: those only for this pet are deleted, shared ones lose this pet. */
   appointments: Appointment[];
+  /** Set while the pet's older history (outside what the store read) is being found and deleted. */
+  swept?: Promise<void>;
 }
 
 /** Writes return immediately (Firestore queues them offline); failures arrive through the store's error callback. */
@@ -137,4 +139,8 @@ export interface PetStore {
   role: Role | null;
   /** Members and roles, for the helpers a medicine course can be restricted to. */
   household: { members: string[]; roles?: Record<string, Role> };
+  /** From when `data.medDoses` holds the course doses (`medDoseWindowStart`; 0: all of them). */
+  medDosesFrom: number;
+  /** Follows one course's doses, all of them: an older course's log while it is open. Returns the stop. */
+  watchCourseDoses: (courseId: string, onChange: (doses: MedDose[]) => void) => () => void;
 }

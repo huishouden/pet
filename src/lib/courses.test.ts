@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { courseDay, courseHistory, courseState, courseText, daysUntil, defaultTimes, dosesOn, givenOnFor, givenTodayFor, lastDay, progress, slotAt, slotMealName, timesText, todaysDoses } from './courses';
+import { courseDay, courseHistory, courseState, courseText, daysUntil, defaultTimes, dosesOn, givenOnFor, givenTodayFor, lastDay, progress, slotAt, slotMealName, timesText, todaysDoses, medDoseWindowStart, dosesRead, MAX_MED_DOSE_DAYS } from './courses';
 import { mealAt } from './feeding';
 
 const now = new Date('2031-05-14T10:30:00').getTime();
@@ -150,3 +150,27 @@ describe('skipped doses', () => {
   });
 });
 
+
+describe('which course doses are read', () => {
+  const NOW = new Date(2031, 4, 14, 10, 30).getTime();
+  const day = (y: number, m: number, d: number) => new Date(y, m - 1, d).getTime();
+  test('today when there are no courses, or only long-finished ones', () => {
+    expect(medDoseWindowStart([], NOW)).toBe(day(2031, 5, 14));
+    expect(medDoseWindowStart([{ startDate: '2031-01-01', days: 10 }], NOW)).toBe(day(2031, 5, 14));
+  });
+  test('the day before the earliest start among running, upcoming and recently finished courses', () => {
+    const courses = [
+      { startDate: '2031-05-10', days: 10 },
+      { startDate: '2031-04-01', days: 20 },
+      { startDate: '2031-05-20', days: 5 },
+      { startDate: '2030-12-01', days: 30 },
+    ];
+    expect(medDoseWindowStart(courses, NOW)).toBe(day(2031, 3, 31));
+    expect(dosesRead(courses[1]!, day(2031, 3, 31))).toBe(true);
+    expect(dosesRead(courses[3]!, day(2031, 3, 31))).toBe(false);
+  });
+  test(`a year-long course still running: at most ${MAX_MED_DOSE_DAYS} days`, () => {
+    expect(medDoseWindowStart([{ startDate: '2030-01-01', days: 365 * 2 }], NOW)).toBe(medDoseWindowStart([{ startDate: '2030-04-09', days: 400 }], NOW));
+    expect(medDoseWindowStart([{ startDate: '2030-01-01', days: 365 * 2 }], NOW)).toBe(day(2030, 4, 9));
+  });
+});

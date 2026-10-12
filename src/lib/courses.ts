@@ -34,6 +34,30 @@ interface DoseLike {
   skipped?: boolean;
 }
 
+/** Finished courses keep their dose counts on the Pets tab this many days after their last day. */
+export const COUNTED_FINISHED_DAYS = 30;
+/** The furthest back the course doses are ever read. */
+export const MAX_MED_DOSE_DAYS = 400;
+
+/**
+ * From when the course doses are read (the start of a local day, so it stays the same all day): the
+ * day before the earliest start among the courses still running, to come, or finished within
+ * `COUNTED_FINISHED_DAYS`, never more than `MAX_MED_DOSE_DAYS` back; today when there are none.
+ * Every dose read is billed on each open: a long course finished months ago costs nothing then.
+ * Older courses' doses are read only when their log is opened (`dosesRead` is false for them).
+ */
+export function medDoseWindowStart(courses: readonly Pick<CourseLike, 'startDate' | 'days'>[], now: number): number {
+  const today = toYmd(now);
+  const since = addDays(today, -COUNTED_FINISHED_DAYS);
+  const starts = courses.filter((c) => parseYmd(c.startDate) !== null && lastDay(c) >= since).map((c) => addDays(c.startDate, -1));
+  const from = starts.reduce((a, b) => (b < a ? b : a), today);
+  const floor = addDays(today, -MAX_MED_DOSE_DAYS);
+  return ymdToTime(from < floor ? floor : from);
+}
+
+/** Whether a course's doses are in what `medDoseWindowStart(…)` = `from` reads. */
+export const dosesRead = (c: Pick<CourseLike, 'startDate'>, from: number): boolean => parseYmd(c.startDate) !== null && ymdToTime(addDays(c.startDate, -1)) >= from;
+
 /** YYYY-MM-DD of the course's last day. */
 export function lastDay(c: Pick<CourseLike, 'startDate' | 'days'>): string {
   const start = parseYmd(c.startDate);

@@ -403,6 +403,7 @@
   "medicineCard.dosesByDayFor": "Doses by day for {name}",
   "medicineCard.dosesByDay": "Doses by day",
   "medicineCard.finished": "finished {date} · {given} of {total} doses",
+  "medicineCard.finishedOn": "finished {date}",
   "doseLog.timeGivenToday": "Time {title} was given today",
   "doseLog.timeGivenOn": "Time {title} was given on {date}",
   "done.give": "Give",

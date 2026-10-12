@@ -172,7 +172,7 @@ function PetDetail({ pet, pets, store, open, now, onGive, onRestore, notify }: {
       </div>
 
       <div className="flex flex-col gap-5">
-        <MedicineCard pet={pet} courses={store.data.courses} medDoses={store.data.medDoses} now={now} open={open} perms={perms} />
+        <MedicineCard pet={pet} courses={store.data.courses} medDoses={store.data.medDoses} medDosesFrom={store.medDosesFrom} now={now} open={open} perms={perms} />
         <section className={`${cardClass} p-6`} aria-label={t('pets.careOf', { name: pet.name })}>
           <div className="flex items-center justify-between gap-4">
             <h3 className={overline}>{t('tab.care')}</h3>
