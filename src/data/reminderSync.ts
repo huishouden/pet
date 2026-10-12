@@ -4,7 +4,8 @@ import { householdRole, type Role } from '@huishouden/pwa-kit/roles';
 import { toYmd } from '@huishouden/pwa-kit/time';
 import type { PetHouseholdData } from '../lib/demo';
 import { db } from './firebase';
-import { publishReminderChanges, publishReminders, reminderSignatures } from './publish';
+import { publishReminderChanges, publishReminders } from './publish';
+import { reminderSignatures } from '../lib/notify';
 
 /**
  * Keeps the household's reminders for Pet in step with its data (`publishReminders`): each course's

@@ -186,7 +186,7 @@ export function routineReminders(routine: Routine, pets: Pick<Pet, 'id' | 'name'
  * publishes: publishing before one has loaded would delete that list's reminders household-wide.
  */
 export const REMINDER_SOURCES = ['pets', 'courses', 'medDoses', 'meals', 'feedings', 'outingPlans', 'outings', 'routines', 'routineLogs'] as const satisfies readonly DataKey[];
-export type ReminderData = Pick<PetHouseholdData, (typeof REMINDER_SOURCES)[number]>;
+export type ReminderSourceData = Pick<PetHouseholdData, (typeof REMINDER_SOURCES)[number]>;
 
 /**
  * Pet's push reminders for the household by ref, each ref's builder: each course's remaining doses,
@@ -194,7 +194,7 @@ export type ReminderData = Pick<PetHouseholdData, (typeof REMINDER_SOURCES)[numb
  * Every record has its ref, empty or not, so one that no longer has reminders is still seen.
  * `outers` are the members who may take a pet out (everyone but kids).
  */
-export function remindersByRef(data: ReminderData, now: number, outers: string[]): Map<string, () => ReminderInput[]> {
+export function remindersByRef(data: ReminderSourceData, now: number, outers: string[]): Map<string, () => ReminderInput[]> {
   const out = new Map<string, () => ReminderInput[]>();
   for (const c of data.courses) out.set(courseRef(c.id), () => courseReminders(c, data.pets.find((p) => p.id === c.petId), data.medDoses, now));
   for (const p of data.pets) out.set(mealsRef(p.id), () => mealReminders(p, data.meals, data.feedings, now));
@@ -205,13 +205,13 @@ export function remindersByRef(data: ReminderData, now: number, outers: string[]
 }
 
 /** Every reminder Pet publishes. */
-export const reminderInputs = (data: ReminderData, now: number, outers: string[]): ReminderInput[] => [...remindersByRef(data, now, outers).values()].flatMap((build) => build());
+export const reminderInputs = (data: ReminderSourceData, now: number, outers: string[]): ReminderInput[] => [...remindersByRef(data, now, outers).values()].flatMap((build) => build());
 
 /** What a ref's reminders are, whole: any change to one (its link, its source, its words) is a change. */
 const signatureOf = (list: ReminderInput[]) => JSON.stringify(list);
 
 /** Each ref's reminders as `publishReminderChanges` compares them: what a full publish wrote. */
-export const reminderSignatures = (data: ReminderData, now: number, outers: string[]): Map<string, string> => new Map([...remindersByRef(data, now, outers)].map(([ref, build]) => [ref, signatureOf(build())]));
+export const reminderSignatures = (data: ReminderSourceData, now: number, outers: string[]): Map<string, string> => new Map([...remindersByRef(data, now, outers)].map(([ref, build]) => [ref, signatureOf(build())]));
 
 /**
  * Which refs a change touches, given what this device last wrote (`written`, by ref) and each ref's

@@ -19,7 +19,8 @@ const real = await import('firebase/firestore');
 const counter = readCounter();
 mock.module('firebase/firestore', () => counter.sdk(real));
 const { connectFirestoreEmulator, initializeFirestore, memoryLocalCache, terminate } = await import('firebase/firestore');
-const { publishAgenda, publishAgendaChanges, publishReminderChanges, publishReminders, publishTodos, reminderSignatures } = await import('../src/data/publish');
+const { publishAgenda, publishAgendaChanges, publishReminderChanges, publishReminders, publishTodos } = await import('../src/data/publish');
+const { reminderSignatures } = await import('../src/lib/notify');
 const { agendaByRef } = await import('../src/lib/agenda');
 
 const emulator = e2eTarget() === 'emulator';

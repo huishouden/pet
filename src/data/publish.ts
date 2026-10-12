@@ -4,7 +4,7 @@ import { localizeTodos, syncTodos } from '@huishouden/pwa-kit/todos';
 import { cancelReminders, localizeReminders, replaceReminders, syncReminders } from '@huishouden/pwa-kit/reminders';
 import { AGENDA_APP, agendaByRef, agendaChanges, type AgendaData } from '../lib/agenda';
 import { todoItems } from '../lib/todos';
-import { APP, reminderChanges, reminderInputs, remindersByRef, type ReminderData } from '../lib/notify';
+import { APP, reminderChanges, reminderInputs, remindersByRef, type ReminderSourceData } from '../lib/notify';
 
 type Published = NonNullable<Parameters<typeof syncAgenda>[4]['published']>;
 
@@ -17,14 +17,12 @@ export interface PublishOptions {
 
 const pub = (published: Published | null | undefined) => (published === undefined ? {} : { published });
 
-export { REMINDER_SOURCES, reminderInputs, reminderSignatures, remindersByRef, type ReminderData } from '../lib/notify';
-
 /**
  * Makes Pet's reminders exactly what its data asks for, on open and when the day turns: one query
  * of the app's reminders (none when this device published the same a short while ago), then only
  * what changed is written. In every member's language (`localizeReminders`).
  */
-export async function publishReminders(db: Firestore, householdId: string, me: string, data: ReminderData, now: number, outers: string[], { restricted = false, published }: PublishOptions = {}) {
+export async function publishReminders(db: Firestore, householdId: string, me: string, data: ReminderSourceData, now: number, outers: string[], { restricted = false, published }: PublishOptions = {}) {
   return syncReminders(db, householdId, APP, await localizeReminders(() => reminderInputs(data, now, outers)), me, now, { restricted, ...pub(published) });
 }
 
@@ -39,7 +37,7 @@ export async function publishReminderChanges(
   householdId: string,
   me: string,
   written: Map<string, string>,
-  data: ReminderData,
+  data: ReminderSourceData,
   now: number,
   outers: string[],
   { restricted = false }: { restricted?: boolean } = {},

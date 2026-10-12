@@ -11,7 +11,7 @@ import { DAY } from '@huishouden/pwa-kit/time';
 import { db } from './firebase';
 import { createActions, type Backend } from './actions';
 import { useReminderSync } from './reminderSync';
-import { REMINDER_SOURCES } from './publish';
+import { REMINDER_SOURCES } from '../lib/notify';
 import { AGENDA_SOURCES, useAgendaSync } from './agendaSync';
 import { COLLECTIONS, type DataKey, type PetStore } from './types';
 import { logWindowStart } from '../lib/routines';

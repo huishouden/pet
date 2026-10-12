@@ -112,8 +112,10 @@ describe('reminders to write after a change', () => {
   const written = (data: typeof d) => reminderSignatures(data, DEMO_NOW, outers);
   const changes = (before: typeof d, after: typeof d) => reminderChanges(written(before), remindersByRef(after, DEMO_NOW, outers));
 
-  test('nothing to write when nothing changed', () => {
+  test('nothing to write when nothing changed, also a minute later', () => {
     expect(changes(d, d)).toEqual({ replace: [], remove: [] });
+    // Signed at open, compared at a later change: nothing derived from the clock may differ.
+    expect(reminderChanges(written(d), remindersByRef(d, DEMO_NOW + 60_000, outers))).toEqual({ replace: [], remove: [] });
   });
 
   test("a meal fed rewrites only that pet's meal reminders", () => {
