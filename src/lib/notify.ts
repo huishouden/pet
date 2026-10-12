@@ -15,7 +15,8 @@ import { fedTodayFor, mealAt, mealsOf } from './feeding';
 import { addDays, startOfDay, toYmd } from '@huishouden/pwa-kit/time';
 import { birthdayReminder } from './birthday';
 import { t } from '../i18n';
-import { COLLECTIONS } from '../data/types';
+import { COLLECTIONS, type DataKey } from '../data/types';
+import type { PetHouseholdData } from './demo';
 
 export const APP = 'pet';
 /** Pet's path on the suite's one site (pwa-kit docs/one-site.md); bun tests have no Vite env. */
@@ -178,4 +179,50 @@ export function routineReminders(routine: Routine, pets: Pick<Pet, 'id' | 'name'
       recipients,
       source: routineSource(routine.id, due),
     }));
+}
+
+/**
+ * The lists Pet's reminders are built from. `useReminderSync` waits for all of them before it
+ * publishes: publishing before one has loaded would delete that list's reminders household-wide.
+ */
+export const REMINDER_SOURCES = ['pets', 'courses', 'medDoses', 'meals', 'feedings', 'outingPlans', 'outings', 'routines', 'routineLogs'] as const satisfies readonly DataKey[];
+export type ReminderSourceData = Pick<PetHouseholdData, (typeof REMINDER_SOURCES)[number]>;
+
+/**
+ * Pet's push reminders for the household by ref, each ref's builder: each course's remaining doses,
+ * each pet's untaken meal cut-offs, next birthday and outings, and each care routine's due days.
+ * Every record has its ref, empty or not, so one that no longer has reminders is still seen.
+ * `outers` are the members who may take a pet out (everyone but kids).
+ */
+export function remindersByRef(data: ReminderSourceData, now: number, outers: string[]): Map<string, () => ReminderInput[]> {
+  const out = new Map<string, () => ReminderInput[]>();
+  for (const c of data.courses) out.set(courseRef(c.id), () => courseReminders(c, data.pets.find((p) => p.id === c.petId), data.medDoses, now));
+  for (const p of data.pets) out.set(mealsRef(p.id), () => mealReminders(p, data.meals, data.feedings, now));
+  for (const p of data.pets) out.set(birthdayRef(p.id), () => birthdayReminders(p, now));
+  for (const p of data.pets) out.set(outingsRef(p.id), () => (outers.length ? outingReminders(p, data.outingPlans.find((x) => x.id === p.id), data.meals, data.outings, now, outers) : []));
+  for (const r of data.routines) out.set(routinesRef(r.id), () => (outers.length ? routineReminders(r, data.pets, data.routineLogs, now, outers) : []));
+  return out;
+}
+
+/** Every reminder Pet publishes. */
+export const reminderInputs = (data: ReminderSourceData, now: number, outers: string[]): ReminderInput[] => [...remindersByRef(data, now, outers).values()].flatMap((build) => build());
+
+/** What a ref's reminders are, whole: any change to one (its link, its source, its words) is a change. */
+const signatureOf = (list: ReminderInput[]) => JSON.stringify(list);
+
+/** Each ref's reminders as `publishReminderChanges` compares them: what a full publish wrote. */
+export const reminderSignatures = (data: ReminderSourceData, now: number, outers: string[]): Map<string, string> => new Map([...remindersByRef(data, now, outers)].map(([ref, build]) => [ref, signatureOf(build())]));
+
+/**
+ * Which refs a change touches, given what this device last wrote (`written`, by ref) and each ref's
+ * builder now: refs whose reminders differ (replace, with the new signature), and refs that are gone
+ * (cancel). An empty ref is a ref: one that empties is replaced with nothing.
+ */
+export function reminderChanges(written: ReadonlyMap<string, string>, builders: ReadonlyMap<string, () => ReminderInput[]>): { replace: [string, () => ReminderInput[], string][]; remove: string[] } {
+  const replace: [string, () => ReminderInput[], string][] = [];
+  for (const [ref, build] of builders) {
+    const signature = signatureOf(build());
+    if (written.get(ref) !== signature) replace.push([ref, build, signature]);
+  }
+  return { replace, remove: [...written.keys()].filter((ref) => !builders.has(ref)) };
 }

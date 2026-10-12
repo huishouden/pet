@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { mergedReminderText, reminderDoc, reminderMergeKey } from '@huishouden/pwa-kit/reminders';
 import { DEMO_NOW, demoData } from './demo';
-import { birthdayReminders, courseRef, courseReminders, mealReminders, mealsRef, petUrl } from './notify';
+import { birthdayReminders, courseRef, courseReminders, mealReminders, mealsRef, petUrl, reminderChanges, reminderSignatures, remindersByRef, routinesRef } from './notify';
 import { readSource, sourceAllowed, stillDue } from '@huishouden/pwa-kit/reminder-source';
 import { doseTodos } from './todos';
 import { mealAt } from './feeding';
@@ -104,5 +104,46 @@ describe('the sender drops a reminder once it is done elsewhere', () => {
     expect(stillDue(bs, new Map([['petProfiles/p1', pet]]))).toBe(true);
     expect(stillDue(bs, new Map([['petProfiles/p1', { ...pet, birthDate: '2027-04-08' }]]))).toBe(false);
     expect(stillDue(bs, new Map([['petProfiles/p1', { ...pet, birthDateApprox: true }]]))).toBe(false);
+  });
+});
+
+describe('reminders to write after a change', () => {
+  const outers = ['sam@example.com'];
+  const written = (data: typeof d) => reminderSignatures(data, DEMO_NOW, outers);
+  const changes = (before: typeof d, after: typeof d) => reminderChanges(written(before), remindersByRef(after, DEMO_NOW, outers));
+
+  test('nothing to write when nothing changed, also a minute later', () => {
+    expect(changes(d, d)).toEqual({ replace: [], remove: [] });
+    // Signed at open, compared at a later change: nothing derived from the clock may differ.
+    expect(reminderChanges(written(d), remindersByRef(d, DEMO_NOW + 60_000, outers))).toEqual({ replace: [], remove: [] });
+  });
+
+  test("a meal fed rewrites only that pet's meal reminders", () => {
+    const meal = d.meals.find((m) => m.petId === miso.id && mealAt(m.time, DEMO_NOW) > DEMO_NOW)!;
+    const fed = { ...d, feedings: [...d.feedings, { id: 'fed-now', petId: miso.id, mealId: meal.id, at: DEMO_NOW, by: 'sam@example.com', createdAt: DEMO_NOW }] };
+    const { replace, remove } = changes(d, fed);
+    expect(replace.map(([ref]) => ref)).toEqual([mealsRef(miso.id)]);
+    expect(replace[0][1]().some((r) => r.at === mealAt(meal.time, DEMO_NOW))).toBe(false);
+    expect(remove).toEqual([]);
+  });
+
+  test('a deleted course is cancelled', () => {
+    expect(changes(d, { ...d, courses: d.courses.filter((c) => c.id !== antibiotic.id) })).toEqual({ replace: [], remove: [courseRef(antibiotic.id)] });
+  });
+
+  test('a ref that empties is replaced with nothing, and any change to a reminder (its link) is a change', () => {
+    const routine = d.routines[0]!;
+    // Reminders turned off: the routine's ref is still there, now empty.
+    const off = { ...d, routines: d.routines.map((r) => (r.id === routine.id ? { ...r, remind: false } : r)) };
+    const before = remindersByRef(d, DEMO_NOW, outers).get(routinesRef(routine.id))!();
+    const { replace } = changes(d, off);
+    expect(before.length).toBeGreaterThan(0);
+    expect(replace.map(([ref, build]) => [ref, build().length])).toEqual([[routinesRef(routine.id), 0]]);
+    // Only the link differs: still rewritten.
+    const sigs = written(d);
+    const builders = remindersByRef(d, DEMO_NOW, outers);
+    const ref = mealsRef(miso.id);
+    const moved = new Map(builders).set(ref, () => builders.get(ref)!().map((r) => ({ ...r, url: `${r.url}&x=1` })));
+    expect(reminderChanges(sigs, moved).replace.map(([r]) => r)).toEqual([ref]);
   });
 });
