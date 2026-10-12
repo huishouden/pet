@@ -3,14 +3,15 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import { clearSharedImages, readSharedImages } from '@huishouden/pwa-kit/shared-images';
 import { clearSharedContact, readSharedContact, type Contact, type ParsedContact } from '@huishouden/pwa-kit/contacts';
-import type { Appointment, Course, Feeding, Meal, MedDose, Outing, Pet, PetRecord, Reminder, Routine, RoutineLog } from './lib/model';
+import type { Appointment, Course, Feeding, Meal, Outing, Pet, PetRecord, Reminder, Routine, RoutineLog } from './lib/model';
 import { outingWhat, type OutingSlot } from './lib/outings';
 import { OutingDialog } from './components/OutingDialog';
 import { OutingPlanDialog } from './components/OutingPlanDialog';
 import { RoutineDialog } from './components/RoutineDialog';
 import { RoutineSheet } from './components/RoutineSheet';
 import { fedTodayFor, mealAt, mealsOf } from './lib/feeding';
-import { dosesRead, givenOnFor, slotAt } from './lib/courses';
+import { givenOnFor, slotAt } from './lib/courses';
+import { useCourseDoses } from './data/courseDoses';
 import { sortPets } from './lib/pets';
 import { isRecurring, markGiven } from './lib/schedule';
 import { addDays, atClock, formatDayShort, longDate, parseYmd, shortDate, startOfDay, toHhmm, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
@@ -296,21 +297,19 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
       notify(t('toast.fedAt', { what, at: atTimeOf(f.at) }), () => actions.deleteFeedings([f]));
     }
   };
-  // An older course's doses aren't read on open (medDoseWindowStart): its log follows them while open.
-  const olderLog = doseLog && store.data.courses.some((c) => c.id === doseLog && !dosesRead(c, store.medDosesFrom)) ? doseLog : null;
-  const [older, setOlder] = useState<{ id: string; doses: MedDose[] } | null>(null);
-  const { watchCourseDoses } = store;
-  useEffect(() => {
-    if (!olderLog) return setOlder(null);
-    return watchCourseDoses(olderLog, (doses) => setOlder({ id: olderLog, doses }));
-  }, [olderLog, watchCourseDoses]);
-  const dosesOf = (c: Course) => (older?.id === c.id ? older.doses : store.data.medDoses);
+  // An older course's doses aren't read on open (medDoseWindowStart): its log follows them while
+  // open, and nothing in it acts until they are in.
+  const logCourse = doseLog ? store.data.courses.find((c) => c.id === doseLog) : undefined;
+  const logDoses = useCourseDoses(store, logCourse);
+  const dosesOf = (c: Course) => (c.id === logCourse?.id ? logDoses : store.data.medDoses);
 
   const toggleDose = (pet: Pet | undefined, c: Course, slot: number, day?: Ymd) => {
     const at = read();
     const d = day ?? toYmd(at);
     const past = d < toYmd(at);
-    const done = givenOnFor(dosesOf(c), c.id, slot, d);
+    const doses = dosesOf(c);
+    if (!doses) return;
+    const done = givenOnFor(doses, c.id, slot, d);
     const what = onDay(pet ? t('toast.petMeal', { pet: pet.name, meal: c.name }) : c.name, d);
     if (!perms.mayGiveCourse(c)) return notify(perms.courseRefusal(c));
     if (done.some((x) => !perms.mayChange(x))) return notify(refusal('edit-others'));
@@ -327,7 +326,8 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   const skipDose = (pet: Pet | undefined, c: Course, slot: number, day: Ymd) => {
     const at = read();
     if (!perms.mayGiveCourse(c)) return notify(perms.courseRefusal(c));
-    if (givenOnFor(dosesOf(c), c.id, slot, day).length) return;
+    const doses = dosesOf(c);
+    if (!doses || givenOnFor(doses, c.id, slot, day).length) return;
     const what = onDay(pet ? t('toast.petMeal', { pet: pet.name, meal: c.name }) : c.name, day);
     const skipped = actions.skipMedDose(c, slot, day < toYmd(at) ? slotAt(c.times[slot], day) : at);
     notify(t('toast.skipped', { what }), () => actions.deleteMedDoses([skipped]));
@@ -335,7 +335,6 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
 
   const sheetRoutine = sheetId ? store.data.routines.find((r) => r.id === sheetId) : undefined;
   const backfillCourse = backfill ? store.data.courses.find((c) => c.id === backfill) : undefined;
-  const logCourse = doseLog ? store.data.courses.find((c) => c.id === doseLog) : undefined;
 
   let content: ReactNode;
   if (!store.ready) content = <p className="p-2 text-lg text-muted">{t('app.loading')}</p>;
@@ -674,12 +673,12 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           }
         />
       )}
-      {logCourse && (
+      {logCourse && logDoses && (
         <DoseLogDialog
           course={logCourse}
           pet={pets.find((p) => p.id === logCourse.petId)}
           meals={store.data.meals}
-          medDoses={dosesOf(logCourse)}
+          medDoses={logDoses}
           me={store.me}
           now={now}
           onToggle={(slot, day) => toggleDose(pets.find((p) => p.id === logCourse.petId), logCourse, slot, day)}

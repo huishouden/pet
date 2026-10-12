@@ -98,7 +98,7 @@ async function firstOpen(browser: Browser, as: Role, path: string, ready: (page:
   }
 }
 
-// 32: every tab mounts the same listeners: the household (1); pets (2), care reminders (1) and their
+// 33: every tab mounts the same listeners: the household (1); pets (2), care reminders (1) and their
 // doses (2), the courses (2) and the running one's doses (4), appointments (2), weights (1), records (1), meals (4),
 // two weeks of feedings (1) and outings (none: 1), outing plans (none: 1), photos (none: 1),
 // routines (2) and their logs (4); the contacts (2) and their payment details (none: 1). On the
@@ -123,7 +123,8 @@ for (const [as, max] of [['member', 33], ['helper', 30], ['kid', 30]] as const) 
   });
 }
 
-// The older course's log, opened from the Pets tab: its six doses, read once while it is open.
+// The older course's log, opened from the Pets tab: its six doses, read once while it is open. It
+// runs last: it un-ticks a dose.
 test("opening an older course's dose log reads its doses then", async ({ browser }) => {
   const context = await browser.newContext({ baseURL: test.info().project.use.baseURL });
   try {
@@ -144,6 +145,11 @@ test("opening an older course's dose log reads its doses then", async ({ browser
       },
       { max: 6, min: 6, label: 'Pet, an older course log' },
     );
+    // Its log acts on its own doses: three days fully given; un-ticking one leaves two.
+    const log = page.getByRole('dialog');
+    await expect(log.getByText('All given')).toHaveCount(3);
+    await log.getByRole('button', { name: /^Undo given/ }).first().click();
+    await expect(log.getByText('All given')).toHaveCount(2);
   } finally {
     await context.close();
   }

@@ -46,6 +46,8 @@ export interface PetBundle {
   routineLogs: RoutineLog[];
   /** Appointments as they were: those only for this pet are deleted, shared ones lose this pet. */
   appointments: Appointment[];
+  /** Set while the pet's older history (outside what the store read) is being found and deleted. */
+  swept?: Promise<void>;
 }
 
 /** Writes return immediately (Firestore queues them offline); failures arrive through the store's error callback. */
