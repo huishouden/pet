@@ -13,11 +13,10 @@ import { createActions, type Backend } from './actions';
 import { useReminderSync } from './reminderSync';
 import { AGENDA_SOURCES, useAgendaSync } from './agendaSync';
 import { COLLECTIONS, type DataKey, type PetStore } from './types';
+import { logWindowStart } from '../lib/routines';
 
 /** How far back dose history reads: a year of daily medication, and every monthly one. */
 const DOSE_HISTORY_DAYS = 400;
-/** How far back routine logs read: enough for a litter change every few months, and the history on a routine's sheet. */
-const ROUTINE_HISTORY_DAYS = 400;
 /** The feeding history the Pets tab shows (14 days), plus a day of margin. */
 const FEEDING_HISTORY_DAYS = 15;
 
@@ -71,12 +70,29 @@ export function useLiveStore(householdId: string, me: string, household: { membe
       listen('feedings', query(col('feedings'), where('at', '>=', Date.now() - FEEDING_HISTORY_DAYS * DAY))),
       listen('outingPlans', col('outingPlans')),
       listen('routines', col('routines')),
-      listen('routineLogs', query(col('routineLogs'), where('at', '>=', Date.now() - ROUTINE_HISTORY_DAYS * DAY))),
       listen('outings', query(col('outings'), where('at', '>=', Date.now() - FEEDING_HISTORY_DAYS * DAY))),
       watchContacts(db, householdId, (contacts) => setData((d) => ({ ...d, contacts })), { app: APP, restricted, backfillPositions: true, onError: fail('contacts') }), // i18n-ignore: a key, not text
     ];
     return () => unsubs.forEach((u) => u());
   }, [base, householdId, restricted]);
+
+  // The routine logs from `logWindowStart` (the slowest routine's history), once the routines are
+  // in; started again only when that day moves (the day turns, a slower routine is added).
+  const logsFrom = answered.has('routines') ? logWindowStart(data.routines, Date.now()) : null;
+  useEffect(() => {
+    if (logsFrom === null) return;
+    return onSnapshot(
+      query(collection(db, base, COLLECTIONS.routineLogs), where('at', '>=', logsFrom)),
+      (s) => {
+        setData((d) => ({ ...d, routineLogs: s.docs.map((x) => ({ id: x.id, ...x.data() }) as PetHouseholdData['routineLogs'][number]) }));
+        setAnswered((a) => (a.has('routineLogs') ? a : new Set(a).add('routineLogs')));
+      },
+      (e) => {
+        setAnswered((a) => (a.has('routineLogs') ? a : new Set(a).add('routineLogs')));
+        errorRef.current(readError(e, t('live.routineLogs')));
+      },
+    );
+  }, [base, logsFrom]);
 
   // Appointments saved before the private flag are hidden from helpers and kids until written with
   // `private: false`; an admin's or member's device does that once.
@@ -100,11 +116,12 @@ export function useLiveStore(householdId: string, me: string, household: { membe
   }, [base, householdId, me]);
 
   const ready = answered.has('pets') && answered.has('reminders');
-  // Push notifications for doses and meal cut-offs, delivered by the household's shared sender.
-  useReminderSync(householdId, me, data, ready, onError, restricted, household);
-  // The household agenda (the portal's calendar and Today) waits for every list it is built from:
-  // publishing before one has loaded would delete that list's items.
-  useAgendaSync(householdId, me, data, AGENDA_SOURCES.every((k) => answered.has(k)), restricted);
+  // What Pet publishes (push notifications for doses, meals, outings, birthdays and routines; the
+  // household agenda and to-dos) waits for every list it is built from: publishing before one has
+  // loaded would delete that list's items.
+  const sourcesIn = AGENDA_SOURCES.every((k) => answered.has(k));
+  useReminderSync(householdId, me, data, sourcesIn, onError, restricted, household);
+  useAgendaSync(householdId, me, data, sourcesIn, restricted);
 
   return { data, ready, actions, members, me, role, household };
 }

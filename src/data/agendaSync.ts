@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { localizeAgenda, removeAgenda, replaceAgenda, syncAgenda } from '@huishouden/pwa-kit/agenda';
-import { localizeTodos, syncTodos } from '@huishouden/pwa-kit/todos';
 import { addDays, toYmd } from '@huishouden/pwa-kit/time';
-import { AGENDA_APP, agendaByRef, agendaChanges, type AgendaData } from '../lib/agenda';
-import { todoItems } from '../lib/todos';
+import { agendaByRef, type AgendaData } from '../lib/agenda';
 import { db } from './firebase';
+import { publishAgenda, publishAgendaChanges, publishTodos } from './publish';
 import type { DataKey } from './types';
 
 /** The lists the agenda is built from; all must have loaded before anything is published. */
@@ -36,15 +34,12 @@ export function useAgendaSync(householdId: string, me: string, data: AgendaData,
       const today = toYmd(now);
       const wanted = agendaByRef(data, now);
       // Every language's words (localizeTodos, localizeAgenda), so the portal shows each member their own.
-      localizeTodos(() => todoItems(data, now))
-        .then((todos) => syncTodos(db, householdId, AGENDA_APP, todos, { by: me, now, restricted }))
-        .catch(warnTodos);
+      publishTodos(db, householdId, me, data, now, { restricted }).catch(warnTodos);
 
       if (syncedDay.current !== today) {
         syncedDay.current = today;
         written.current = new Map([...wanted].map(([ref, items]) => [ref, JSON.stringify(items)]));
-        const all = () => [...agendaByRef(data, now)].flatMap(([ref, list]) => list.map((i) => ({ ...i, ref })));
-        localizeAgenda(all).then((items) => syncAgenda(db, householdId, AGENDA_APP, items, { by: me, now, restricted })).catch((e) => {
+        publishAgenda(db, householdId, me, data, now, { restricted }).catch((e) => {
           syncedDay.current = null;
           written.current = new Map();
           warn(e);
@@ -52,20 +47,7 @@ export function useAgendaSync(householdId: string, me: string, data: AgendaData,
         return;
       }
 
-      const { replace, remove } = agendaChanges(written.current, wanted);
-      for (const [ref, , signature] of replace) {
-        written.current.set(ref, signature);
-        localizeAgenda(() => agendaByRef(data, now).get(ref) ?? [])
-          .then((items) => replaceAgenda(db, householdId, AGENDA_APP, ref, items, { by: me, now, restricted }))
-          .catch((e) => {
-            written.current.delete(ref);
-            warn(e);
-          });
-      }
-      for (const ref of remove) {
-        written.current.delete(ref);
-        removeAgenda(db, householdId, AGENDA_APP, ref, { restricted }).catch(warn);
-      }
+      void publishAgendaChanges(db, householdId, me, written.current, data, now, { restricted, onError: warn });
     }, 2000);
     return () => clearTimeout(id);
   }, [householdId, me, restricted, ready, day, data.pets, data.appointments, data.reminders, data.courses, data.medDoses, data.meals, data.feedings, data.outingPlans, data.outings, data.routines, data.routineLogs]);

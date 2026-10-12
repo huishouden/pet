@@ -5,7 +5,7 @@
 
 import { ROUTINE_DEFAULTS, ROUTINE_PRESETS, ROUTINE_PRESET_SCHEDULES, routineLogId, routineRule, routineSchedule, routineStatus, type RoutinePreset, type RoutineStatus } from '@huishouden/pwa-kit/pet-routines';
 import { describeRule, describeSchedule } from '@huishouden/pwa-kit/schedule';
-import { dueText, toYmd } from '@huishouden/pwa-kit/time';
+import { addDays, dueText, toYmd, ymdToTime } from '@huishouden/pwa-kit/time';
 import { formatList } from '@huishouden/pwa-kit/i18n';
 import type { Pet, Routine, RoutineLog } from './model';
 import { t } from '../i18n';
@@ -15,6 +15,24 @@ export type { RoutinePreset };
 
 /** The history a routine's sheet lists. */
 export const HISTORY_SHOWN = 12;
+/** The furthest back routine logs are ever read. */
+export const MAX_LOG_DAYS = 400;
+/** The least read back, with no routines or only daily ones: two weeks. */
+export const MIN_LOG_DAYS = 15;
+
+const UNIT_DAYS = { day: 1, week: 7, month: 31 } as const;
+
+/**
+ * From when the routine logs are read (the start of a local day, so it stays the same all day): far
+ * enough back for the slowest routine's sheet (`HISTORY_SHOWN` times, and two more for where it
+ * stands), at least two weeks, at most `MAX_LOG_DAYS`. Every log read is billed on each open: a
+ * household that scoops daily and changes the litter weekly reads 14 weeks of logs, not a year.
+ */
+export function logWindowStart(routines: readonly Pick<Routine, 'mode' | 'every' | 'unit'>[], now: number): number {
+  const today = toYmd(now);
+  const days = Math.max(MIN_LOG_DAYS, ...routines.map((r) => (HISTORY_SHOWN + 2) * (r.mode === 'weekdays' ? 7 : (r.every ?? 1) * UNIT_DAYS[r.unit ?? 'week'])));
+  return ymdToTime(addDays(today, -Math.min(MAX_LOG_DAYS, days)));
+}
 
 /** A preset's name as it is written into the routine when picked ("Scoop litter box"); the person may change it. */
 export function presetName(kind: RoutinePreset): string {

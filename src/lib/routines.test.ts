@@ -10,7 +10,7 @@ import { DEMO_NOW, demoData, type PetHouseholdData } from './demo';
 import { FIELDS } from './model';
 import { routineDoc, routineLogDoc } from './build';
 import { routineReminders, routineSource, routinesRef } from './notify';
-import { petsLabel, presetsFor, routinesOfPet, routinesToday, scheduleText, statusOf } from './routines';
+import { logWindowStart, MAX_LOG_DAYS, petsLabel, presetsFor, routinesOfPet, routinesToday, scheduleText, statusOf } from './routines';
 import { routineOps, routineTodos } from './todos';
 
 // The sample household on its fixed day (Wednesday 14 May 2031, 10:30): Miso's litter box is
@@ -179,5 +179,19 @@ describe('reminders', () => {
     expect(stillDue(source, docs({ [`petRoutines/${scoop.id}`]: { name: 'x' }, [log]: null }))).toBe(true);
     expect(stillDue(source, docs({ [`petRoutines/${scoop.id}`]: { name: 'x' }, [log]: { by: ME } }))).toBe(false);
     expect(stillDue(source, docs({ [`petRoutines/${scoop.id}`]: null, [log]: null }))).toBe(false);
+  });
+});
+
+describe('which routine logs are read', () => {
+  const NOW = new Date(2031, 4, 14, 10, 30).getTime();
+  const daysBack = (n: number) => new Date(2031, 4, 14 - n).getTime();
+  test('two weeks with no routines or a daily one; the slowest routine\'s history otherwise', () => {
+    expect(logWindowStart([], NOW)).toBe(daysBack(15));
+    expect(logWindowStart([{ mode: 'fixed', every: 1, unit: 'day' }], NOW)).toBe(daysBack(15));
+    expect(logWindowStart([{ mode: 'fixed', every: 1, unit: 'day' }, { mode: 'after-done', every: 1, unit: 'week' }], NOW)).toBe(daysBack(98));
+    expect(logWindowStart([{ mode: 'weekdays' }], NOW)).toBe(daysBack(98));
+  });
+  test(`never more than ${MAX_LOG_DAYS} days`, () => {
+    expect(logWindowStart([{ mode: 'after-done', every: 3, unit: 'month' }], NOW)).toBe(daysBack(MAX_LOG_DAYS));
   });
 });
