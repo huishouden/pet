@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { reminderDoc } from '@huishouden/pwa-kit/reminders';
+import { mergedReminderText, reminderDoc, reminderMergeKey } from '@huishouden/pwa-kit/reminders';
 import { DEMO_NOW, demoData } from './demo';
 import { birthdayReminders, courseRef, courseReminders, mealReminders, mealsRef, petUrl } from './notify';
 import { readSource, sourceAllowed, stillDue } from '@huishouden/pwa-kit/reminder-source';
@@ -49,6 +49,16 @@ describe('meal reminders', () => {
     expect(before.map((r) => r.title)).toEqual(['Miso: PM not fed yet', 'Miso: AM not fed yet', 'Miso: PM not fed yet']);
     const pmFed = { id: 'f', petId: miso.id, mealId: `${miso.id}-pm`, at: DEMO_NOW, by: 'sam@example.com', createdAt: DEMO_NOW };
     expect(mealReminders(miso, d.meals, [...d.feedings, pmFed], DEMO_NOW)).toHaveLength(2);
+  });
+
+  test('two pets not fed at the same meal and minute: one notification, "Biscuit and Miso: PM not fed yet"', () => {
+    const [b] = mealReminders(biscuit, d.meals, d.feedings, DEMO_NOW);
+    const [m] = mealReminders(miso, d.meals, d.feedings, DEMO_NOW);
+    expect(b.at).toBe(m.at);
+    const all = (r: typeof b) => ({ ...r, recipients: 'all' as const });
+    expect(reminderMergeKey(all(b))).toBe(reminderMergeKey(all(m)));
+    expect(mergedReminderText([all(m), all(b)], 'en').title).toBe('Biscuit and Miso: PM not fed yet');
+    for (const r of [b, m]) expect(reminderDoc(r, 'sam@example.com', DEMO_NOW).merge).toEqual({ key: 'meal:pm', part: r === b ? 'Biscuit' : 'Miso', title: '{parts}: PM not fed yet' });
   });
 });
 

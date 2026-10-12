@@ -135,6 +135,12 @@ has loaded; after that, two seconds after changes settle, each changed record's 
 The signed-out sample writes nothing. The mapping is `src/lib/agenda.ts`; the writes are
 `src/data/agendaSync.ts`.
 
+Meals and scheduled outings carry a `merge` (`@huishouden/pwa-kit/merge`, `src/lib/merge.ts`), and so
+do the "not fed yet" and outing notifications. Two pets with the same meal (or outing) at the same time
+show as one in the portal and the household's calendars, and as one notification: "Feed Milo and Theo
+· AM", "Milo and Theo: AM not fed yet". Each pet's meal is still ticked on its own, and a pet fed
+already drops out of the notification.
+
 Pet also publishes its open care to the household to-do list (`households/{householdId}/todos`, app
 `pet`, through `@huishouden/pwa-kit/todos`), which the portal's To-do tab lists with every app's,
 at the same moments as the agenda. Each item carries the writes its buttons make, the same Pet's
