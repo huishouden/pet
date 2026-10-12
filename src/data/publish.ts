@@ -1,11 +1,12 @@
 import type { Firestore } from 'firebase/firestore';
 import { localizeAgenda, removeAgenda, replaceAgenda, syncAgenda } from '@huishouden/pwa-kit/agenda';
 import { localizeTodos, syncTodos } from '@huishouden/pwa-kit/todos';
-import { localizeReminders, syncReminders, type ReminderInput } from '@huishouden/pwa-kit/reminders';
+import { cancelReminders, localizeReminders, replaceReminders, syncReminders, type ReminderInput } from '@huishouden/pwa-kit/reminders';
 import { AGENDA_APP, agendaByRef, agendaChanges, type AgendaData } from '../lib/agenda';
 import { todoItems } from '../lib/todos';
-import { APP, birthdayReminders, courseReminders, mealReminders, outingReminders, routineReminders } from '../lib/notify';
+import { APP, birthdayRef, birthdayReminders, courseRef, courseReminders, mealReminders, mealsRef, outingReminders, outingsRef, routineReminders, routinesRef } from '../lib/notify';
 import type { PetHouseholdData } from '../lib/demo';
+import type { DataKey } from './types';
 
 type Published = NonNullable<Parameters<typeof syncAgenda>[4]['published']>;
 
@@ -19,27 +20,88 @@ export interface PublishOptions {
 const pub = (published: Published | null | undefined) => (published === undefined ? {} : { published });
 
 /**
- * Pet's push reminders for the household: each course's remaining doses, each pet's untaken meal
- * cut-offs, next birthday and outings, and each care routine's due days. `outers` are the members
- * who may take a pet out (everyone but kids).
+ * The lists Pet's reminders are built from. `useReminderSync` waits for all of them before it
+ * publishes: publishing before one has loaded would delete that list's reminders household-wide.
  */
-export function reminderInputs(data: PetHouseholdData, now: number, outers: string[]): ReminderInput[] {
-  return [
-    ...data.courses.flatMap((c) => courseReminders(c, data.pets.find((p) => p.id === c.petId), data.medDoses, now)),
-    ...data.pets.flatMap((p) => mealReminders(p, data.meals, data.feedings, now)),
-    ...data.pets.flatMap((p) => birthdayReminders(p, now)),
-    ...(outers.length ? data.pets.flatMap((p) => outingReminders(p, data.outingPlans.find((x) => x.id === p.id), data.meals, data.outings, now, outers)) : []),
-    ...(outers.length ? data.routines.flatMap((r) => routineReminders(r, data.pets, data.routineLogs, now, outers)) : []),
-  ];
+export const REMINDER_SOURCES = ['pets', 'courses', 'medDoses', 'meals', 'feedings', 'outingPlans', 'outings', 'routines', 'routineLogs'] as const satisfies readonly DataKey[];
+export type ReminderData = Pick<PetHouseholdData, (typeof REMINDER_SOURCES)[number]>;
+
+/**
+ * Pet's push reminders for the household by ref, each ref's builder: each course's remaining doses,
+ * each pet's untaken meal cut-offs, next birthday and outings, and each care routine's due days.
+ * Every record has its ref, empty or not, so one that no longer has reminders is still seen.
+ * `outers` are the members who may take a pet out (everyone but kids).
+ */
+export function remindersByRef(data: ReminderData, now: number, outers: string[]): Map<string, () => ReminderInput[]> {
+  const out = new Map<string, () => ReminderInput[]>();
+  for (const c of data.courses) out.set(courseRef(c.id), () => courseReminders(c, data.pets.find((p) => p.id === c.petId), data.medDoses, now));
+  for (const p of data.pets) out.set(mealsRef(p.id), () => mealReminders(p, data.meals, data.feedings, now));
+  for (const p of data.pets) out.set(birthdayRef(p.id), () => birthdayReminders(p, now));
+  for (const p of data.pets) out.set(outingsRef(p.id), () => (outers.length ? outingReminders(p, data.outingPlans.find((x) => x.id === p.id), data.meals, data.outings, now, outers) : []));
+  for (const r of data.routines) out.set(routinesRef(r.id), () => (outers.length ? routineReminders(r, data.pets, data.routineLogs, now, outers) : []));
+  return out;
+}
+
+/** Every reminder Pet publishes. */
+export const reminderInputs = (data: ReminderData, now: number, outers: string[]): ReminderInput[] => [...remindersByRef(data, now, outers).values()].flatMap((build) => build());
+
+const signatureOf = (list: ReminderInput[]) => JSON.stringify(list.map((r) => [r.id, r.at, r.title, r.body, r.recipients]));
+
+/** Each ref's reminders as `publishReminderChanges` compares them: what a full publish wrote. */
+export const reminderSignatures = (data: ReminderData, now: number, outers: string[]): Map<string, string> => new Map([...remindersByRef(data, now, outers)].map(([ref, build]) => [ref, signatureOf(build())]));
+
+/**
+ * Makes Pet's reminders exactly what its data asks for, on open and when the day turns: one query
+ * of the app's reminders (none when this device published the same a short while ago), then only
+ * what changed is written. In every member's language (`localizeReminders`).
+ */
+export async function publishReminders(db: Firestore, householdId: string, me: string, data: ReminderData, now: number, outers: string[], { restricted = false, published }: PublishOptions = {}) {
+  return syncReminders(db, householdId, APP, await localizeReminders(() => reminderInputs(data, now, outers)), me, now, { restricted, ...pub(published) });
 }
 
 /**
- * Makes Pet's reminders exactly what its data asks for: one query of the app's reminders (none
- * when this device published the same a short while ago), then only what changed is written. In
- * every member's language (`localizeReminders`).
+ * After a change: the reminders of each record whose reminders changed since `written` (what this
+ * device last wrote, by ref), replaced, and those of each record that is gone, cancelled; one query
+ * each, so a meal fed costs that pet's meal reminders, not all of Pet's. A failed ref is left as it
+ * was in `written`, so the next change retries it. Returns how many failed.
  */
-export async function publishReminders(db: Firestore, householdId: string, me: string, data: PetHouseholdData, now: number, outers: string[], { restricted = false, published }: PublishOptions = {}) {
-  return syncReminders(db, householdId, APP, await localizeReminders(() => reminderInputs(data, now, outers)), me, now, { restricted, ...pub(published) });
+export async function publishReminderChanges(
+  db: Firestore,
+  householdId: string,
+  me: string,
+  written: Map<string, string>,
+  data: ReminderData,
+  now: number,
+  outers: string[],
+  { restricted = false }: { restricted?: boolean } = {},
+) {
+  const builders = remindersByRef(data, now, outers);
+  const replace = [...builders].flatMap(([ref, build]) => {
+    const signature = signatureOf(build());
+    return written.get(ref) === signature ? [] : [[ref, build, signature] as const];
+  });
+  const remove = [...written.keys()].filter((ref) => !builders.has(ref));
+  let failed = 0;
+  await Promise.all([
+    ...replace.map(async ([ref, build, signature]) => {
+      written.set(ref, signature);
+      try {
+        await replaceReminders(db, householdId, ref, await localizeReminders(build), me, now, { restricted });
+      } catch {
+        written.delete(ref);
+        failed++;
+      }
+    }),
+    ...remove.map(async (ref) => {
+      try {
+        await cancelReminders(db, householdId, ref, { restricted });
+        written.delete(ref);
+      } catch {
+        failed++;
+      }
+    }),
+  ]);
+  return { replaced: replace.length, removed: remove.length, failed };
 }
 
 /** The household to-do list's Pet items: one query of what Pet published (none when unchanged). */
@@ -56,7 +118,8 @@ export async function publishAgenda(db: Firestore, householdId: string, me: stri
 /**
  * After a change: the agenda items of each record whose items changed since `written` (what this
  * device last wrote, by ref), replaced, and those of each record that is gone, removed; one query
- * each. `written` follows what was written; a failed ref leaves it, so the next change retries.
+ * each. `written` follows what was written; a failed ref (replaced or removed) is left as it was,
+ * so the next change retries it.
  */
 export async function publishAgendaChanges(
   db: Firestore,
@@ -80,9 +143,9 @@ export async function publishAgendaChanges(
       }
     }),
     ...remove.map(async (ref) => {
-      written.delete(ref);
       try {
         await removeAgenda(db, householdId, AGENDA_APP, ref, { restricted });
+        written.delete(ref);
       } catch (e) {
         onError?.(e);
       }

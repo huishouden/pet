@@ -19,7 +19,7 @@ const real = await import('firebase/firestore');
 const counter = readCounter();
 mock.module('firebase/firestore', () => counter.sdk(real));
 const { connectFirestoreEmulator, initializeFirestore, memoryLocalCache, terminate } = await import('firebase/firestore');
-const { publishAgenda, publishAgendaChanges, publishReminders, publishTodos } = await import('../src/data/publish');
+const { publishAgenda, publishAgendaChanges, publishReminderChanges, publishReminders, publishTodos, reminderSignatures } = await import('../src/data/publish');
 const { agendaByRef } = await import('../src/lib/agenda');
 
 const emulator = e2eTarget() === 'emulator';
@@ -35,6 +35,9 @@ const URL = 'https://huishouden-staging.web.app/pet/';
 let hh: TestHousehold;
 let app: FirebaseApp;
 let db: ReturnType<typeof real.getFirestore>;
+/** The helper's device. */
+let helperApp: FirebaseApp;
+let helperDb: ReturnType<typeof real.getFirestore>;
 let admin: string;
 let outers: string[];
 
@@ -48,12 +51,19 @@ beforeAll(async () => {
   connectFirestoreEmulator(db, process.env.HH_EMULATOR_HOST || '127.0.0.1', Number(process.env.HH_EMULATOR_FIRESTORE_PORT || 8080), {
     mockUserToken: { sub: hh.users.admin.uid, email: admin, email_verified: true },
   });
+  helperApp = initializeApp({ apiKey: 'demo-key', projectId: e2eProject(), appId: 'demo' }, `reads-helper-${hh.id}`);
+  helperDb = initializeFirestore(helperApp, { localCache: memoryLocalCache() });
+  connectFirestoreEmulator(helperDb, process.env.HH_EMULATOR_HOST || '127.0.0.1', Number(process.env.HH_EMULATOR_FIRESTORE_PORT || 8080), {
+    mockUserToken: { sub: hh.users.helper.uid, email: hh.users.helper.email, email_verified: true },
+  });
 });
 
 afterAll(async () => {
   if (!emulator) return;
   await terminate(db);
+  await terminate(helperDb);
   await deleteApp(app);
+  await deleteApp(helperApp);
 });
 
 // An invented household: two pets with a morning and an evening meal each, an antibiotic course
@@ -139,5 +149,46 @@ describe.skipIf(!emulator)("a change: one query for each record whose agenda ite
     const after = { ...before, appointments: [{ ...before.appointments[0]!, at: NOW + 6 * DAY }], reminders: [] };
     const { value } = await expectReads(() => publishAgendaChanges(db, hh.id, admin, written, after, NOW), { max: 2, min: 2, counter, label: 'Pet agenda change' });
     expect(value).toEqual({ replaced: 1, removed: 1 });
+  });
+});
+
+describe.skipIf(!emulator)('a change to reminders: one query for each record whose reminders changed', () => {
+  test("Miso's morning meal fed: only Miso's meal reminders are read and replaced", async () => {
+    const before = data();
+    await publishReminders(db, hh.id, admin, before, NOW, outers, { published: null });
+    const written = reminderSignatures(before, NOW, outers);
+    // Fed this evening's meal early: today's PM cut-off goes, tomorrow's stays.
+    const after = { ...before, feedings: [{ id: 'f1', petId: 'miso', mealId: 'miso-pm', at: NOW, by: admin, createdAt: NOW }] } as PetHouseholdData;
+    // Miso's meal reminders before the change: today's PM and tomorrow's AM and PM.
+    const { value } = await expectReads(() => publishReminderChanges(db, hh.id, admin, written, after, NOW, outers), { max: 3, min: 3, counter, label: 'Pet reminders, a meal fed' });
+    expect(value).toEqual({ replaced: 1, removed: 0, failed: 0 });
+    // Nothing changed since: nothing read.
+    await expectReads(() => publishReminderChanges(db, hh.id, admin, written, after, NOW, outers), { max: 0, counter, label: 'Pet reminders, no change' });
+  });
+});
+
+describe.skipIf(!emulator)("a helper's device: the restricted publish, under the rules", () => {
+  test("publishes what isn't private, and leaves the private items another member published", async () => {
+    // The admin's device publishes with a private grooming appointment the helper never reads.
+    const groom = { id: 'groom', petIds: ['miso'], kind: 'grooming', title: 'Test grooming', at: NOW + 4 * DAY, private: true, createdAt: NOW - DAY, by: admin };
+    const full = { ...data(), appointments: [...data().appointments, groom] } as PetHouseholdData;
+    await publishAgenda(db, hh.id, admin, full, NOW, { published: null });
+    // The helper's device, with what the rules let it read, publishes restricted: its queries ask
+    // only for items that aren't private.
+    const { value } = await expectReads(
+      async () => {
+        const reminders = await publishReminders(helperDb, hh.id, hh.users.helper.email, data(), NOW, outers, { restricted: true, published: null });
+        const todos = await publishTodos(helperDb, hh.id, hh.users.helper.email, data(), NOW, { restricted: true, published: null });
+        const agenda = await publishAgenda(helperDb, hh.id, hh.users.helper.email, data(), NOW, { restricted: true, published: null });
+        return { reminders, todos, agenda };
+      },
+      // 43: the 23 reminders already there (Miso's meal changed above, one is written), the 4 to-dos
+      // and one stray of the interleaving test's, and the 15 agenda items: not the private grooming.
+      { max: 43, min: 43, counter, label: 'Pet publish, helper' },
+    );
+    expect(value.agenda.deleted).toBe(0);
+    // The private item is still there: the admin's next publish has nothing to put back.
+    const again = await publishAgenda(db, hh.id, admin, full, NOW, { published: null });
+    expect(again).toMatchObject({ written: 0, deleted: 0 });
   });
 });

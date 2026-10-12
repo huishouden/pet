@@ -11,6 +11,7 @@ import { DAY } from '@huishouden/pwa-kit/time';
 import { db } from './firebase';
 import { createActions, type Backend } from './actions';
 import { useReminderSync } from './reminderSync';
+import { REMINDER_SOURCES } from './publish';
 import { AGENDA_SOURCES, useAgendaSync } from './agendaSync';
 import { COLLECTIONS, type DataKey, type PetStore } from './types';
 import { logWindowStart } from '../lib/routines';
@@ -119,9 +120,8 @@ export function useLiveStore(householdId: string, me: string, household: { membe
   // What Pet publishes (push notifications for doses, meals, outings, birthdays and routines; the
   // household agenda and to-dos) waits for every list it is built from: publishing before one has
   // loaded would delete that list's items.
-  const sourcesIn = AGENDA_SOURCES.every((k) => answered.has(k));
-  useReminderSync(householdId, me, data, sourcesIn, onError, restricted, household);
-  useAgendaSync(householdId, me, data, sourcesIn, restricted);
+  useReminderSync(householdId, me, data, REMINDER_SOURCES.every((k) => answered.has(k)), onError, restricted, household);
+  useAgendaSync(householdId, me, data, AGENDA_SOURCES.every((k) => answered.has(k)), restricted);
 
   return { data, ready, actions, members, me, role, household };
 }
