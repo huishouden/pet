@@ -1,12 +1,10 @@
 import type { Firestore } from 'firebase/firestore';
 import { localizeAgenda, removeAgenda, replaceAgenda, syncAgenda } from '@huishouden/pwa-kit/agenda';
 import { localizeTodos, syncTodos } from '@huishouden/pwa-kit/todos';
-import { cancelReminders, localizeReminders, replaceReminders, syncReminders, type ReminderInput } from '@huishouden/pwa-kit/reminders';
+import { cancelReminders, localizeReminders, replaceReminders, syncReminders } from '@huishouden/pwa-kit/reminders';
 import { AGENDA_APP, agendaByRef, agendaChanges, type AgendaData } from '../lib/agenda';
 import { todoItems } from '../lib/todos';
-import { APP, birthdayRef, birthdayReminders, courseRef, courseReminders, mealReminders, mealsRef, outingReminders, outingsRef, routineReminders, routinesRef } from '../lib/notify';
-import type { PetHouseholdData } from '../lib/demo';
-import type { DataKey } from './types';
+import { APP, reminderChanges, reminderInputs, remindersByRef, type ReminderData } from '../lib/notify';
 
 type Published = NonNullable<Parameters<typeof syncAgenda>[4]['published']>;
 
@@ -19,36 +17,7 @@ export interface PublishOptions {
 
 const pub = (published: Published | null | undefined) => (published === undefined ? {} : { published });
 
-/**
- * The lists Pet's reminders are built from. `useReminderSync` waits for all of them before it
- * publishes: publishing before one has loaded would delete that list's reminders household-wide.
- */
-export const REMINDER_SOURCES = ['pets', 'courses', 'medDoses', 'meals', 'feedings', 'outingPlans', 'outings', 'routines', 'routineLogs'] as const satisfies readonly DataKey[];
-export type ReminderData = Pick<PetHouseholdData, (typeof REMINDER_SOURCES)[number]>;
-
-/**
- * Pet's push reminders for the household by ref, each ref's builder: each course's remaining doses,
- * each pet's untaken meal cut-offs, next birthday and outings, and each care routine's due days.
- * Every record has its ref, empty or not, so one that no longer has reminders is still seen.
- * `outers` are the members who may take a pet out (everyone but kids).
- */
-export function remindersByRef(data: ReminderData, now: number, outers: string[]): Map<string, () => ReminderInput[]> {
-  const out = new Map<string, () => ReminderInput[]>();
-  for (const c of data.courses) out.set(courseRef(c.id), () => courseReminders(c, data.pets.find((p) => p.id === c.petId), data.medDoses, now));
-  for (const p of data.pets) out.set(mealsRef(p.id), () => mealReminders(p, data.meals, data.feedings, now));
-  for (const p of data.pets) out.set(birthdayRef(p.id), () => birthdayReminders(p, now));
-  for (const p of data.pets) out.set(outingsRef(p.id), () => (outers.length ? outingReminders(p, data.outingPlans.find((x) => x.id === p.id), data.meals, data.outings, now, outers) : []));
-  for (const r of data.routines) out.set(routinesRef(r.id), () => (outers.length ? routineReminders(r, data.pets, data.routineLogs, now, outers) : []));
-  return out;
-}
-
-/** Every reminder Pet publishes. */
-export const reminderInputs = (data: ReminderData, now: number, outers: string[]): ReminderInput[] => [...remindersByRef(data, now, outers).values()].flatMap((build) => build());
-
-const signatureOf = (list: ReminderInput[]) => JSON.stringify(list.map((r) => [r.id, r.at, r.title, r.body, r.recipients]));
-
-/** Each ref's reminders as `publishReminderChanges` compares them: what a full publish wrote. */
-export const reminderSignatures = (data: ReminderData, now: number, outers: string[]): Map<string, string> => new Map([...remindersByRef(data, now, outers)].map(([ref, build]) => [ref, signatureOf(build())]));
+export { REMINDER_SOURCES, reminderInputs, reminderSignatures, remindersByRef, type ReminderData } from '../lib/notify';
 
 /**
  * Makes Pet's reminders exactly what its data asks for, on open and when the day turns: one query
@@ -75,12 +44,7 @@ export async function publishReminderChanges(
   outers: string[],
   { restricted = false }: { restricted?: boolean } = {},
 ) {
-  const builders = remindersByRef(data, now, outers);
-  const replace = [...builders].flatMap(([ref, build]) => {
-    const signature = signatureOf(build());
-    return written.get(ref) === signature ? [] : [[ref, build, signature] as const];
-  });
-  const remove = [...written.keys()].filter((ref) => !builders.has(ref));
+  const { replace, remove } = reminderChanges(written, remindersByRef(data, now, outers));
   let failed = 0;
   await Promise.all([
     ...replace.map(async ([ref, build, signature]) => {
