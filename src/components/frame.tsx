@@ -1,6 +1,7 @@
 import { CalendarDays, Contact as ContactIcon, PawPrint, Pill, Sun } from 'lucide-react';
 import type { User } from 'firebase/auth';
 import { AppOpening, type AppFrameProps, type OpeningPhase } from '@huishouden/pwa-kit/react/frame';
+import { trackView } from '@huishouden/pwa-kit/observability';
 import type { Tab } from '@huishouden/pwa-kit/react/ui';
 import { useUrlTab } from '@huishouden/pwa-kit/react/url-state';
 import { PORTAL_URL } from '../lib/portal';
@@ -42,6 +43,7 @@ export function petFrame(t: ReturnType<typeof useT>, account: Account, tab?: { i
     portalUrl: PORTAL_URL,
     version: VERSION,
     ...account,
+    onView: trackView,
     layout: 'fit',
     ...(tab && { tabs: tabs(t), tab: tab.id, onTab: (id: string) => tab.choose(id as TabId) }),
   };
