@@ -23,7 +23,8 @@ import { calendarWords, fromCalendar } from './lib/calendarImport';
 import { isBirthdayOf } from './lib/birthday';
 import { auth } from './data/firebase';
 import { Header, type Tab } from './components/Header';
-import { Toast, type ToastState } from '@huishouden/pwa-kit/react/ui';
+import { ScreenSkeleton, Toast, type ToastState } from '@huishouden/pwa-kit/react/ui';
+import { useUrlParam, useUrlTab } from '@huishouden/pwa-kit/react/url-state';
 import { PetDialog } from './components/PetDialog';
 import type { BirthdayGuess } from './lib/birthday';
 import { ReminderDialog } from './components/ReminderDialog';
@@ -53,14 +54,14 @@ import { formatWeight } from './lib/weight';
 export type TabId = 'today' | 'care' | 'appointments' | 'pets' | 'contacts';
 
 // On phones Today, Care, Visits and Pets sit in the bottom bar; Contacts is under More.
-const tabs = (t: ReturnType<typeof useT>): Tab[] => [
+export const tabs = (t: ReturnType<typeof useT>): Tab[] => [
   { id: 'today', label: t('tab.today'), icon: Sun, primary: true },
   { id: 'care', label: t('tab.care'), icon: Pill, primary: true },
   { id: 'appointments', label: t('tab.appointments'), short: t('tab.visits'), icon: CalendarDays, primary: true },
   { id: 'pets', label: t('tab.pets'), icon: PawPrint, primary: true },
   { id: 'contacts', label: t('tab.contacts'), icon: ContactIcon },
 ];
-const TAB_IDS: readonly TabId[] = ['today', 'care', 'appointments', 'pets', 'contacts'];
+export const TAB_IDS: readonly TabId[] = ['today', 'care', 'appointments', 'pets', 'contacts'];
 
 interface Props {
   store: PetStore;
@@ -110,7 +111,8 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   const { now, read } = useClock();
   // Opened from another app's Share menu (Google Maps → Share → Pet): a new contact, prefilled.
   const [shared] = useState(() => readSharedPlace(location));
-  const [tab, setTab] = useState<TabId>(() => (shared ? 'contacts' : initialTab()));
+  // The tab and the pet on screen live in the address, so a reload (an update) and Back return to them.
+  const [tab, setTab] = useUrlTab(TAB_IDS, 'today');
   const [petDialog, setPetDialog] = useState<{ pet: Pet | null; birthday?: BirthdayGuess } | null>(null);
   const [reminder, setReminder] = useState<{ reminder: Reminder | null; petId?: string } | null>(null);
   const [appointment, setAppointment] = useState<{ appointment: Appointment | null; petId?: string } | null>(null);
@@ -119,7 +121,8 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   const [contact, setContact] = useState<{ contact: Contact | null; role?: string; prefill?: ParsedPlace; shared?: ParsedContact[] } | null>(() =>
     shared ? { contact: null, prefill: shared.place } : null,
   );
-  const [shownPet, setShownPet] = useState<string | null>(() => new URLSearchParams(location.search).get('pet'));
+  const [shownPet, setPetParam] = useUrlParam('pet');
+  const setShownPet = (id: string | null) => setPetParam(id, { replace: true });
   const [meal, setMeal] = useState<{ meal: Meal | null; petId: string } | null>(null);
   const [feeding, setFeeding] = useState<{ feeding: Feeding | null; petId: string } | null>(null);
   const [course, setCourse] = useState<{ course: Course | null; petId: string; images?: File[] } | null>(null);
@@ -163,7 +166,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
     void readSharedContact().then((cards) => {
       if (!cards) return;
       clearSharedContact();
-      chooseTab('contacts');
+      chooseTab('contacts', {}, true);
       setContact({ contact: null, shared: cards });
     });
   }, []);
@@ -183,27 +186,20 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
     if (!pet) return;
     setSharedImages(null);
     if (!perms.managesCourses) return notify(courseRefusalText());
-    chooseTab('pets');
-    setShownPet(pet.id);
+    chooseTab('pets', { pet: pet.id });
     setCourse({ course: null, petId: pet.id, images: sharedImages });
   }, [sharedImages, pets, shownPet, perms.managesCourses]);
 
   useEffect(() => {
     if (!shared) return;
     clearSharedPlace();
-    chooseTab('contacts');
+    chooseTab('contacts', {}, true);
   }, [shared]);
 
-  const chooseTab = (id: TabId) => {
-    setTab(id);
-    const url = new URL(location.href);
-    if (id === 'today') url.searchParams.delete('tab');
-    else url.searchParams.set('tab', id);
-    history.replaceState(null, '', url);
-  };
+  const chooseTab = (id: TabId, also: Record<string, string | null> = {}, replace = false) => setTab(id, { also, replace });
 
   const open: Open = {
-    tab: chooseTab,
+    tab: (id) => chooseTab(id),
     pet: (pet, birthday) => editable(pet, () => setPetDialog({ pet, birthday })),
     reminder: (r, petId) => editable(r, () => setReminder({ reminder: r, petId })),
     appointment: (a, petId) => editable(a, () => setAppointment({ appointment: a, petId })),
@@ -221,10 +217,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
     outingPlan: (petId) => (perms.managesPlans ? setPlanFor(petId) : notify(refusal('change-settings'))),
     routine: (r, petId) => (perms.managesRoutines ? setRoutineDialog({ routine: r, petId }) : notify(refusal('change-settings'))),
     routineSheet: (r) => setSheetId(r.id),
-    showPet: (petId) => {
-      setShownPet(petId);
-      chooseTab('pets');
-    },
+    showPet: (petId) => chooseTab('pets', { pet: petId }),
   };
 
   // An outing's two taps: Pooped or Pee only, now, by me, for that scheduled outing. Undo removes it.
@@ -337,7 +330,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   const backfillCourse = backfill ? store.data.courses.find((c) => c.id === backfill) : undefined;
 
   let content: ReactNode;
-  if (!store.ready) content = <p className="p-2 text-lg text-muted">{t('app.loading')}</p>;
+  if (!store.ready) content = <ScreenSkeleton label={t('app.loading')} />;
   else if (tab === 'care') content = <Care store={store} pets={pets} open={open} {...reminderActions} notify={notify} deviceSettings={deviceSettings} />;
   else if (tab === 'appointments') content = <Appointments store={store} pets={pets} open={open} calendarAvailable={calendar} notify={notify} onImport={importEvents} />;
   else if (tab === 'pets') content = <Pets store={store} pets={pets} open={open} shown={shownPet} onShow={setShownPet} {...reminderActions} notify={notify} />;
@@ -696,8 +689,4 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   );
 }
 
-function initialTab(): TabId {
-  const t = new URLSearchParams(location.search).get('tab');
-  return TAB_IDS.some((x) => x === t) ? (t as TabId) : 'today';
-}
 
