@@ -317,7 +317,9 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
 
   const frame = petFrame(t, { user, onSignIn, onSignOut, signingIn }, { id: tab, choose: (id) => chooseTab(id) });
   // The first data still on its way: the opening frame, which counts no view yet.
-  if (!store.ready) return <AppOpening {...frame} phase="data" />;
+  // One toast for both frames: a first load that fails says so while the app is still opening.
+  const toastEl = <Toast toast={toast} onDone={clearToast} />;
+  if (!store.ready) return <AppOpening {...frame} phase="data" after={toastEl} />;
 
   let content: ReactNode;
   if (tab === 'care') content = <Care store={store} pets={pets} open={open} {...reminderActions} notify={notify} deviceSettings={deviceSettings} />;
@@ -655,7 +657,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
           onClose={() => setDoseLog(null)}
         />
       )}
-      <Toast toast={toast} onDone={clearToast} />
+      {toastEl}
     </>
   );
 
