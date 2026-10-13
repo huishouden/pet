@@ -84,3 +84,20 @@ test('a reload and Back return to the screen in the address', async ({ page }) =
   await page.goForward();
   await expect(currentTab(page)).toHaveText('Pets');
 });
+
+test('the pet shown on Pets is in the address: a reload keeps it, Back leaves the tab', async ({ page }) => {
+  await page.goto('./?tab=care');
+  await page.getByRole('button', { name: 'Pets', exact: true }).first().click();
+  await expect(page.getByRole('region', { name: "Biscuit's profile" })).toBeVisible();
+  await page.getByRole('button', { name: 'Miso', exact: true }).click();
+  await expect(page).toHaveURL(/\?tab=pets&pet=demo-pet-miso$/);
+  await expect(page.getByRole('region', { name: "Miso's records" })).toBeVisible();
+  await page.reload();
+  await expect(currentTab(page)).toHaveText('Pets');
+  await expect(page.getByRole('region', { name: "Miso's records" })).toBeVisible();
+  // Choosing a pet refines the screen (replace), so Back goes to the tab before, Forward returns to Miso.
+  await page.goBack();
+  await expect(currentTab(page)).toHaveText('Care');
+  await page.goForward();
+  await expect(page.getByRole('region', { name: "Miso's records" })).toBeVisible();
+});
