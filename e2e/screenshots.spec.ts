@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { captureScreenshot } from '@huishouden/pwa-kit/e2e';
+import { captureOpening, captureScreenshot } from '@huishouden/pwa-kit/e2e';
 import places from './fixtures/nominatim.json' with { type: 'json' };
 import { calendarEvents, mockCalendar } from './fixtures/calendar';
 
@@ -9,6 +9,9 @@ import { calendarEvents, mockCalendar } from './fixtures/calendar';
 const fixedTime = '2031-05-14T10:30:00';
 
 const needsDoing = (p: import('@playwright/test').Page) => expect(p.getByRole('region', { name: 'Needs doing' }).getByText('Antibiotic for Biscuit')).toBeVisible();
+
+// The frame while the app opens (the session restoring), held there: the kit's AppOpening.
+test('opening', ({ page }) => captureOpening(page, 'opening', { path: './?tab=care', fixedTime }));
 
 test('today', ({ page }) =>
   captureScreenshot(page, 'today', {

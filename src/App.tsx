@@ -7,10 +7,10 @@ import { useLiveStore } from './data/useLiveStore';
 import { useDemoStore } from './data/useDemoStore';
 import { DEMO_NOW } from './lib/demo';
 import { ClockProvider } from '@huishouden/pwa-kit/react/clock';
-import { PetApp, TAB_IDS, tabs, type TabId } from './PetApp';
-import { useUrlTab } from '@huishouden/pwa-kit/react/url-state';
-import { Header } from './components/Header';
-import { cardClass, primaryButton, SampleBanner, ScreenSkeleton, useToast } from '@huishouden/pwa-kit/react/ui';
+import { PetApp } from './PetApp';
+import { AppFrame } from '@huishouden/pwa-kit/react/frame';
+import { PetOpening, petFrame } from './components/frame';
+import { cardClass, primaryButton, SampleBanner, useToast } from '@huishouden/pwa-kit/react/ui';
 import { PORTAL_URL } from './lib/portal';
 import { t, useT } from './i18n';
 import { NotificationsCard, VAPID_PUBLIC_KEY } from './components/NotificationsCard';
@@ -43,7 +43,7 @@ export default function App() {
 
   const frame = { onSignIn: signIn, onSignOut: signOut, signingIn };
 
-  if (user === undefined) return <Opening user={undefined} {...frame} />;
+  if (user === undefined) return <PetOpening user={undefined} {...frame} phase="session" />;
   if (user === null) return <DemoApp {...frame} signInError={signInError} />;
   return <SignedIn key={user.uid} user={user} {...frame} />;
 }
@@ -70,7 +70,7 @@ function SignedIn({ user, ...frame }: FrameProps & { user: User }) {
   }, [householdId, user]);
 
   if (state.status === 'ready') return <LiveApp householdId={state.household.id} household={state.household} user={user} {...frame} />;
-  if (state.status === 'loading') return <Opening user={user} {...frame} label={t('household.finding')} />;
+  if (state.status === 'loading') return <PetOpening user={user} {...frame} phase="household" />;
   if (state.status === 'error')
     return (
       <Plain user={user} {...frame}>
@@ -127,30 +127,8 @@ function DemoInner({ read, signInError, ...frame }: FrameProps & { read: () => n
   return <PetApp store={store} user={null} {...frame} toast={toast} notify={notify} clearToast={clear} banner={banner} />;
 }
 
-/**
- * While the app opens (the session restoring, the household loading): the app's own frame and tabs
- * over the kit's placeholder, so nothing flashes or jumps before the first screen arrives.
- */
-function Opening({ user, label, ...frame }: FrameProps & { user: User | null | undefined; label?: string }) {
-  const t = useT();
-  const [tab, setTab] = useUrlTab(TAB_IDS, 'today');
-  return (
-    <div className="flex min-h-dvh flex-col bg-page font-sans text-ink antialiased">
-      <Header tabs={tabs(t)} tab={tab} onTab={(id) => setTab(id as TabId)} user={user} {...frame} opening />
-      <main className="mx-auto flex w-full max-w-[1200px] min-h-0 flex-1 flex-col gap-4 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-6">
-        <ScreenSkeleton label={label ?? t('app.loading')} />
-      </main>
-    </div>
-  );
-}
-
+/** A note in the frame, outside the app's tabs: no household, or it can't be reached. */
 function Plain({ user, children, ...frame }: FrameProps & { user: User | null; children?: ReactNode }) {
-  return (
-    <div className="flex min-h-dvh flex-col bg-page font-sans text-ink antialiased">
-      <Header tabs={[]} tab="" onTab={() => {}} user={user} {...frame} />
-      <main className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-6">
-        {children && <div className={`${cardClass} max-w-2xl p-6 text-lg text-muted`}>{children}</div>}
-      </main>
-    </div>
-  );
+  const t = useT();
+  return <AppFrame {...petFrame(t, { user, ...frame })}>{children && <div className={`${cardClass} max-w-2xl p-6 text-lg text-muted`}>{children}</div>}</AppFrame>;
 }
