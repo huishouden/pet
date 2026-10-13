@@ -1,4 +1,3 @@
-import { CalendarDays, Contact as ContactIcon, PawPrint, Pill, Sun } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import { clearSharedImages, readSharedImages } from '@huishouden/pwa-kit/shared-images';
@@ -22,9 +21,10 @@ import { isImported, type CalendarMatch } from '@huishouden/pwa-kit/calendar';
 import { calendarWords, fromCalendar } from './lib/calendarImport';
 import { isBirthdayOf } from './lib/birthday';
 import { auth } from './data/firebase';
-import { Header, type Tab } from './components/Header';
-import { ScreenSkeleton, Toast, type ToastState } from '@huishouden/pwa-kit/react/ui';
-import { useUrlParam, useUrlTab } from '@huishouden/pwa-kit/react/url-state';
+import { AppFrame, AppOpening } from '@huishouden/pwa-kit/react/frame';
+import { petFrame, usePetTab, type Account, type TabId } from './components/frame';
+import { Toast, type ToastState } from '@huishouden/pwa-kit/react/ui';
+import { useUrlParam } from '@huishouden/pwa-kit/react/url-state';
 import { PetDialog } from './components/PetDialog';
 import type { BirthdayGuess } from './lib/birthday';
 import { ReminderDialog } from './components/ReminderDialog';
@@ -51,24 +51,10 @@ import { helpersOf, refusal } from '@huishouden/pwa-kit/roles';
 import { personName } from '@huishouden/pwa-kit/people';
 import { formatWeight } from './lib/weight';
 
-export type TabId = 'today' | 'care' | 'appointments' | 'pets' | 'contacts';
 
-// On phones Today, Care, Visits and Pets sit in the bottom bar; Contacts is under More.
-export const tabs = (t: ReturnType<typeof useT>): Tab[] => [
-  { id: 'today', label: t('tab.today'), icon: Sun, primary: true },
-  { id: 'care', label: t('tab.care'), icon: Pill, primary: true },
-  { id: 'appointments', label: t('tab.appointments'), short: t('tab.visits'), icon: CalendarDays, primary: true },
-  { id: 'pets', label: t('tab.pets'), icon: PawPrint, primary: true },
-  { id: 'contacts', label: t('tab.contacts'), icon: ContactIcon },
-];
-export const TAB_IDS: readonly TabId[] = ['today', 'care', 'appointments', 'pets', 'contacts'];
-
-interface Props {
+interface Props extends Omit<Account, 'user'> {
   store: PetStore;
   user: User | null;
-  onSignIn: () => void;
-  onSignOut: () => void;
-  signingIn: boolean;
   toast: ToastState | null;
   notify: (message: string, undo?: () => void) => void;
   clearToast: () => void;
@@ -112,7 +98,7 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   // Opened from another app's Share menu (Google Maps → Share → Pet): a new contact, prefilled.
   const [shared] = useState(() => readSharedPlace(location));
   // The tab and the pet on screen live in the address, so a reload (an update) and Back return to them.
-  const [tab, setTab] = useUrlTab(TAB_IDS, 'today');
+  const [tab, setTab] = usePetTab();
   const [petDialog, setPetDialog] = useState<{ pet: Pet | null; birthday?: BirthdayGuess } | null>(null);
   const [reminder, setReminder] = useState<{ reminder: Reminder | null; petId?: string } | null>(null);
   const [appointment, setAppointment] = useState<{ appointment: Appointment | null; petId?: string } | null>(null);
@@ -329,9 +315,12 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
   const sheetRoutine = sheetId ? store.data.routines.find((r) => r.id === sheetId) : undefined;
   const backfillCourse = backfill ? store.data.courses.find((c) => c.id === backfill) : undefined;
 
+  const frame = petFrame(t, { user, onSignIn, onSignOut, signingIn }, { id: tab, choose: (id) => chooseTab(id) });
+  // The first data still on its way: the opening frame, which counts no view yet.
+  if (!store.ready) return <AppOpening {...frame} phase="data" />;
+
   let content: ReactNode;
-  if (!store.ready) content = <ScreenSkeleton label={t('app.loading')} />;
-  else if (tab === 'care') content = <Care store={store} pets={pets} open={open} {...reminderActions} notify={notify} deviceSettings={deviceSettings} />;
+  if (tab === 'care') content = <Care store={store} pets={pets} open={open} {...reminderActions} notify={notify} deviceSettings={deviceSettings} />;
   else if (tab === 'appointments') content = <Appointments store={store} pets={pets} open={open} calendarAvailable={calendar} notify={notify} onImport={importEvents} />;
   else if (tab === 'pets') content = <Pets store={store} pets={pets} open={open} shown={shownPet} onShow={setShownPet} {...reminderActions} notify={notify} />;
   else if (tab === 'contacts') content = <Contacts store={store} open={open} notify={notify} />;
@@ -352,25 +341,8 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
       />
     );
 
-  return (
-    <PetPhotos.Provider value={photos}>
-    <div className="flex min-h-dvh flex-col bg-page font-sans text-ink antialiased lg:h-dvh lg:overflow-hidden">
-      <Header tabs={tabs(t)} tab={tab} onTab={(id) => chooseTab(id as TabId)} user={user} onSignIn={onSignIn} onSignOut={onSignOut} signingIn={signingIn} />
-      <main className="mx-auto flex w-full max-w-[1200px] min-h-0 flex-1 flex-col gap-4 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-6">
-        {banner}
-        {backfillCourse && (
-          <div role="status" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-line bg-surface px-5 py-3 shadow-sm">
-            <p className="min-w-0 flex-1 text-base text-ink">{t('backfill.text', { date: longDate(backfillCourse.startDate, toYmd(now)) })}</p>
-            <button type="button" className={secondaryButton} onClick={() => open.doseLog(backfillCourse)}>
-              {t('backfill.mark')}
-            </button>
-            <button type="button" className={ghostButton} onClick={() => setBackfill(null)}>
-              {t('backfill.notNow')}
-            </button>
-          </div>
-        )}
-        <div className="min-h-0 flex-1">{content}</div>
-      </main>
+  const dialogs = (
+    <>
 
       {petDialog && (
         <PetDialog
@@ -684,7 +656,26 @@ export function PetApp({ store, user, onSignIn, onSignOut, signingIn, toast, not
         />
       )}
       <Toast toast={toast} onDone={clearToast} />
-    </div>
+    </>
+  );
+
+  return (
+    <PetPhotos.Provider value={photos}>
+    <AppFrame {...frame} after={dialogs}>
+        {banner}
+        {backfillCourse && (
+          <div role="status" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-line bg-surface px-5 py-3 shadow-sm">
+            <p className="min-w-0 flex-1 text-base text-ink">{t('backfill.text', { date: longDate(backfillCourse.startDate, toYmd(now)) })}</p>
+            <button type="button" className={secondaryButton} onClick={() => open.doseLog(backfillCourse)}>
+              {t('backfill.mark')}
+            </button>
+            <button type="button" className={ghostButton} onClick={() => setBackfill(null)}>
+              {t('backfill.notNow')}
+            </button>
+          </div>
+        )}
+        <div className="min-h-0 flex-1">{content}</div>
+    </AppFrame>
     </PetPhotos.Provider>
   );
 }
