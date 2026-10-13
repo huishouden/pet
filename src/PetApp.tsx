@@ -22,7 +22,7 @@ import { calendarWords, fromCalendar } from './lib/calendarImport';
 import { isBirthdayOf } from './lib/birthday';
 import { auth } from './data/firebase';
 import { AppFrame, AppOpening } from '@huishouden/pwa-kit/react/frame';
-import { petFrame, usePetTab, type TabId } from './components/frame';
+import { petFrame, usePetTab, type Account, type TabId } from './components/frame';
 import { Toast, type ToastState } from '@huishouden/pwa-kit/react/ui';
 import { useUrlParam } from '@huishouden/pwa-kit/react/url-state';
 import { PetDialog } from './components/PetDialog';
@@ -51,14 +51,10 @@ import { helpersOf, refusal } from '@huishouden/pwa-kit/roles';
 import { personName } from '@huishouden/pwa-kit/people';
 import { formatWeight } from './lib/weight';
 
-export type { TabId } from './components/frame';
 
-interface Props {
+interface Props extends Omit<Account, 'user'> {
   store: PetStore;
   user: User | null;
-  onSignIn: () => void;
-  onSignOut: () => void;
-  signingIn: boolean;
   toast: ToastState | null;
   notify: (message: string, undo?: () => void) => void;
   clearToast: () => void;

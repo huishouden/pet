@@ -23,9 +23,9 @@ Installable on the tablet, phones and laptops, and works offline (changes sync w
 |---|---|
 | ![Profile, feeding history, medicine course, care, weight chart and records](docs/screenshots/pet.png) | ![The pet's page on its birthday](docs/screenshots/birthday.png) |
 
-| Care | |
+| Care | Opening |
 |---|---|
-| ![Reminders grouped by overdue, this week and later](docs/screenshots/care.png) | |
+| ![Reminders grouped by overdue, this week and later](docs/screenshots/care.png) | ![While Pet opens: the app bar and tabs already in place over a placeholder, so nothing moves when the pets arrive](docs/screenshots/opening.png) |
 
 | Appointments | Contacts |
 |---|---|
