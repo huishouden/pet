@@ -73,7 +73,7 @@ test('a new course defaults to the pet’s AM and PM times and appears on the bo
   await page.getByRole('button', { name: 'Miso', exact: true }).click();
   await page.getByRole('region', { name: "Miso's medicine" }).getByRole('button', { name: 'Add course' }).click();
   const dialog = page.getByRole('dialog', { name: 'Medicine course for Miso' });
-  await expect(dialog.getByText('It is read on this device and not kept; only the NDC code printed on it is looked up', { exact: false })).toBeVisible();
+  await expect(dialog.getByText('It is read on this device and not kept; only the medicine’s code (NDC) or name is looked up', { exact: false })).toBeVisible();
   await expect(dialog.getByLabel('Dose 1 time')).toHaveValue('09:00');
   await expect(dialog.getByLabel('Dose 2 time')).toHaveValue('19:00');
   await dialog.getByLabel('Medicine').fill('Eye drops');
