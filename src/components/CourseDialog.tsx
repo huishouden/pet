@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { GiversField, type GiversValue } from '@huishouden/pwa-kit/react/roles';
 import { toMedCourse, type ParsedCourse } from '@huishouden/pwa-kit/dose';
 import { LabelScan, type LabelFill } from '@huishouden/pwa-kit/react/dose';
@@ -50,11 +50,24 @@ export function CourseDialog({ course, pet, meals, now, images, helpers = [], na
   const setCount = (n: number) => setTimes(defaultTimes(n, mealTimes));
   // "Scan the label" (the kit's LabelScan): the photo is read on this device and never stored or
   // uploaded; the course is filled from it and the card says field by field what was filled.
+  const scannedName = useRef('');
+  const pickedStrength = useRef('');
+  // A strength picked on the scan card goes after the name as it is now (what the person typed
+  // stays), in place of one picked before.
+  const pickStrength = (strength: string) =>
+    setName((now) => {
+      const previous = pickedStrength.current;
+      const base = previous && now.endsWith(` ${previous}`) ? now.slice(0, -previous.length - 1) : now.trim() || scannedName.current;
+      pickedStrength.current = strength;
+      return `${base} ${strength}`.trim().slice(0, LIMITS.courseName);
+    });
   const readLabelInto = (parsed: ParsedCourse): LabelFill[] => {
     // The pet's first meals (`defaultMeals`: ids end in -am and -pm, whatever language named them).
     const am = mealsOf(meals, pet?.id ?? '').find((m) => m.id.endsWith('-am') || m.name === 'AM')?.time;
     const pm = mealsOf(meals, pet?.id ?? '').find((m) => m.id.endsWith('-pm') || m.name === 'PM')?.time;
     const draft = toMedCourse(parsed, { startDate: toYmd(now), defaultTimes: { ...(am ? { morning: am } : {}), ...(pm ? { evening: pm } : {}) } });
+    // The name without a strength, for the strength picked when the label's was unreadable.
+    scannedName.current = parsed.name ?? '';
     if (!draft.name && !draft.dose && draft.times.length === 0) return [];
     fill(draft);
     return [
@@ -122,7 +135,12 @@ export function CourseDialog({ course, pet, meals, now, images, helpers = [], na
           save();
         }}
       >
-        <LabelScan onRead={readLabelInto} images={images} intro={t('courseDialog.scanIntro')} />
+        <LabelScan
+          onRead={readLabelInto}
+          onStrength={pickStrength}
+          images={images}
+          intro={t('courseDialog.scanIntro')}
+        />
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t('courseDialog.medicine')}>
             <input className={inputClass} value={name} maxLength={LIMITS.courseName} onChange={(e) => setName(e.target.value)} placeholder={t('courseDialog.medicinePlaceholder')} autoComplete="off" />

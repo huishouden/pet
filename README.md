@@ -106,7 +106,10 @@ routines, Add a routine, Scoop litter box, then again for Change litter.
 
 Scan the label reads a medicine label photo on the device (`@huishouden/pwa-kit/dose`, tesseract.js
 loaded on first use) and fills in the course for the person to check; the photo is never stored or
-uploaded. Medicine doses, meals nobody has ticked by their time, scheduled outings (with reminders on
+uploaded. When the label shows an NDC, only that code is looked up in the FDA's public list, and its
+name, strength and form are used when they agree with what was read (the card says so). When the
+strength can't be read, the strengths the medicine comes in (from animal-drug labels, on the device)
+are offered to pick from, completing the Medicine field. Medicine doses, meals nobody has ticked by their time, scheduled outings (with reminders on
 in the pet's plan; to admins, members and helpers, cancelled once the outing is logged anywhere) care routines with reminders on (at their time on each due day, to admins, members and helpers, cancelled once the day is marked done anywhere) and each pet's next birthday (9:00
 on the day; not for an approximate birth date) become reminders in the
 household's `reminders` collection (`@huishouden/pwa-kit/reminders`), which the shared sender
@@ -173,6 +176,8 @@ years", with no birthday line or reminder.
 ## Privacy
 
 Household data lives in the household's own Firestore documents, visible only to its members.
+Scanning a medicine label sends only its NDC code, when it shows one, to the FDA's public NDC list
+(no photo, no name, no account); the portal's Privacy page lists it.
 To catch problems early, the app sends reports to New Relic (free tier) through
 `@huishouden/pwa-kit/observability`: errors (emails, ids, query strings and long numbers removed),
 Core Web Vitals and page loads, the app version, device type, and the country and region New Relic
