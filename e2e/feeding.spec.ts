@@ -120,6 +120,23 @@ test('Scan the label fills the course from the photo and lists what it did not u
   await expect(page.getByRole('region', { name: "Miso's medicine" })).toContainText('Day 1 of 10');
 });
 
+test('Scan the label offers the strengths a medicine comes in when the label\'s was unreadable', async ({ page }) => {
+  await page.addInitScript((text) => {
+    (window as unknown as { __mockLabelText: string }).__mockLabelText = text;
+  }, 'EXAMPLE VET CLINIC\nPet: Miso\nGalliprant tablets\nGive 1 tablet by mouth once daily\nQty: 30');
+  await page.goto('./?tab=pets&pet=demo-pet-miso');
+  await page.getByRole('region', { name: "Miso's medicine" }).getByRole('button', { name: 'Add course' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Medicine course for Miso' });
+  await dialog.getByLabel('Label photo').setInputFiles({ name: 'label.jpg', mimeType: 'image/jpeg', buffer: Buffer.from('not a real photo') });
+  await expect(dialog.getByLabel('Medicine')).toHaveValue('Galliprant');
+  const pick = dialog.getByRole('region', { name: 'Pick the strength' });
+  await expect(pick).toContainText('Galliprant comes in these strengths');
+  await pick.getByRole('button', { name: '60 mg' }).click();
+  await expect(dialog.getByLabel('Medicine')).toHaveValue('Galliprant 60 mg');
+  await pick.getByRole('button', { name: '20 mg' }).click();
+  await expect(dialog.getByLabel('Medicine')).toHaveValue('Galliprant 20 mg');
+});
+
 test('Scan the label takes two photos chosen together, and a photo pasted with Ctrl+V', async ({ page }) => {
   const label = readFileSync(new URL('./fixtures/label.txt', import.meta.url), 'utf8');
   // The reader asks the mock for its text twice per photo (is there one, then take it): count them.
